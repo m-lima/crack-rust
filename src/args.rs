@@ -4,7 +4,6 @@ extern crate num_cpus;
 use clap::value_t;
 
 use super::options;
-use super::secrets;
 
 macro_rules! algorithm {
     (options::Algorithm::MD5) => {

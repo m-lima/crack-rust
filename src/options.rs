@@ -29,9 +29,12 @@ impl std::fmt::Display for Shared {
             Ok(())
         } else {
             writeln!(fmt, "Algorithm: {}", self.algorithm)?;
-            writeln!(fmt, "Salt: {}", self.salt)?;
-            if let Verboseness::High = self.verboseness {
-                writeln!(
+
+            if let Verboseness::Low = self.verboseness {
+                write!(fmt, "Salt: {}", self.salt)
+            } else {
+                writeln!(fmt, "Salt: {}", self.salt)?;
+                write!(
                     fmt,
                     "{}",
                     self.input
@@ -40,9 +43,8 @@ impl std::fmt::Display for Shared {
                             "{}\n  {}",
                             prev, curr
                         ))
-                )?;
+                )
             }
-            write!(fmt, "----------")
         }
     }
 }
@@ -71,7 +73,7 @@ impl std::fmt::Display for Decrypt {
             Verboseness::None => Ok(()),
             _ => {
                 writeln!(fmt, "Threads: {}", self.thread_count)?;
-                writeln!(fmt, "Length: {}", self.length)?;
+                writeln!(fmt, "Length: {}", self.length + self.prefix.len() as u8)?;
                 writeln!(fmt, "Prefix: {}", self.prefix)?;
                 write!(fmt, "{}", self.shared)
             }
