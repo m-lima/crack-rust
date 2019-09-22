@@ -124,14 +124,15 @@ impl Print {
             println!("Summary:");
             separator();
             println!("{:19}{}", "Threads launched:", summary.thread_count);
-            duration("Time elapsed:", 19,  &summary.duration);
+            duration("Time elapsed:", 19, &summary.duration);
             println!("{:19}{}", "Hashes:", summary.hash_count);
             println!(
                 "Hashes per second: {}",
                 summary.hash_count / summary.duration.as_millis() as u64
             );
             println!(
-                "{:19}{}/{} ({}%)", "Values found:",
+                "{:19}{}/{} ({}%)",
+                "Values found:",
                 summary.cracked_count,
                 summary.total_count,
                 summary.cracked_count * 100 / summary.total_count
