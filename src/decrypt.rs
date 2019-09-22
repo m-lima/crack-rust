@@ -10,35 +10,30 @@ pub struct Input {
 
 unsafe impl Send for Input {}
 
-fn hash(algorithm: &options::Algorithm, salted_prefix: &String, number: &String) -> String {
+fn hash(algorithm: &options::Algorithm, number: &String) -> String {
     match algorithm {
         options::Algorithm::MD5 => {
             use md5::Digest;
-            format!("{:x}", md5::Md5::digest(format!("{}{}", salted_prefix, number).as_bytes()))
-        },
+            format!("{:x}", md5::Md5::digest(number.as_bytes()))
+        }
         options::Algorithm::SHA256 => {
             use sha2::Digest;
-            format!("{:x}", sha2::Sha256::digest(format!("{}{}", salted_prefix, number).as_bytes()))
-        },
+            format!("{:x}", sha2::Sha256::digest(number.as_bytes()))
+        }
     }
 }
 
-fn build_number(number: u64, length: u8) -> String {
-    let number = number.to_string();
-    let padding = vec!['0'; length as usize - number.len()]
-        .into_iter()
-        .collect::<String>();
-    format!("{}{}", padding, number)
-}
-
 pub fn execute(options: options::Decrypt) {
-    let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(options.shared.input.len()));
+    let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(
+        options.shared.input.len(),
+    ));
     let input = Input {
         data: std::rc::Rc::new(options.shared.input.into_iter().collect()),
     };
 
     let thread_space = options.number_space / options.thread_count as u64;
-    let mut threads = Vec::<std::thread::JoinHandle<()>>::with_capacity(options.thread_count as usize);
+    let mut threads =
+        Vec::<std::thread::JoinHandle<()>>::with_capacity(options.thread_count as usize);
 
     for t in 0..options.thread_count {
         let count = count.clone();
@@ -47,7 +42,7 @@ pub fn execute(options: options::Decrypt) {
         let algorithm = options.shared.algorithm.clone();
         let prefix = options.prefix.clone();
         let salted_prefix = format!("{}{}", options.shared.salt, options.prefix);
-        let length = options.length;
+        let length = options.length as usize;
         let this_thread_space = if t < options.thread_count - 1 {
             thread_space
         } else {
@@ -61,16 +56,16 @@ pub fn execute(options: options::Decrypt) {
                         return;
                     }
                 }
-                
-                let number = build_number(n, length);
-                let hash = hash(&algorithm, &salted_prefix, &number);
+
+                let number = format!("{}{:02$}", salted_prefix, n, length);
+                let hash = hash(&algorithm, &number);
                 if input.data.contains(&hash) {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     if input.data.len() == 1 {
-                        println!("{}{}", prefix, number);
+                        println!("{}{:02$}", prefix, n, length);
                         return;
                     }
-                    println!("{} :: {}{}", hash, prefix, number);
+                    println!("{} :: {}{:03$}", hash, prefix, n, length);
                 }
             }
         }));
