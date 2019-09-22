@@ -1,9 +1,9 @@
 extern crate clap;
-extern crate num_cpus;
 
 use clap::value_t;
 
 use super::options;
+use super::print;
 
 macro_rules! algorithm {
     (options::Algorithm::MD5) => {
@@ -232,6 +232,14 @@ fn get_input(matches: &clap::ArgMatches) -> Vec<String> {
         .collect()
 }
 
+fn parse_verboseness(matches: &clap::ArgMatches) -> print::Verboseness {
+    match matches.occurrences_of(arg!(_Arg::Verbose)) {
+        2 => print::Verboseness::High,
+        1 => print::Verboseness::Low,
+        0 | _ => print::Verboseness::None,
+    }
+}
+
 fn parse_shared_args(matches: &clap::ArgMatches) -> options::Shared {
     options::Shared {
         algorithm: value_t!(
@@ -242,21 +250,19 @@ fn parse_shared_args(matches: &clap::ArgMatches) -> options::Shared {
         .unwrap(),
         salt: String::from(matches.value_of(arg!(_Arg::Salt, ArgField::Name)).unwrap()),
         input: get_input(matches),
-        verboseness: match matches.occurrences_of(arg!(_Arg::Verbose)) {
-            2 => options::Verboseness::High,
-            1 => options::Verboseness::Low,
-            0 | _ => options::Verboseness::None,
-        },
     }
 }
 
-fn parse_encrypt(matches: &clap::ArgMatches) -> options::Variant {
-    options::Variant::Encrypt(options::Encrypt {
-        shared: parse_shared_args(&matches),
-    })
+fn parse_encrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verboseness) {
+    (
+        options::Variant::Encrypt(options::Encrypt {
+            shared: parse_shared_args(&matches),
+        }),
+        parse_verboseness(&matches),
+    )
 }
 
-fn parse_decrypt(matches: &clap::ArgMatches) -> options::Variant {
+fn parse_decrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verboseness) {
     let shared = parse_shared_args(&matches);
 
     let prefix = String::from(
@@ -271,34 +277,27 @@ fn parse_decrypt(matches: &clap::ArgMatches) -> options::Variant {
         .unwrap();
     let length = total_length - prefix.len() as u8;
     let number_space = 10u64.pow(length as u32);
-    let thread_count = {
-        let thread_count = matches
-            .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
-            .unwrap()
-            .parse::<u8>()
-            .unwrap();
-        std::cmp::min(
-            number_space / 1024 + 1,
-            if thread_count == 0 {
-                num_cpus::get() as u8
-            } else {
-                thread_count
-            } as u64,
-        ) as u8
-    };
+    let thread_count = matches
+        .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
+        .unwrap()
+        .parse::<u8>()
+        .unwrap();
 
     // let files = Vec::<String>::new();
 
-    options::Variant::Decrypt(options::Decrypt {
-        shared,
-        thread_count,
-        length,
-        number_space,
-        prefix,
-    })
+    (
+        options::Variant::Decrypt(options::Decrypt {
+            shared,
+            thread_count,
+            length,
+            number_space,
+            prefix,
+        }),
+        parse_verboseness(&matches),
+    )
 }
 
-pub fn parse() -> options::Variant {
+pub fn parse() -> (options::Variant, print::Verboseness) {
     let matches = setup();
     match matches.subcommand() {
         (cmd!(_Command::Encrypt), Some(sub_matches)) => parse_encrypt(&sub_matches),

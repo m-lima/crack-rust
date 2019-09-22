@@ -2,6 +2,7 @@ extern crate md5;
 extern crate sha2;
 
 use super::options;
+use super::summary;
 
 pub struct Result {
     input: String,
@@ -28,7 +29,7 @@ impl Result {
     }
 }
 
-pub fn execute(options: options::Encrypt) {
+pub fn execute(options: options::Encrypt) -> summary::Variant {
     for input in &options.shared.input {
         let result = match options.shared.algorithm {
             options::Algorithm::MD5 => Result::md5(&options.shared.salt, input),
@@ -40,4 +41,6 @@ pub fn execute(options: options::Encrypt) {
             println!("{} :: {}", result.input, result.output);
         }
     }
+
+    summary::Variant::Encrypt()
 }

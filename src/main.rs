@@ -2,25 +2,20 @@ mod args;
 mod decrypt;
 mod encrypt;
 mod options;
+mod print;
 mod secrets;
-// mod summary;
+mod summary;
 
 fn main() {
-    let options = args::parse();
-    println!("{}", options);
-    println!("----------");
-    match options {
-        options::Variant::Encrypt(options) => {
-            encrypt::execute(options);
-        }
-        options::Variant::Decrypt(options) => {
-            decrypt::execute(options);
-        }
-    }
-    // println!("----------");
-    // let summary = match options {
-    //     options::Variant::Encrypt(options) => encrypt::execute(options),
+    let (options, verboseness) = args::parse();
+    let print = print::new(verboseness);
 
-    //     options::Variant::Decrypt(options) => decrypt::execute(options),
-    // };
+    print.options(&options);
+
+    let summary = match options {
+        options::Variant::Encrypt(options) => encrypt::execute(options),
+        options::Variant::Decrypt(options) => decrypt::execute(options),
+    };
+
+    print.summary(&summary);
 }

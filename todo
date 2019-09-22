@@ -1,4 +1,5 @@
-[ ]  Percentage
-[ ]  Time taken
+[ ]  Progress percentage
 [ ]  Get input from stdin
 [ ] !GPU
+
+[x]  Time taken
