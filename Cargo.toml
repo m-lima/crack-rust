@@ -1,0 +1,12 @@
+[package]
+name = "cracker"
+version = "0.1.0"
+authors = ["Marcelo Lima <marcelo@telenordigital.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2"
+md-5 = "0.8"
+sha2 = "0.8"
+num_cpus = "1.0"
+# ocl = "0.19"
