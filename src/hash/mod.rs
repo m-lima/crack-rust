@@ -27,11 +27,11 @@ impl std::hash::Hash for Hash {
 
 impl Ord for Hash {
     fn cmp(&self, rhs: &Self) -> std::cmp::Ordering {
-        match self.hi.cmp(&rhs.lo) {
-            std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
-            std::cmp::Ordering::Less => std::cmp::Ordering::Less,
+        let o = match self.hi.cmp(&rhs.hi) {
             std::cmp::Ordering::Equal => self.lo.cmp(&rhs.lo),
-        }
+            o => o,
+        };
+        o
     }
 }
 

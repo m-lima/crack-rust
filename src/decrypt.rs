@@ -5,12 +5,13 @@ extern crate sha2;
 use super::hash;
 use super::options;
 use super::summary;
+use eytzinger::SliceExt;
 
 static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
 
 #[derive(Clone)]
 pub struct Input {
-    data: std::rc::Rc<std::collections::HashSet<hash::Hash>>,
+    data: std::rc::Rc<Vec<hash::Hash>>,
 }
 
 unsafe impl Send for Input {}
@@ -34,15 +35,16 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
     ));
     let input = {
         use hash::IntoHash;
+        let mut data = options
+            .shared
+            .input
+            .into_iter()
+            .map(|v| v.into_hash().unwrap())
+            .collect::<Vec<hash::Hash>>();
+        data.as_mut_slice()
+            .eytzingerize(&mut eytzinger::permutation::InplacePermutator);
         Input {
-            data: std::rc::Rc::new(
-                options
-                    .shared
-                    .input
-                    .into_iter()
-                    .map(|v| v.into_hash().unwrap())
-                    .collect(),
-            ),
+            data: std::rc::Rc::new(data),
         }
     };
 
@@ -79,7 +81,7 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
                         hash::compute::<sha2::Sha256>(&salted_prefix, &number)
                     }
                 };
-                if input.data.contains(&hash) {
+                if input.data.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     if input.data.len() == 1 {
                         println!("{}{:02$}", &prefix, n, length);

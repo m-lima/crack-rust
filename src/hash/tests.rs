@@ -107,3 +107,17 @@ fn compute() {
         format!("{:x}", expected_hash.result())
     );
 }
+
+#[test]
+fn cmp() {
+    let hash_10 = super::Hash { hi: 1, lo: 0 };
+    let hash_20 = super::Hash { hi: 2, lo: 0 };
+    let hash_01 = super::Hash { hi: 0, lo: 1 };
+    let hash_02 = super::Hash { hi: 0, lo: 2 };
+
+    assert_eq!(hash_10.cmp(&hash_10), std::cmp::Ordering::Equal);
+    assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
+    assert_eq!(hash_10.cmp(&hash_02), std::cmp::Ordering::Greater);
+    assert_eq!(hash_10.cmp(&hash_01), std::cmp::Ordering::Greater);
+    assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
+}
