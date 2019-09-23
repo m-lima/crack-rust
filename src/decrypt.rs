@@ -2,6 +2,7 @@ extern crate md5;
 extern crate num_cpus;
 extern crate sha2;
 
+use super::hash;
 use super::options;
 use super::summary;
 
@@ -9,23 +10,10 @@ static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
 
 #[derive(Clone)]
 pub struct Input {
-    data: std::rc::Rc<std::collections::HashSet<String>>,
+    data: std::rc::Rc<std::collections::HashSet<hash::Hash>>,
 }
 
 unsafe impl Send for Input {}
-
-fn hash(algorithm: &options::Algorithm, number: &String) -> String {
-    match algorithm {
-        options::Algorithm::MD5 => {
-            use md5::Digest;
-            format!("{:x}", md5::Md5::digest(number.as_bytes()))
-        }
-        options::Algorithm::SHA256 => {
-            use sha2::Digest;
-            format!("{:x}", sha2::Sha256::digest(number.as_bytes()))
-        }
-    }
-}
 
 fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     std::cmp::min(
@@ -44,8 +32,18 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
     let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(
         options.shared.input.len(),
     ));
-    let input = Input {
-        data: std::rc::Rc::new(options.shared.input.into_iter().collect()),
+    let input = {
+        use hash::IntoHash;
+        Input {
+            data: std::rc::Rc::new(
+                options
+                    .shared
+                    .input
+                    .into_iter()
+                    .map(|v| v.into_hash().unwrap())
+                    .collect(),
+            ),
+        }
     };
 
     let thread_count = get_optimal_thread_count(options.thread_count, options.number_space);
@@ -74,15 +72,20 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
                     }
                 }
 
-                let number = format!("{}{:02$}", salted_prefix, n, length);
-                let hash = hash(&algorithm, &number);
+                let number = format!("{:01$}", n, length);
+                let hash = match &algorithm {
+                    options::Algorithm::MD5 => hash::compute::<md5::Md5>(&salted_prefix, &number),
+                    options::Algorithm::SHA256 => {
+                        hash::compute::<sha2::Sha256>(&salted_prefix, &number)
+                    }
+                };
                 if input.data.contains(&hash) {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     if input.data.len() == 1 {
-                        println!("{}{:02$}", prefix, n, length);
+                        println!("{}{:02$}", &prefix, n, length);
                         return n - (t as u64 * this_thread_space);
                     }
-                    println!("{} :: {}{:03$}", hash, prefix, n, length);
+                    println!("{:x} :: {}{:03$}", &hash, &prefix, n, length);
                 }
             }
             this_thread_space

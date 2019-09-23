@@ -1,6 +1,7 @@
 mod args;
 mod decrypt;
 mod encrypt;
+mod hash;
 mod options;
 mod print;
 mod secrets;

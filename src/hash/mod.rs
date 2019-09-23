@@ -1,5 +1,8 @@
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug)]
-enum HashError {
+pub enum HashError {
     ParseError,
 }
 
@@ -15,14 +18,11 @@ impl Hash {
     }
 }
 
-pub fn compute<D: digest::Digest>(salted_prefix: &String, number: &String) -> Hash {
-    let mut digest = D::new();
-    digest.input(salted_prefix);
-    digest.input(number);
-    digest
-        .result()
-        .into_iter()
-        .fold(Hash::default(), |p, c| (p << 1) + c as u64)
+impl std::hash::Hash for Hash {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u128(self.hi);
+        state.write_u128(self.lo);
+    }
 }
 
 impl Ord for Hash {
@@ -122,79 +122,86 @@ impl std::ops::BitOr<u64> for Hash {
 
 impl std::fmt::LowerHex for Hash {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(fmt, "{:032x}{:032x}", self.hi, self.lo)
+        {
+            let bytes = &unsafe { std::mem::transmute::<u128, [u8; 16]>(self.lo) };
+            for b in bytes {
+                write!(fmt, "{:02x}", b)?;
+            }
+        }
+        {
+            let bytes = &unsafe { std::mem::transmute::<u128, [u8; 16]>(self.hi) };
+            for b in bytes {
+                write!(fmt, "{:02x}", b)?;
+            }
+        }
+        Ok(())
     }
 }
 
 impl std::fmt::Binary for Hash {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(fmt, "{:0128b}{:0128b}", self.hi, self.lo)
+        {
+            let bytes = &unsafe { std::mem::transmute::<u128, [u8; 16]>(self.lo) };
+            for b in bytes {
+                write!(fmt, "{:08b}", b)?;
+            }
+        }
+        {
+            let bytes = &unsafe { std::mem::transmute::<u128, [u8; 16]>(self.hi) };
+            for b in bytes {
+                write!(fmt, "{:08b}", b)?;
+            }
+        }
+        Ok(())
     }
 }
 
-trait IntoHash {
-    fn into_number(&self) -> Result<Hash, HashError>;
+pub trait IntoHash {
+    fn into_hash(&self) -> Result<Hash, HashError>;
 }
 
 impl IntoHash for String {
-  fn into_number(&self) -> Result<Hash, HashError> {
-      let mut hash = Hash::default();
-      for c in self.chars() {
-          let int = match c as u8 {
-              c if c >= 0x30 && c < 0x3a  => c - 0x30, // decimal
-              c if c >= 0x41 && c < 0x47  => c - 0x41 + 0xa, // uppercase
-              c if c >= 0x61 && c < 0x67  => c - 0x61 + 0xa, // lowercase
-              _ => return Err(HashError::ParseError),
-          };
-          hash = (hash << 4) | int;
-      }
-      Ok(hash)
-  }
+    fn into_hash(&self) -> Result<Hash, HashError> {
+        let mut hash = Hash::default();
+        for (i, c) in self.chars().rev().enumerate() {
+            let int = match c as u8 {
+                c if c >= 0x30 && c < 0x3a => c - 0x30,       // decimal
+                c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
+                c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
+                _ => return Err(HashError::ParseError),
+            };
+            if i % 2 == 0 {
+                hash = hash << 8;
+                hash = hash | int;
+            } else {
+                hash = hash | (int << 4);
+            }
+        }
+        Ok(hash)
+    }
 }
 
-#[test]
-fn add() {
-    let mut hash = Hash{
-        lo: std::u128::MAX - 1,
-        hi: 16,
-    };
-    hash = hash + 1u64;
-    assert_eq!(hash, Hash{ hi: 16, lo: std::u128::MAX });
-}
-
-#[test]
-fn add_overflow() {
-    let mut hash = Hash{
-        lo: std::u128::MAX,
-        hi: 16,
-    };
-    hash = hash + 1u8;
-    assert_eq!(hash, Hash{ hi: 17, lo: 0 });
-}
-
-#[test]
-fn shift() {
-    let mut hash = Hash{
-        lo: 1,
-        hi: 8,
-    };
-    hash = hash << 4;
-    assert_eq!(hash, Hash{ hi: 8 * 16, lo: 16 });
-}
-
-#[test]
-fn shift_overflow() {
-    let mut hash = Hash{
-        lo: (1 << 127) | 1,
-        hi: 8,
-    };
-    hash = hash << 4;
-    assert_eq!(hash, Hash{ hi: 128 + 8, lo: 16 });
-}
-
-#[test]
-fn parse_string() {
-    let input = String::from("123Af");
-    let parsed = input.into_number().unwrap();
-    assert_eq!(parsed, Hash{ hi: 0, lo: 74671 });
+pub fn compute<D: digest::Digest>(salted_prefix: &String, number: &String) -> Hash {
+    let mut digest = D::new();
+    digest.input(salted_prefix.as_bytes());
+    digest.input(number.as_bytes());
+    let result = digest.result();
+    Hash {
+        lo: unsafe {
+            std::mem::transmute::<[u8; 16], u128>({
+                // let mut value = [0u8; 16];
+                // let mut value = std::mem::MaybeUninit::<[u8; 16]>::uninit();
+                let mut value = std::mem::uninitialized::<[u8; 16]>();
+                value.copy_from_slice(&result[00..16]);
+                value
+            })
+        },
+        hi: unsafe {
+            std::mem::transmute::<[u8; 16], u128>({
+                let mut value = std::mem::uninitialized::<[u8; 16]>();
+                value.copy_from_slice(&result[16..32]);
+                value
+            })
+        },
+    }
 }
