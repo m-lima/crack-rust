@@ -1,6 +1,6 @@
-use super::hash;
-use super::options;
-use super::summary;
+use crate::hash;
+use crate::options;
+use crate::summary;
 
 pub fn execute(options: &options::Encrypt) -> summary::Mode {
     for input in &options.shared.input {

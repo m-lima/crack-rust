@@ -6,7 +6,7 @@ pub enum Error {
     ParseError,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Copy, Clone)]
 pub struct Hash {
     hi: u128,
     lo: u128,

@@ -1,5 +1,5 @@
-use super::options;
-use super::summary;
+use crate::options;
+use crate::summary;
 
 macro_rules! no_verbose_gate {
     ($self:ident) => {

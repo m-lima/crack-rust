@@ -1,7 +1,7 @@
 use clap::value_t;
 
-use super::options;
-use super::print;
+use crate::options;
+use crate::print;
 
 macro_rules! algorithm {
     (options::Algorithm::MD5) => {
@@ -9,6 +9,15 @@ macro_rules! algorithm {
     };
     (options::Algorithm::SHA256) => {
         "SHA256"
+    };
+}
+
+macro_rules! core {
+    (options::Core::CPU) => {
+        "CPU"
+    };
+    (options::Core::GPU) => {
+        "GPU"
     };
 }
 
@@ -34,6 +43,7 @@ enum _Arg {
     Prefix,
     Salt,
     ThreadCount,
+    Core,
     Verbose,
 }
 
@@ -89,8 +99,15 @@ macro_rules! arg {
     (_Arg::ThreadCount, $f:path) => {
         match $f {
             ArgField::Name => "thread-count",
-            ArgField::Short => "c",
+            ArgField::Short => "n",
             ArgField::Parameter => "COUNT",
+        }
+    };
+    (_Arg::Core, $f:path) => {
+        match $f {
+            ArgField::Name => "core",
+            ArgField::Short => "c",
+            ArgField::Parameter => "CORE",
         }
     };
     (_Arg::Verbose) => {
@@ -157,6 +174,17 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .validator(|v| v.parse::<u8>().map(|_| ()).map_err(|e| e.to_string())),
         )
         .arg(
+            clap::Arg::with_name(arg!(_Arg::Core, ArgField::Name))
+                .long(arg!(_Arg::Core, ArgField::Name))
+                .short(arg!(_Arg::Core, ArgField::Short))
+                .value_name(arg!(_Arg::Core, ArgField::Parameter))
+                .help("Core to run in [GPU, CPU]")
+                .takes_value(true)
+                .default_value(core!(options::Core::GPU))
+                .possible_values(&options::Core::variants())
+                .case_insensitive(true),
+        )
+        .arg(
             clap::Arg::with_name(arg!(_Arg::Length, ArgField::Name))
                 .long(arg!(_Arg::Length, ArgField::Name))
                 .short(arg!(_Arg::Length, ArgField::Short))
@@ -215,7 +243,7 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
                 .value_name(arg!(_Arg::Salt, ArgField::Parameter))
                 .help("Salt to use")
                 .takes_value(true)
-                .default_value(super::secrets::SALT)
+                .default_value(crate::secrets::SALT)
                 .global(true),
         )
         .arg(
@@ -294,6 +322,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
         .unwrap()
         .parse::<u8>()
         .unwrap();
+    let core = value_t!(matches, arg!(_Arg::Core, ArgField::Name), options::Core).unwrap();
 
     // let files = Vec::<String>::new();
 
@@ -304,7 +333,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
             length,
             number_space,
             prefix,
-            core: options::Core::CPU,
+            core,
         }),
         parse_verboseness(&matches),
     )
