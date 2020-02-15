@@ -8,6 +8,14 @@ clap::arg_enum! {
     }
 }
 
+clap::arg_enum! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Core {
+        CPU,
+        GPU,
+    }
+}
+
 pub struct Shared {
     pub input: Vec<String>,
     pub algorithm: Algorithm,
@@ -24,6 +32,7 @@ pub struct Decrypt {
     pub thread_count: u8,
     pub number_space: u64,
     pub prefix: String,
+    pub core: Core,
 }
 
 pub enum Mode {

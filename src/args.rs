@@ -98,13 +98,104 @@ macro_rules! arg {
     };
 }
 
-#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-fn setup<'a>() -> clap::ArgMatches<'a> {
+fn create_app<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("Cracker")
         .version("0.1")
         .author("Marcelo Lima")
         .about("MD5 and SHA256 cracker")
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+}
+
+fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
+    clap::SubCommand::with_name(cmd!(_Command::Decrypt))
+        .about("Attempts to crack the given input")
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
+                .long(arg!(_Arg::Input, ArgField::Name))
+                .short(arg!(_Arg::Input, ArgField::Short))
+                .value_name(arg!(_Arg::Input, ArgField::Parameter))
+                .help("Input values to crack")
+                .takes_value(true)
+                .multiple(true)
+                // .required_unless(arg!(_Arg::File, ArgField::Name)),
+                .required(true),
+        )
+        // .arg(
+        //     clap::Arg::with_name(arg!(_Arg::File, ArgField::Name))
+        //         .long(arg!(_Arg::File, ArgField::Name))
+        //         .short(arg!(_Arg::File, ArgField::Short))
+        //         .value_name(arg!(_Arg::File, ArgField::Parameter))
+        //         .help("Path to a file containing hashes to crack")
+        //         .takes_value(true)
+        //         .multiple(true)
+        //         .validator(|v| {
+        //             let path = std::path::Path::new(&v);
+        //             if path.exists() && path.is_file() {
+        //                 Ok(())
+        //             } else {
+        //                 Err(String::from(format!("\"{}\" is not a file", v)))
+        //             }
+        //         })
+        //         .required_unless(arg!(_Arg::Input, ArgField::Name)),
+        // )
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::Prefix, ArgField::Name))
+                .long(arg!(_Arg::Prefix, ArgField::Name))
+                .short(arg!(_Arg::Prefix, ArgField::Short))
+                .value_name(arg!(_Arg::Prefix, ArgField::Parameter))
+                .help("Known prefix of hashed value")
+                .takes_value(true),
+        )
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::ThreadCount, ArgField::Name))
+                .long(arg!(_Arg::ThreadCount, ArgField::Name))
+                .short(arg!(_Arg::ThreadCount, ArgField::Short))
+                .value_name(arg!(_Arg::ThreadCount, ArgField::Parameter))
+                .help("Number of threads to spawn (0 for auto)")
+                .takes_value(true)
+                .default_value("0")
+                .validator(|v| v.parse::<u8>().map(|_| ()).map_err(|e| e.to_string())),
+        )
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::Length, ArgField::Name))
+                .long(arg!(_Arg::Length, ArgField::Name))
+                .short(arg!(_Arg::Length, ArgField::Short))
+                .value_name(arg!(_Arg::Length, ArgField::Parameter))
+                .help("Length of hashed value")
+                .takes_value(true)
+                .default_value("12")
+                .validator(|v| {
+                    v.parse::<u8>().map_err(|e| e.to_string()).and_then(|v| {
+                        if v > 0 {
+                            Ok(())
+                        } else {
+                            Err(format!(
+                                "{} must be a positive integer",
+                                arg!(_Arg::Length, ArgField::Name)
+                            ))
+                        }
+                    })
+                }),
+        )
+}
+
+fn setup_encrypt<'a, 'b>() -> clap::App<'a, 'b> {
+    clap::SubCommand::with_name(cmd!(_Command::Encrypt))
+        .about("Hashes the given input")
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
+                .long(arg!(_Arg::Input, ArgField::Name))
+                .short(arg!(_Arg::Input, ArgField::Short))
+                .value_name(arg!(_Arg::Input, ArgField::Parameter))
+                .help("Input values to hash")
+                .takes_value(true)
+                .multiple(true)
+                .required(true),
+        )
+}
+
+fn setup<'a>() -> clap::ArgMatches<'a> {
+    create_app()
         .arg(
             clap::Arg::with_name(arg!(_Arg::Algorithm, ArgField::Name))
                 .long(arg!(_Arg::Algorithm, ArgField::Name))
@@ -134,92 +225,8 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
                 .multiple(true)
                 .global(true),
         )
-        .subcommand(
-            clap::SubCommand::with_name(cmd!(_Command::Decrypt))
-                .about("Attempts to crack the given input")
-                .arg(
-                    clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
-                        .long(arg!(_Arg::Input, ArgField::Name))
-                        .short(arg!(_Arg::Input, ArgField::Short))
-                        .value_name(arg!(_Arg::Input, ArgField::Parameter))
-                        .help("Input values to crack")
-                        .takes_value(true)
-                        .multiple(true)
-                        // .required_unless(arg!(_Arg::File, ArgField::Name)),
-                        .required(true),
-                )
-                // .arg(
-                //     clap::Arg::with_name(arg!(_Arg::File, ArgField::Name))
-                //         .long(arg!(_Arg::File, ArgField::Name))
-                //         .short(arg!(_Arg::File, ArgField::Short))
-                //         .value_name(arg!(_Arg::File, ArgField::Parameter))
-                //         .help("Path to a file containing hashes to crack")
-                //         .takes_value(true)
-                //         .multiple(true)
-                //         .validator(|v| {
-                //             let path = std::path::Path::new(&v);
-                //             if path.exists() && path.is_file() {
-                //                 Ok(())
-                //             } else {
-                //                 Err(String::from(format!("\"{}\" is not a file", v)))
-                //             }
-                //         })
-                //         .required_unless(arg!(_Arg::Input, ArgField::Name)),
-                // )
-                .arg(
-                    clap::Arg::with_name(arg!(_Arg::Prefix, ArgField::Name))
-                        .long(arg!(_Arg::Prefix, ArgField::Name))
-                        .short(arg!(_Arg::Prefix, ArgField::Short))
-                        .value_name(arg!(_Arg::Prefix, ArgField::Parameter))
-                        .help("Known prefix of hashed value")
-                        .takes_value(true),
-                )
-                .arg(
-                    clap::Arg::with_name(arg!(_Arg::ThreadCount, ArgField::Name))
-                        .long(arg!(_Arg::ThreadCount, ArgField::Name))
-                        .short(arg!(_Arg::ThreadCount, ArgField::Short))
-                        .value_name(arg!(_Arg::ThreadCount, ArgField::Parameter))
-                        .help("Number of threads to spawn (0 for auto)")
-                        .takes_value(true)
-                        .default_value("0")
-                        .validator(|v| v.parse::<u8>().map(|_| ()).map_err(|e| e.to_string())),
-                )
-                .arg(
-                    clap::Arg::with_name(arg!(_Arg::Length, ArgField::Name))
-                        .long(arg!(_Arg::Length, ArgField::Name))
-                        .short(arg!(_Arg::Length, ArgField::Short))
-                        .value_name(arg!(_Arg::Length, ArgField::Parameter))
-                        .help("Length of hashed value")
-                        .takes_value(true)
-                        .default_value("12")
-                        .validator(|v| {
-                            v.parse::<u8>().map_err(|e| e.to_string()).and_then(|v| {
-                                if v > 0 {
-                                    Ok(())
-                                } else {
-                                    Err(format!(
-                                        "{} must be a positive integer",
-                                        arg!(_Arg::Length, ArgField::Name)
-                                    ))
-                                }
-                            })
-                        }),
-                ),
-        )
-        .subcommand(
-            clap::SubCommand::with_name(cmd!(_Command::Encrypt))
-                .about("Hashes the given input")
-                .arg(
-                    clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
-                        .long(arg!(_Arg::Input, ArgField::Name))
-                        .short(arg!(_Arg::Input, ArgField::Short))
-                        .value_name(arg!(_Arg::Input, ArgField::Parameter))
-                        .help("Input values to hash")
-                        .takes_value(true)
-                        .multiple(true)
-                        .required(true),
-                ),
-        )
+        .subcommand(setup_decrypt())
+        .subcommand(setup_encrypt())
         .get_matches()
 }
 
@@ -297,6 +304,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
             length,
             number_space,
             prefix,
+            core: options::Core::CPU,
         }),
         parse_verboseness(&matches),
     )
