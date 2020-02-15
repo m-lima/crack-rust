@@ -45,7 +45,7 @@ pub fn execute(options: &options::Decrypt) -> summary::Variant {
             .iter()
             .map(|v| v.into_hash().unwrap())
             .collect::<Vec<hash::Hash>>();
-        data.sort();
+        data.sort_unstable();
         data.as_mut_slice()
             .eytzingerize(&mut eytzinger::permutation::InplacePermutator);
         data

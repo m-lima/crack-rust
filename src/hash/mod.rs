@@ -6,30 +6,15 @@ pub enum Error {
     ParseError,
 }
 
-#[derive(PartialEq, Eq, Debug, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Hash {
-    pub hi: u128,
-    pub lo: u128,
+    hi: u128,
+    lo: u128,
 }
 
 impl Default for Hash {
     fn default() -> Self {
         Self { hi: 0, lo: 0 }
-    }
-}
-
-impl Ord for Hash {
-    fn cmp(&self, rhs: &Self) -> std::cmp::Ordering {
-        match self.hi.cmp(&rhs.hi) {
-            std::cmp::Ordering::Equal => self.lo.cmp(&rhs.lo),
-            o => o,
-        }
-    }
-}
-
-impl PartialOrd for Hash {
-    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(rhs))
     }
 }
 
@@ -44,79 +29,12 @@ impl std::ops::Shl<u8> for Hash {
     }
 }
 
-impl std::ops::Add<u8> for Hash {
-    type Output = Self;
-
-    // Allowed because of hot path and certainty of no loss
-    #[allow(clippy::cast_lossless)]
-    fn add(self, rhs: u8) -> Self {
-        let lo = std::num::Wrapping(self.lo) + std::num::Wrapping(rhs as u128);
-        Self {
-            lo: lo.0,
-            hi: self.hi + if self.lo > lo.0 { 1 } else { 0 },
-        }
-    }
-}
-
-impl std::ops::Add<u64> for Hash {
-    type Output = Self;
-
-    // Allowed because of hot path and certainty of no loss
-    #[allow(clippy::cast_lossless)]
-    fn add(self, rhs: u64) -> Self {
-        let lo = std::num::Wrapping(self.lo) + std::num::Wrapping(rhs as u128);
-        Self {
-            lo: lo.0,
-            hi: self.hi + if self.lo > lo.0 { 1 } else { 0 },
-        }
-    }
-}
-
-impl std::ops::BitAnd<u8> for Hash {
-    type Output = Self;
-
-    // Allowed because of hot path and certainty of no loss
-    #[allow(clippy::cast_lossless)]
-    fn bitand(self, rhs: u8) -> Self {
-        Self {
-            lo: self.lo & rhs as u128,
-            hi: self.hi,
-        }
-    }
-}
-
-impl std::ops::BitAnd<u64> for Hash {
-    type Output = Self;
-
-    // Allowed because of hot path and certainty of no loss
-    #[allow(clippy::cast_lossless)]
-    fn bitand(self, rhs: u64) -> Self {
-        Self {
-            lo: self.lo & rhs as u128,
-            hi: self.hi,
-        }
-    }
-}
-
 impl std::ops::BitOr<u8> for Hash {
     type Output = Self;
 
     // Allowed because of hot path and certainty of no loss
     #[allow(clippy::cast_lossless)]
     fn bitor(self, rhs: u8) -> Self {
-        Self {
-            lo: self.lo | rhs as u128,
-            hi: self.hi,
-        }
-    }
-}
-
-impl std::ops::BitOr<u64> for Hash {
-    type Output = Self;
-
-    // Allowed because of hot path and certainty of no loss
-    #[allow(clippy::cast_lossless)]
-    fn bitor(self, rhs: u64) -> Self {
         Self {
             lo: self.lo | rhs as u128,
             hi: self.hi,

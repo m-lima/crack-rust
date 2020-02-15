@@ -1,32 +1,6 @@
 use super::*;
 
 #[test]
-fn add() {
-    let mut hash = Hash {
-        lo: u128::max_value() - 1,
-        hi: 16,
-    };
-    hash = hash + 1u64;
-    assert_eq!(
-        hash,
-        Hash {
-            hi: 16,
-            lo: u128::max_value(),
-        }
-    );
-}
-
-#[test]
-fn add_overflow() {
-    let mut hash = Hash {
-        lo: u128::max_value(),
-        hi: 16,
-    };
-    hash = hash + 1u8;
-    assert_eq!(hash, Hash { hi: 17, lo: 0 });
-}
-
-#[test]
 fn shift() {
     let mut hash = Hash { lo: 1, hi: 8 };
     hash = hash << 4;
