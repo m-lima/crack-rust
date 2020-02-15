@@ -128,15 +128,19 @@ impl Print {
             println!();
             println!("Summary:");
             separator();
-            println!("{:19}{}", "Threads launched:", summary.thread_count);
-            duration("Time elapsed:", 19, &summary.duration);
-            println!("{:19}{}", "Hashes:", summary.hash_count);
+            println!("{:21}{}", "Threads launched:", summary.thread_count);
+            duration("Time elapsed:", 21, &summary.duration);
+            println!("{:21}{}", "Hashes:", summary.hash_count);
+            if summary.duration.as_micros() == 0 {
+                println!("Hashes per millisec: NaN");
+            } else {
+                println!(
+                    "Hashes per millisec: {}",
+                    (u128::from(summary.hash_count) * 1_000) / summary.duration.as_micros()
+                );
+            };
             println!(
-                "Hashes per second: {}",
-                u128::from(summary.hash_count) / summary.duration.as_millis()
-            );
-            println!(
-                "{:19}{}/{} ({}%)",
+                "{:21}{}/{} ({}%)",
                 "Values found:",
                 summary.cracked_count,
                 summary.total_count,

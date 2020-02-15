@@ -6,28 +6,15 @@ pub enum Error {
     ParseError,
 }
 
-#[derive(Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash)]
 pub struct Hash {
     pub hi: u128,
     pub lo: u128,
 }
 
-impl Hash {
-    pub fn default() -> Self {
+impl Default for Hash {
+    fn default() -> Self {
         Self { hi: 0, lo: 0 }
-    }
-}
-
-impl std::hash::Hash for Hash {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u128(self.hi);
-        state.write_u128(self.lo);
-    }
-}
-
-impl PartialEq for Hash {
-    fn eq(&self, other: &Self) -> bool {
-        self.hi == other.hi && self.lo == other.lo
     }
 }
 
@@ -199,24 +186,13 @@ impl Into for String {
 }
 
 pub fn compute<D: digest::Digest>(salted_prefix: &str, number: &str) -> Hash {
+    use std::convert::TryInto;
     let mut digest = D::new();
     digest.input(salted_prefix.as_bytes());
     digest.input(number.as_bytes());
     let result = digest.result();
     Hash {
-        lo: unsafe {
-            std::mem::transmute::<[u8; 16], u128>({
-                let mut value = std::mem::MaybeUninit::<[u8; 16]>::uninit().assume_init();
-                value.copy_from_slice(&result[00..16]);
-                value
-            })
-        },
-        hi: unsafe {
-            std::mem::transmute::<[u8; 16], u128>({
-                let mut value = std::mem::MaybeUninit::<[u8; 16]>::uninit().assume_init();
-                value.copy_from_slice(&result[16..32]);
-                value
-            })
-        },
+        lo: unsafe { std::mem::transmute::<[u8; 16], u128>(result[00..16].try_into().unwrap()) },
+        hi: unsafe { std::mem::transmute::<[u8; 16], u128>(result[16..32].try_into().unwrap()) },
     }
 }

@@ -63,20 +63,18 @@ pub fn execute(options: &options::Decrypt) -> summary::Variant {
         let prefix = options.prefix.clone();
         let salted_prefix = format!("{}{}", options.shared.salt, options.prefix);
         let length = options.length as usize;
-        let this_thread_space = if t < u64::from(thread_count - 1) {
-            thread_space
-        } else {
-            options.number_space - t * thread_space
-        };
+        let first = t * thread_space;
+        let last = std::cmp::min(first + thread_space, options.number_space);
 
         threads.push(std::thread::spawn(move || unsafe {
             let count = &*count_sender.data;
             let input = &*input_sender.data;
-            for n in (t * this_thread_space)..((t + 1) * this_thread_space) {
+
+            for n in first..last {
                 if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1
                     && count.load(std::sync::atomic::Ordering::Acquire) == 0
                 {
-                    return n - (t * this_thread_space);
+                    return n - first;
                 }
 
                 let number = format!("{:01$}", n, length);
@@ -90,12 +88,12 @@ pub fn execute(options: &options::Decrypt) -> summary::Variant {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     if input.len() == 1 {
                         println!("{}{:02$}", &prefix, n, length);
-                        return n - (t * this_thread_space);
+                        return n - first;
                     }
                     println!("{:x} :: {}{:03$}", &hash, &prefix, n, length);
                 }
             }
-            this_thread_space
+            last - first
         }));
     }
 
