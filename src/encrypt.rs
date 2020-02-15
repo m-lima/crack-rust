@@ -2,7 +2,7 @@ use super::hash;
 use super::options;
 use super::summary;
 
-pub fn execute(options: &options::Encrypt) -> summary::Variant {
+pub fn execute(options: &options::Encrypt) -> summary::Mode {
     for input in &options.shared.input {
         let result = match &options.shared.algorithm {
             options::Algorithm::MD5 => hash::compute::<md5::Md5>(&options.shared.salt, &input),
@@ -17,5 +17,5 @@ pub fn execute(options: &options::Encrypt) -> summary::Variant {
         }
     }
 
-    summary::Variant::Encrypt()
+    summary::Mode::Encrypt()
 }

@@ -252,16 +252,16 @@ fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> options::Shared {
     }
 }
 
-fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Verboseness) {
+fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verboseness) {
     (
-        options::Variant::Encrypt(options::Encrypt {
+        options::Mode::Encrypt(options::Encrypt {
             shared: parse_shared_args(&matches),
         }),
         parse_verboseness(&matches),
     )
 }
 
-fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Verboseness) {
+fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verboseness) {
     let shared = parse_shared_args(&matches);
 
     let prefix = String::from(
@@ -291,7 +291,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Ve
     // let files = Vec::<String>::new();
 
     (
-        options::Variant::Decrypt(options::Decrypt {
+        options::Mode::Decrypt(options::Decrypt {
             shared,
             thread_count,
             length,
@@ -302,7 +302,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Ve
     )
 }
 
-pub fn parse() -> (options::Variant, print::Verboseness) {
+pub fn parse() -> (options::Mode, print::Verboseness) {
     let matches = setup();
     match matches.subcommand() {
         (cmd!(_Command::Encrypt), Some(sub_matches)) => parse_encrypt(&sub_matches),

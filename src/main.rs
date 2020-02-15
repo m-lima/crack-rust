@@ -17,8 +17,8 @@ fn main() {
     print.options(&options);
 
     let summary = match &options {
-        options::Variant::Encrypt(options) => encrypt::execute(options),
-        options::Variant::Decrypt(options) => decrypt::execute(options),
+        options::Mode::Encrypt(options) => encrypt::execute(options),
+        options::Mode::Decrypt(options) => decrypt::execute(options),
     };
 
     print.summary(&summary);

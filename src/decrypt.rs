@@ -33,7 +33,7 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
-pub fn execute(options: &options::Decrypt) -> summary::Variant {
+pub fn execute(options: &options::Decrypt) -> summary::Mode {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
@@ -99,7 +99,7 @@ pub fn execute(options: &options::Decrypt) -> summary::Variant {
 
     let hash_count = threads.into_iter().map(|t| t.join().unwrap()).sum();
 
-    summary::Variant::Decrypt(summary::Decrypt {
+    summary::Mode::Decrypt(summary::Decrypt {
         total_count: input.len(),
         cracked_count: input.len() - count.load(std::sync::atomic::Ordering::Relaxed),
         duration: time.elapsed(),

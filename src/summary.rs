@@ -6,7 +6,7 @@ pub struct Decrypt {
     pub thread_count: u8,
 }
 
-pub enum Variant {
+pub enum Mode {
     Encrypt(),
     Decrypt(Decrypt),
 }

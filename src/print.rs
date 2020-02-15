@@ -107,14 +107,14 @@ impl Print {
         self.input(&options.shared.input);
     }
 
-    pub fn options(&self, options: &options::Variant) {
+    pub fn options(&self, options: &options::Mode) {
         no_verbose_gate!(self);
 
         println!("Options:");
         separator();
         match options {
-            options::Variant::Encrypt(options) => self.encrypt_options(options),
-            options::Variant::Decrypt(options) => self.decrypt_options(options),
+            options::Mode::Encrypt(options) => self.encrypt_options(options),
+            options::Mode::Decrypt(options) => self.decrypt_options(options),
         }
 
         println!();
@@ -122,9 +122,9 @@ impl Print {
         separator();
     }
 
-    pub fn summary(&self, summary: &summary::Variant) {
+    pub fn summary(&self, summary: &summary::Mode) {
         no_verbose_gate!(self);
-        if let summary::Variant::Decrypt(summary) = summary {
+        if let summary::Mode::Decrypt(summary) = summary {
             println!();
             println!("Summary:");
             separator();

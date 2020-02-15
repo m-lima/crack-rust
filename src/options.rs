@@ -26,7 +26,7 @@ pub struct Decrypt {
     pub prefix: String,
 }
 
-pub enum Variant {
+pub enum Mode {
     Encrypt(Encrypt),
     Decrypt(Decrypt),
 }
