@@ -1,5 +1,3 @@
-extern crate clap;
-
 use clap::value_t;
 
 use super::options;
@@ -100,6 +98,7 @@ macro_rules! arg {
     };
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn setup<'a>() -> clap::ArgMatches<'a> {
     clap::App::new("Cracker")
         .version("0.1")
@@ -198,10 +197,10 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
                                 if v > 0 {
                                     Ok(())
                                 } else {
-                                    Err(String::from(format!(
+                                    Err(format!(
                                         "{} must be a positive integer",
                                         arg!(_Arg::Length, ArgField::Name)
-                                    )))
+                                    ))
                                 }
                             })
                         }),
@@ -224,7 +223,7 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
         .get_matches()
 }
 
-fn get_input(matches: &clap::ArgMatches) -> Vec<String> {
+fn get_input(matches: &clap::ArgMatches<'_>) -> Vec<String> {
     matches
         .values_of(arg!(_Arg::Input, ArgField::Name))
         .unwrap()
@@ -232,7 +231,7 @@ fn get_input(matches: &clap::ArgMatches) -> Vec<String> {
         .collect()
 }
 
-fn parse_verboseness(matches: &clap::ArgMatches) -> print::Verboseness {
+fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> print::Verboseness {
     match matches.occurrences_of(arg!(_Arg::Verbose)) {
         2 => print::Verboseness::High,
         1 => print::Verboseness::Low,
@@ -240,7 +239,7 @@ fn parse_verboseness(matches: &clap::ArgMatches) -> print::Verboseness {
     }
 }
 
-fn parse_shared_args(matches: &clap::ArgMatches) -> options::Shared {
+fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> options::Shared {
     options::Shared {
         algorithm: value_t!(
             matches,
@@ -253,7 +252,7 @@ fn parse_shared_args(matches: &clap::ArgMatches) -> options::Shared {
     }
 }
 
-fn parse_encrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verboseness) {
+fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Verboseness) {
     (
         options::Variant::Encrypt(options::Encrypt {
             shared: parse_shared_args(&matches),
@@ -262,7 +261,7 @@ fn parse_encrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verbos
     )
 }
 
-fn parse_decrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verboseness) {
+fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Variant, print::Verboseness) {
     let shared = parse_shared_args(&matches);
 
     let prefix = String::from(
@@ -270,13 +269,19 @@ fn parse_decrypt(matches: &clap::ArgMatches) -> (options::Variant, print::Verbos
             .value_of(arg!(_Arg::Prefix, ArgField::Name))
             .unwrap_or(""),
     );
-    let total_length: u8 = matches
+    let total_length = matches
         .value_of(arg!(_Arg::Length, ArgField::Name))
         .unwrap()
         .parse::<u8>()
         .unwrap();
+    if prefix.len() > usize::from(total_length) {
+        panic!("Prefix is too long");
+    }
+
+    // Allowed because the length was checked for overflow
+    #[allow(clippy::cast_possible_truncation)]
     let length = total_length - prefix.len() as u8;
-    let number_space = 10u64.pow(length as u32);
+    let number_space = 10_u64.pow(u32::from(length));
     let thread_count = matches
         .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
         .unwrap()

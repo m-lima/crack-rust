@@ -1,5 +1,3 @@
-extern crate clap;
-
 use clap::arg_enum;
 
 clap::arg_enum! {

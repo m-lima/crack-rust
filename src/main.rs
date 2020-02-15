@@ -1,3 +1,6 @@
+#![deny(warnings, clippy::pedantic)]
+#![warn(rust_2018_idioms)]
+
 mod args;
 mod decrypt;
 mod encrypt;

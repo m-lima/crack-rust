@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn add() {
     let mut hash = Hash {
-        lo: std::u128::MAX - 1,
+        lo: u128::max_value() - 1,
         hi: 16,
     };
     hash = hash + 1u64;
@@ -11,7 +11,7 @@ fn add() {
         hash,
         Hash {
             hi: 16,
-            lo: std::u128::MAX
+            lo: u128::max_value(),
         }
     );
 }
@@ -19,7 +19,7 @@ fn add() {
 #[test]
 fn add_overflow() {
     let mut hash = Hash {
-        lo: std::u128::MAX,
+        lo: u128::max_value(),
         hi: 16,
     };
     hash = hash + 1u8;

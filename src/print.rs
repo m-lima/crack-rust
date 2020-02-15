@@ -53,12 +53,17 @@ fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
         }
     }
 
-    let seconds = (millis % 60_000) as f32 / 1000 as f32;
+    // Allowed because modulo 60000 is never grater than u16::MAX (65536)
+    #[allow(clippy::cast_possible_truncation)]
+    let seconds = {
+        let seconds = f32::from((millis % 60_000) as u16);
+        seconds / 1000_f32
+    };
     println!("{:.2}s ({}ms)", seconds, millis);
 }
 
 impl Print {
-    fn input(&self, input: &Vec<String>) {
+    fn input(&self, input: &[String]) {
         high_verbose_gate!(self);
 
         println!();
@@ -69,7 +74,7 @@ impl Print {
         }
     }
 
-    fn shared_options(&self, options: &options::Shared) {
+    fn shared_options(options: &options::Shared) {
         println!("{:15}{}", "Algorithm:", options.algorithm);
         if !options.salt.is_empty() {
             println!("{:15}{}", "Salt:", options.salt);
@@ -77,12 +82,12 @@ impl Print {
     }
 
     fn encrypt_options(&self, options: &options::Encrypt) {
-        self.shared_options(&options.shared);
+        Self::shared_options(&options.shared);
         self.input(&options.shared.input);
     }
 
     fn decrypt_options(&self, options: &options::Decrypt) {
-        self.shared_options(&options.shared);
+        Self::shared_options(&options.shared);
         println!(
             "{:15}{}",
             "Threads:",
@@ -96,7 +101,7 @@ impl Print {
         println!(
             "{:15}{}",
             "Length:",
-            options.length + options.prefix.len() as u8
+            usize::from(options.length) + options.prefix.len()
         );
         println!("{:15}{}", "Possibilities:", options.number_space);
         self.input(&options.shared.input);
@@ -128,7 +133,7 @@ impl Print {
             println!("{:19}{}", "Hashes:", summary.hash_count);
             println!(
                 "Hashes per second: {}",
-                summary.hash_count / summary.duration.as_millis() as u64
+                u128::from(summary.hash_count) / summary.duration.as_millis()
             );
             println!(
                 "{:19}{}/{} ({}%)",

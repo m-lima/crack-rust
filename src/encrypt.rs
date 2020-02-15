@@ -1,10 +1,9 @@
-extern crate md5;
-extern crate sha2;
-
 use super::hash;
 use super::options;
 use super::summary;
 
+// Allowed to maintain consistency between calls (decrypt::execute)
+#[allow(clippy::needless_pass_by_value)]
 pub fn execute(options: options::Encrypt) -> summary::Variant {
     for input in &options.shared.input {
         let result = match &options.shared.algorithm {
