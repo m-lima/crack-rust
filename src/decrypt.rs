@@ -150,7 +150,7 @@ mod cpu {
     }
 
     #[cfg(test)]
-    mod tests {
+    mod test {
         use super::*;
 
         fn new_hash(string: &str) -> hash::Hash {
