@@ -6,4 +6,4 @@
 .vscode
 
 # Hidden
-src/secrets.rs
+hidden/
