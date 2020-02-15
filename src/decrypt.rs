@@ -1,16 +1,17 @@
+use eytzinger::SliceExt;
+
 use super::hash;
 use super::options;
 use super::summary;
-use eytzinger::SliceExt;
 
 static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
 
 #[derive(Clone)]
-pub struct Input {
-    data: std::rc::Rc<Vec<hash::Hash>>,
+pub struct Sender<T> {
+    data: *const T,
 }
 
-unsafe impl Send for Input {}
+unsafe impl<T> Send for Sender<T> {}
 
 // Allowed because the count was checked for overflow
 #[allow(clippy::cast_possible_truncation)]
@@ -32,25 +33,22 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
-pub fn execute(options: options::Decrypt) -> summary::Variant {
+pub fn execute(options: &options::Decrypt) -> summary::Variant {
     let time = std::time::Instant::now();
 
-    let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(
-        options.shared.input.len(),
-    ));
+    let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
     let input = {
         use hash::Into;
         let mut data = options
             .shared
             .input
-            .into_iter()
+            .iter()
             .map(|v| v.into_hash().unwrap())
             .collect::<Vec<hash::Hash>>();
+        data.sort();
         data.as_mut_slice()
             .eytzingerize(&mut eytzinger::permutation::InplacePermutator);
-        Input {
-            data: std::rc::Rc::new(data),
-        }
+        data
     };
 
     let thread_count = get_optimal_thread_count(options.thread_count, options.number_space);
@@ -58,8 +56,8 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
     let mut threads = Vec::<std::thread::JoinHandle<u64>>::with_capacity(thread_count as usize);
 
     for t in 0..u64::from(thread_count) {
-        let count = count.clone();
-        let input = input.clone();
+        let count_sender = Sender { data: &count };
+        let input_sender = Sender { data: &input };
 
         let algorithm = options.shared.algorithm.clone();
         let prefix = options.prefix.clone();
@@ -71,7 +69,9 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
             options.number_space - t * thread_space
         };
 
-        threads.push(std::thread::spawn(move || {
+        threads.push(std::thread::spawn(move || unsafe {
+            let count = &*count_sender.data;
+            let input = &*input_sender.data;
             for n in (t * this_thread_space)..((t + 1) * this_thread_space) {
                 if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1
                     && count.load(std::sync::atomic::Ordering::Acquire) == 0
@@ -86,9 +86,9 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
                         hash::compute::<sha2::Sha256>(&salted_prefix, &number)
                     }
                 };
-                if input.data.eytzinger_search(&hash).is_some() {
+                if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
-                    if input.data.len() == 1 {
+                    if input.len() == 1 {
                         println!("{}{:02$}", &prefix, n, length);
                         return n - (t * this_thread_space);
                     }
@@ -102,8 +102,8 @@ pub fn execute(options: options::Decrypt) -> summary::Variant {
     let hash_count = threads.into_iter().map(|t| t.join().unwrap()).sum();
 
     summary::Variant::Decrypt(summary::Decrypt {
-        total_count: input.data.len(),
-        cracked_count: input.data.len() - count.load(std::sync::atomic::Ordering::Relaxed),
+        total_count: input.len(),
+        cracked_count: input.len() - count.load(std::sync::atomic::Ordering::Relaxed),
         duration: time.elapsed(),
         hash_count,
         thread_count,
