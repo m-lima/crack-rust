@@ -33,22 +33,16 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
-pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
+fn execute_inner<H: hash::Hash + 'static>(options: &options::Decrypt) -> summary::Mode {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
     let input = {
-        use hash::Into;
         let mut data = options
             .shared
             .input
             .iter()
-            .map(|v| {
-                v.into_hash().unwrap_or_else(|err| {
-                    eprintln!("Failed to build build hash: {}", err);
-                    std::process::exit(-1);
-                })
-            })
+            .map(|s| hash::hash::<H>(s))
             .collect::<Vec<_>>();
         data.sort_unstable();
         data.as_mut_slice()
@@ -64,7 +58,6 @@ pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
 
-        let algorithm = options.shared.algorithm.clone();
         let prefix = options.prefix.clone();
         let salted_prefix = format!("{}{}", options.shared.salt, options.prefix);
         let length = options.length as usize;
@@ -84,12 +77,7 @@ pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
                 }
 
                 let number = format!("{:01$}", n, length);
-                let hash = match &algorithm {
-                    options::Algorithm::MD5 => hash::compute::<md5::Md5>(&salted_prefix, &number),
-                    options::Algorithm::SHA256 => {
-                        hash::compute::<sha2::Sha256>(&salted_prefix, &number)
-                    }
-                };
+                let hash = hash::compute::<H>(&salted_prefix, &number);
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
@@ -129,15 +117,16 @@ pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
     })
 }
 
+pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
+    match &options.shared.algorithm {
+        options::Algorithm::MD5 => execute_inner::<hash::h128::Hash>(&options),
+        options::Algorithm::SHA256 => execute_inner::<hash::h256::Hash>(&options),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-
-    fn new_hash(string: &str) -> hash::Hash {
-        use hash::Into;
-        let hash = String::from(string);
-        hash.into_hash().unwrap()
-    }
 
     #[test]
     fn test_decryption() {
@@ -146,22 +135,28 @@ mod test {
 
         let expected = vec![
             summary::Decrypted {
-                hash: new_hash("6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090"),
+                hash: String::from(
+                    "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
+                ),
                 plain: prefix.clone() + "23",
             },
             summary::Decrypted {
-                hash: new_hash("97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67"),
+                hash: String::from(
+                    "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
+                ),
                 plain: prefix.clone() + "55",
             },
             summary::Decrypted {
-                hash: new_hash("237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e"),
+                hash: String::from(
+                    "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
+                ),
                 plain: prefix.clone() + "99",
             },
         ];
 
         let options = options::Decrypt {
             shared: options::Shared {
-                input: expected.iter().map(|v| format!("{:x}", v.hash)).collect(),
+                input: expected.iter().map(|v| v.hash.to_string()).collect(),
                 algorithm: options::Algorithm::SHA256,
                 salt,
             },

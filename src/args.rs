@@ -106,7 +106,7 @@ macro_rules! arg {
     (_Arg::Device, $f:path) => {
         match $f {
             ArgField::Name => "device",
-            ArgField::Short => "c",
+            ArgField::Short => "d",
             ArgField::Parameter => "DEVICE",
         }
     };

@@ -1,20 +1,29 @@
-#[derive(Debug)]
-pub enum Error {
-    Parse(u8),
-}
-impl std::error::Error for Error {}
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        match &self {
-            Self::Parse(c) => write!(fmt, "invalid character '{}'", *c as char),
-        }
-    }
-}
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Copy, Clone)]
 pub struct Hash {
     hi: u128,
     lo: u128,
+}
+
+impl super::Hash for Hash {
+    type Algorithm = sha2::Sha256;
+
+    fn from<N: digest::generic_array::ArrayLength<u8>>(
+        bytes: digest::generic_array::GenericArray<u8, N>,
+    ) -> Self {
+        use std::convert::TryInto;
+        Self {
+            lo: unsafe {
+                std::mem::transmute::<[u8; 16], u128>(
+                    bytes[00..16].try_into().expect("Failed lo transmutation"),
+                )
+            },
+            hi: unsafe {
+                std::mem::transmute::<[u8; 16], u128>(
+                    bytes[16..32].try_into().expect("Failed lo transmutation"),
+                )
+            },
+        }
+    }
 }
 
 impl Default for Hash {
@@ -38,6 +47,49 @@ impl std::ops::BitOrAssign<u8> for Hash {
         self.lo |= rhs as u128;
     }
 }
+
+//impl std::convert::From<[u64; 2]> for Hash {
+//    fn from(array: [u64; 2]) -> Self {
+//        Self {
+//            lo: unsafe { std::mem::transmute::<[u64; 2], u128>(array) },
+//            hi: 0,
+//        }
+//    }
+//}
+//
+//impl std::convert::From<[u64; 4]> for Hash {
+//    fn from(array: [u64; 4]) -> Self {
+//        use std::convert::TryInto;
+//        Self {
+//            lo: unsafe {
+//                std::mem::transmute::<[u64; 2], u128>(
+//                    array[0..2].try_into().expect("Failed lo transmutation"),
+//                )
+//            },
+//            hi: unsafe {
+//                std::mem::transmute::<[u64; 2], u128>(
+//                    array[2..4].try_into().expect("Failed hi transmutation"),
+//                )
+//            },
+//        }
+//    }
+//}
+//
+//impl std::convert::Into<[u64; 2]> for Hash {
+//    fn into(self) -> [u64; 2] {
+//        unsafe { std::mem::transmute::<u128, [u64; 2]>(self.lo) }
+//    }
+//}
+//
+//impl std::convert::Into<[u64; 4]> for Hash {
+//    fn into(self) -> [u64; 4] {
+//        let lo = unsafe { std::mem::transmute::<u128, [u64; 2]>(self.lo) };
+//        let hi = unsafe { std::mem::transmute::<u128, [u64; 2]>(self.hi) };
+//        [lo[1], lo[0], hi[1], hi[0]]
+//    }
+//}
+//
+//unsafe impl ocl::traits::OclPrm for Hash {}
 
 impl std::fmt::LowerHex for Hash {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -75,43 +127,6 @@ impl std::fmt::Binary for Hash {
     }
 }
 
-pub trait Into {
-    fn into_hash(&self) -> Result<Hash, Error>;
-}
-
-impl Into for String {
-    fn into_hash(&self) -> Result<Hash, Error> {
-        let mut hash = Hash::default();
-        for (i, c) in self.chars().rev().enumerate() {
-            let int = match c as u8 {
-                c if c >= 0x30 && c < 0x3a => c - 0x30,       // decimal
-                c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
-                c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
-                c => return Err(Error::Parse(c)),
-            };
-            if i % 2 == 0 {
-                hash <<= 8;
-                hash |= int;
-            } else {
-                hash |= int << 4;
-            }
-        }
-        Ok(hash)
-    }
-}
-
-pub fn compute<D: digest::Digest>(salted_prefix: &str, number: &str) -> Hash {
-    use std::convert::TryInto;
-    let mut digest = D::new();
-    digest.input(salted_prefix.as_bytes());
-    digest.input(number.as_bytes());
-    let result = digest.result();
-    Hash {
-        lo: unsafe { std::mem::transmute::<[u8; 16], u128>(result[00..16].try_into().unwrap()) },
-        hi: unsafe { std::mem::transmute::<[u8; 16], u128>(result[16..32].try_into().unwrap()) },
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -143,7 +158,7 @@ mod test {
     fn parse_string() {
         let input =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let parsed = input.into_hash().unwrap();
+        let parsed = super::super::hash::<Hash>(&input);
 
         let expected = Hash {
             hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
@@ -170,7 +185,7 @@ mod test {
     fn string_round_trip() {
         let string =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let hash = string.into_hash().unwrap();
+        let hash = super::super::hash::<Hash>(&string);
         assert_eq!(format!("{:x}", hash), string);
     }
 
@@ -187,7 +202,7 @@ mod test {
     #[test]
     fn compute() {
         //dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80
-        let hash = super::compute::<sha2::Sha256>(&String::from("123"), &String::from("abc"));
+        let hash = super::super::compute::<Hash>(&String::from("123"), &String::from("abc"));
 
         use sha2::Digest;
         let mut expected_hash = sha2::Sha256::new();
@@ -202,10 +217,10 @@ mod test {
 
     #[test]
     fn cmp() {
-        let hash_10 = super::Hash { hi: 1, lo: 0 };
-        let hash_20 = super::Hash { hi: 2, lo: 0 };
-        let hash_01 = super::Hash { hi: 0, lo: 1 };
-        let hash_02 = super::Hash { hi: 0, lo: 2 };
+        let hash_10 = Hash { hi: 1, lo: 0 };
+        let hash_20 = Hash { hi: 2, lo: 0 };
+        let hash_01 = Hash { hi: 0, lo: 1 };
+        let hash_02 = Hash { hi: 0, lo: 2 };
 
         assert_eq!(hash_10.cmp(&hash_10), std::cmp::Ordering::Equal);
         assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
@@ -213,4 +228,15 @@ mod test {
         assert_eq!(hash_10.cmp(&hash_01), std::cmp::Ordering::Greater);
         assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
     }
+
+    //    #[test]
+    //    fn array_round_trip() {
+    //        let hash = Hash { hi: 14, lo: 58 };
+    //
+    //        let array: [u128; 2] = hash.into();
+    //        assert_eq!(array, [14_u128, 58_u128]);
+    //
+    //        let back_hash = Hash::from(array);
+    //        assert_eq!(hash, back_hash);
+    //    }
 }

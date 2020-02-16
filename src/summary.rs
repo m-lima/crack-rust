@@ -16,12 +16,15 @@ pub enum Mode {
 
 #[derive(Debug, PartialEq)]
 pub struct Decrypted {
-    pub hash: hash::Hash,
+    pub hash: String,
     pub plain: String,
 }
 
 impl Decrypted {
-    pub fn new(hash: hash::Hash, plain: String) -> Self {
-        Self { hash, plain }
+    pub fn new<H: hash::Hash>(hash: H, plain: String) -> Self {
+        Self {
+            hash: hash.to_string(),
+            plain,
+        }
     }
 }

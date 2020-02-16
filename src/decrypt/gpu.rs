@@ -18,28 +18,28 @@ fn get_source_for<'a>(algorithm: &options::Algorithm) -> &'a str {
 pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
     let source = get_source_for(&options.shared.algorithm);
 
-    //        let hashes = options
-    //            .shared
-    //            .input
-    //            .iter()
-    //            .map(|h| {
-    //                use crate::hash::Into;
-    //                h.into_hash().unwrap_or_else(|err| {
-    //                    eprintln!("Failed to build build hash: {}", err);
-    //                    std::process::exit(-1);
-    //                }).
-    //            })
-    //            .collect::<Vec<_>>();
-    //
-    //        let buffer = ocl::Buffer::builder()
-    //            .flags(ocl::MemFlags::READ_ONLY)
-    //            .len(options.shared.input.len())
-    //            .copy_host_slice(&hashes)
-    //            .build()
-    //            .unwrap_or_else(|err| {
-    //                eprintln!("Failed to create input buffer: {}", err);
+    //    let hashes = options
+    //        .shared
+    //        .input
+    //        .iter()
+    //        .map(|h| {
+    //            use crate::hash::Into;
+    //            h.into_hash().unwrap_or_else(|err| {
+    //                eprintln!("Failed to build build hash: {}", err);
     //                std::process::exit(-1);
-    //            });
+    //            })
+    //        })
+    //        .collect::<Vec<_>>();
+    //
+    //    let buffer = ocl::Buffer::builder()
+    //        .flags(ocl::MemFlags::READ_ONLY)
+    //        .len(options.shared.input.len())
+    //        .copy_host_slice(&hashes)
+    //        .build()
+    //        .unwrap_or_else(|err| {
+    //            eprintln!("Failed to create input buffer: {}", err);
+    //            std::process::exit(-1);
+    //        });
 
     //    let program = ocl::Program::builder()
     //        .source(source)
