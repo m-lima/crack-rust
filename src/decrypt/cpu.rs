@@ -81,7 +81,6 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
                 let number = format!("{:01$}", n, length);
                 let hash = C::digest(&salted_prefix, &number);
                 if input.eytzinger_search(&hash).is_some() {
-                    use hash::Hash;
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
                     decrypted.push(summary::Decrypted::new(hash.to_string(), result.clone()));

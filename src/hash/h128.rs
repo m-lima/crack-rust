@@ -3,7 +3,7 @@ pub struct Hash {
     lo: u128,
 }
 
-impl super::Hash for Hash {
+impl super::Builder for Hash {
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self {
@@ -17,6 +17,8 @@ impl super::Hash for Hash {
         }
     }
 }
+
+impl super::Hash for Hash {}
 
 impl Default for Hash {
     fn default() -> Self {
@@ -59,6 +61,12 @@ impl std::fmt::Binary for Hash {
             }
         }
         Ok(())
+    }
+}
+
+impl std::fmt::Display for Hash {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::LowerHex::fmt(&self, fmt)
     }
 }
 

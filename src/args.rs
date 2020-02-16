@@ -180,7 +180,7 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name(arg!(_Arg::Device, ArgField::Parameter))
                 .help("Device to run in [GPU, CPU]")
                 .takes_value(true)
-                .default_value(device!(options::Device::GPU))
+                .default_value(device!(options::Device::CPU))
                 .possible_values(&options::Device::variants())
                 .case_insensitive(true),
         )
