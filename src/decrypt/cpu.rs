@@ -11,6 +11,14 @@ pub struct Sender<T> {
     data: *const T,
 }
 
+impl<T> std::ops::Deref for Sender<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.data }
+    }
+}
+
 unsafe impl<T> Send for Sender<T> {}
 
 // Allowed because the count was checked for overflow
@@ -66,9 +74,9 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
         let first = t * thread_space;
         let last = std::cmp::min(first + thread_space, options.number_space);
 
-        threads.push(std::thread::spawn(move || unsafe {
-            let count = &*count_sender.data;
-            let input = &*input_sender.data;
+        threads.push(std::thread::spawn(move || {
+            let count = &count_sender;
+            let input = &input_sender;
             let mut decrypted = Vec::new();
 
             for n in first..last {
