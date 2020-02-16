@@ -1,21 +1,31 @@
 mod h128;
 mod h256;
 
-pub trait Hash:
-    PartialEq + Eq + PartialOrd + Ord + std::fmt::LowerHex + std::fmt::Binary + ToString
-{
+pub trait GpuCompatible {
     type GpuArray: ocl::OclPrm;
     fn to_gpu_array(&self) -> Self::GpuArray;
 }
 
-pub trait Builder: Hash + std::ops::ShlAssign<u8> + std::ops::BitOrAssign<u8> + Default {
+pub trait Hash:
+    GpuCompatible
+    + std::fmt::LowerHex
+    + std::fmt::Binary
+    + ToString
+    + PartialEq
+    + Eq
+    + PartialOrd
+    + Ord
+    + std::ops::ShlAssign<u8>
+    + std::ops::BitOrAssign<u8>
+    + Default
+{
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self;
 }
 
 pub trait AlgorithmConverter<D: digest::Digest> {
-    type Output: Builder + 'static;
+    type Output: Hash + 'static;
     fn digest(salted_prefix: &str, number: &str) -> Self::Output {
         let mut digest = D::new();
         digest.input(salted_prefix.as_bytes());

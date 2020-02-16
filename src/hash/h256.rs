@@ -4,23 +4,18 @@ pub struct Hash {
     lo: u128,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Clone, Copy)]
-pub struct GpuHash([u64; 4]);
-unsafe impl ocl::OclPrm for GpuHash {}
-
-impl std::fmt::Display for GpuHash {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for block in &self.0 {
-            let bytes = &unsafe { std::mem::transmute::<u64, [u8; 8]>(*block) };
-            for b in bytes {
-                write!(fmt, "{:02x}", b)?;
-            }
-        }
-        Ok(())
+impl super::GpuCompatible for Hash {
+    type GpuArray = GpuHash;
+    fn to_gpu_array(&self) -> Self::GpuArray {
+        GpuHash(unsafe {
+            let lo = std::mem::transmute::<u128, [u64; 2]>(self.lo);
+            let hi = std::mem::transmute::<u128, [u64; 2]>(self.hi);
+            [lo[0], lo[1], hi[0], hi[1]]
+        })
     }
 }
 
-impl super::Builder for Hash {
+impl super::Hash for Hash {
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self {
@@ -37,17 +32,6 @@ impl super::Builder for Hash {
                 )
             },
         }
-    }
-}
-
-impl super::Hash for Hash {
-    type GpuArray = GpuHash;
-    fn to_gpu_array(&self) -> Self::GpuArray {
-        GpuHash(unsafe {
-            let lo = std::mem::transmute::<u128, [u64; 2]>(self.lo);
-            let hi = std::mem::transmute::<u128, [u64; 2]>(self.hi);
-            [lo[0], lo[1], hi[0], hi[1]]
-        })
     }
 }
 
@@ -112,6 +96,22 @@ impl std::fmt::Binary for Hash {
 impl std::fmt::Display for Hash {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::LowerHex::fmt(&self, fmt)
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Clone, Copy)]
+pub struct GpuHash([u64; 4]);
+unsafe impl ocl::OclPrm for GpuHash {}
+
+impl std::fmt::Display for GpuHash {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for block in &self.0 {
+            let bytes = &unsafe { std::mem::transmute::<u64, [u8; 8]>(*block) };
+            for b in bytes {
+                write!(fmt, "{:02x}", b)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -226,7 +226,7 @@ mod test {
             lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
         };
         {
-            use super::super::Hash;
+            use super::super::GpuCompatible;
             let gpu_array = expected.to_gpu_array();
 
             assert_eq!(gpu_array.to_string(), expected.to_string());

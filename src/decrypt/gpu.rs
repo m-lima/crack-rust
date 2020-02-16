@@ -26,7 +26,7 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
         .input
         .iter()
         .map(|h| {
-            use hash::Hash;
+            use hash::GpuCompatible;
             C::from_string(h).to_gpu_array()
         })
         .collect::<Vec<_>>();
