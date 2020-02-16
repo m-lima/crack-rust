@@ -310,7 +310,8 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
         .parse::<u8>()
         .unwrap();
     if prefix.len() > usize::from(total_length) {
-        panic!("Prefix is too long");
+        eprintln!("Prefix is too long");
+        std::process::exit(-1);
     }
 
     // Allowed because the length was checked for overflow

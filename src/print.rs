@@ -53,7 +53,7 @@ fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
         }
     }
 
-    // Allowed because modulo 60000 is never grater than u16::MAX (65536)
+    // Allowed because modulo 60000 is never grater than u16::MAX (65,536)
     #[allow(clippy::cast_possible_truncation)]
     let seconds = {
         let seconds = f32::from((millis % 60_000) as u16);

@@ -29,7 +29,8 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
         if requested_count == 0 {
             let cores = num_cpus::get();
             if cores > usize::from(u8::max_value()) {
-                panic!("Too many cores.. You have one powerful computer!");
+                eprintln!("Too many cores.. You have one powerful computer!");
+                std::process::exit(-1);
             }
             cores as u64
         } else {
