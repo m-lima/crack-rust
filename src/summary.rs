@@ -1,5 +1,3 @@
-use super::hash;
-
 pub struct Decrypt {
     pub total_count: usize,
     pub cracked_count: usize,
@@ -21,10 +19,7 @@ pub struct Decrypted {
 }
 
 impl Decrypted {
-    pub fn new<H: hash::Hash>(hash: H, plain: String) -> Self {
-        Self {
-            hash: hash.to_string(),
-            plain,
-        }
+    pub fn new(hash: String, plain: String) -> Self {
+        Self { hash, plain }
     }
 }

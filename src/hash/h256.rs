@@ -4,9 +4,7 @@ pub struct Hash {
     lo: u128,
 }
 
-impl super::Hash for Hash {
-    type Algorithm = sha2::Sha256;
-
+impl super::InnerHash for Hash {
     fn from<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self {
@@ -25,6 +23,8 @@ impl super::Hash for Hash {
         }
     }
 }
+
+impl super::Hash for Hash {}
 
 impl Default for Hash {
     fn default() -> Self {
