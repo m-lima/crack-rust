@@ -2,19 +2,17 @@ use crate::hash;
 use crate::options;
 use crate::summary;
 
-fn execute_typed<D: digest::Digest>(options: &options::Encrypt) -> summary::Mode {
+fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
+    options: &options::Encrypt,
+) -> summary::Mode {
     for input in &options.shared.input {
-        //        use hash::AlgorithmConverter;
         if options.shared.input.len() == 1 {
-            println!(
-                "{:x}",
-                32 //hash::Converter::digest(&options.shared.salt, &input)
-            );
+            println!("{:x}", C::digest(&options.shared.salt, &input));
         } else {
             println!(
                 "{} :: {:x}",
                 &input,
-                32 //hash::Converter::digest(&options.shared.salt, &input)
+                C::digest(&options.shared.salt, &input)
             );
         }
     }
@@ -24,7 +22,7 @@ fn execute_typed<D: digest::Digest>(options: &options::Encrypt) -> summary::Mode
 
 pub fn execute(options: &options::Encrypt) -> summary::Mode {
     match &options.shared.algorithm {
-        options::Algorithm::MD5 => execute_typed::<md5::Md5>(options),
-        options::Algorithm::SHA256 => execute_typed::<sha2::Sha256>(options),
+        options::Algorithm::MD5 => execute_typed::<_, hash::Converter<md5::Md5>>(options),
+        options::Algorithm::SHA256 => execute_typed::<_, hash::Converter<sha2::Sha256>>(options),
     }
 }

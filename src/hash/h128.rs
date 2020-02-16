@@ -3,8 +3,8 @@ pub struct Hash {
     lo: u128,
 }
 
-impl super::InnerHash for Hash {
-    fn from<N: digest::generic_array::ArrayLength<u8>>(
+impl super::Hash for Hash {
+    fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self {
         use std::convert::TryInto;
@@ -17,8 +17,6 @@ impl super::InnerHash for Hash {
         }
     }
 }
-
-impl super::Hash for Hash {}
 
 impl Default for Hash {
     fn default() -> Self {
@@ -66,7 +64,9 @@ impl std::fmt::Binary for Hash {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::super::AlgorithmConverter;
+    use super::super::Converter;
+    use super::Hash;
 
     #[test]
     fn shift() {
@@ -86,7 +86,7 @@ mod test {
     fn parse_string() {
         let input =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let parsed = super::super::hash::<Hash>(&input);
+        let parsed = Converter::<md5::Md5>::from_string(&input);
 
         let expected = Hash {
             lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
@@ -107,7 +107,7 @@ mod test {
     #[test]
     fn string_round_trip() {
         let string = String::from("dd130a849d7b29e5541b05d2f7f86a4a");
-        let hash = super::super::hash::<Hash>(&string);
+        let hash = Converter::<md5::Md5>::from_string(&string);
         assert_eq!(format!("{:x}", hash), string);
     }
 
@@ -124,7 +124,7 @@ mod test {
     #[test]
     fn compute() {
         //a906449d5769fa7361d7ecc6aa3f6d28
-        let hash = super::super::compute::<Hash>(&String::from("123"), &String::from("abc"));
+        let hash = Converter::<md5::Md5>::digest(&String::from("123"), &String::from("abc"));
 
         use sha2::Digest;
         let mut expected_hash = md5::Md5::new();

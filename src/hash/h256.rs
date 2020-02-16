@@ -4,8 +4,8 @@ pub struct Hash {
     lo: u128,
 }
 
-impl super::InnerHash for Hash {
-    fn from<N: digest::generic_array::ArrayLength<u8>>(
+impl super::Hash for Hash {
+    fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self {
         use std::convert::TryInto;
@@ -23,8 +23,6 @@ impl super::InnerHash for Hash {
         }
     }
 }
-
-impl super::Hash for Hash {}
 
 impl Default for Hash {
     fn default() -> Self {
@@ -47,49 +45,6 @@ impl std::ops::BitOrAssign<u8> for Hash {
         self.lo |= rhs as u128;
     }
 }
-
-//impl std::convert::From<[u64; 2]> for Hash {
-//    fn from(array: [u64; 2]) -> Self {
-//        Self {
-//            lo: unsafe { std::mem::transmute::<[u64; 2], u128>(array) },
-//            hi: 0,
-//        }
-//    }
-//}
-//
-//impl std::convert::From<[u64; 4]> for Hash {
-//    fn from(array: [u64; 4]) -> Self {
-//        use std::convert::TryInto;
-//        Self {
-//            lo: unsafe {
-//                std::mem::transmute::<[u64; 2], u128>(
-//                    array[0..2].try_into().expect("Failed lo transmutation"),
-//                )
-//            },
-//            hi: unsafe {
-//                std::mem::transmute::<[u64; 2], u128>(
-//                    array[2..4].try_into().expect("Failed hi transmutation"),
-//                )
-//            },
-//        }
-//    }
-//}
-//
-//impl std::convert::Into<[u64; 2]> for Hash {
-//    fn into(self) -> [u64; 2] {
-//        unsafe { std::mem::transmute::<u128, [u64; 2]>(self.lo) }
-//    }
-//}
-//
-//impl std::convert::Into<[u64; 4]> for Hash {
-//    fn into(self) -> [u64; 4] {
-//        let lo = unsafe { std::mem::transmute::<u128, [u64; 2]>(self.lo) };
-//        let hi = unsafe { std::mem::transmute::<u128, [u64; 2]>(self.hi) };
-//        [lo[1], lo[0], hi[1], hi[0]]
-//    }
-//}
-//
-//unsafe impl ocl::traits::OclPrm for Hash {}
 
 impl std::fmt::LowerHex for Hash {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -129,7 +84,9 @@ impl std::fmt::Binary for Hash {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::super::AlgorithmConverter;
+    use super::super::Converter;
+    use super::Hash;
 
     #[test]
     fn shift() {
@@ -158,7 +115,7 @@ mod test {
     fn parse_string() {
         let input =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let parsed = super::super::hash::<Hash>(&input);
+        let parsed = Converter::<sha2::Sha256>::from_string(&input);
 
         let expected = Hash {
             hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
@@ -185,7 +142,7 @@ mod test {
     fn string_round_trip() {
         let string =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let hash = super::super::hash::<Hash>(&string);
+        let hash = Converter::<sha2::Sha256>::from_string(&string);
         assert_eq!(format!("{:x}", hash), string);
     }
 
@@ -202,7 +159,7 @@ mod test {
     #[test]
     fn compute() {
         //dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80
-        let hash = super::super::compute::<Hash>(&String::from("123"), &String::from("abc"));
+        let hash = Converter::<sha2::Sha256>::digest(&String::from("123"), &String::from("abc"));
 
         use sha2::Digest;
         let mut expected_hash = sha2::Sha256::new();
@@ -228,15 +185,4 @@ mod test {
         assert_eq!(hash_10.cmp(&hash_01), std::cmp::Ordering::Greater);
         assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
     }
-
-    //    #[test]
-    //    fn array_round_trip() {
-    //        let hash = Hash { hi: 14, lo: 58 };
-    //
-    //        let array: [u128; 2] = hash.into();
-    //        assert_eq!(array, [14_u128, 58_u128]);
-    //
-    //        let back_hash = Hash::from(array);
-    //        assert_eq!(hash, back_hash);
-    //    }
 }

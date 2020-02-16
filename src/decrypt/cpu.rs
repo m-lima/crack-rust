@@ -33,17 +33,18 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
-fn execute_typed<H: hash::Hash>(options: &options::Decrypt) -> summary::Mode {
+fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
+    options: &options::Decrypt,
+) -> summary::Mode {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
     let input = {
-        use hash::AlgorithmConverter;
         let mut data = options
             .shared
             .input
             .iter()
-            .map(|s| hash::Converter::from_string(s))
+            .map(|s| C::from_string(s))
             .collect::<Vec<_>>();
         data.sort_unstable();
         data.as_mut_slice()
@@ -71,7 +72,6 @@ fn execute_typed<H: hash::Hash>(options: &options::Decrypt) -> summary::Mode {
             let mut decrypted = Vec::new();
 
             for n in first..last {
-                use hash::AlgorithmConverter;
                 if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1
                     && count.load(std::sync::atomic::Ordering::Acquire) == 0
                 {
@@ -79,8 +79,9 @@ fn execute_typed<H: hash::Hash>(options: &options::Decrypt) -> summary::Mode {
                 }
 
                 let number = format!("{:01$}", n, length);
-                let hash = hash::Converter::digest(&salted_prefix, &number);
+                let hash = C::digest(&salted_prefix, &number);
                 if input.eytzinger_search(&hash).is_some() {
+                    use hash::Hash;
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
                     decrypted.push(summary::Decrypted::new(hash.to_string(), result.clone()));
@@ -121,8 +122,8 @@ fn execute_typed<H: hash::Hash>(options: &options::Decrypt) -> summary::Mode {
 
 pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
     match &options.shared.algorithm {
-        options::Algorithm::MD5 => execute_typed::<md5::Md5>(&options),
-        options::Algorithm::SHA256 => execute_typed::<sha2::Sha256>(&options),
+        options::Algorithm::MD5 => execute_typed::<_, hash::Converter<md5::Md5>>(&options),
+        options::Algorithm::SHA256 => execute_typed::<_, hash::Converter<sha2::Sha256>>(&options),
     }
 }
 
