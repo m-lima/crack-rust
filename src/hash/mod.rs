@@ -4,6 +4,8 @@ mod h256;
 pub trait Hash:
     PartialEq + Eq + PartialOrd + Ord + std::fmt::LowerHex + std::fmt::Binary + ToString
 {
+    type GpuArray: ocl::OclPrm;
+    fn to_gpu_array(&self) -> Self::GpuArray;
 }
 
 pub trait Builder: Hash + std::ops::ShlAssign<u8> + std::ops::BitOrAssign<u8> + Default {

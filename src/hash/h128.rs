@@ -1,6 +1,22 @@
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Hash {
     lo: u128,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Clone, Copy)]
+pub struct GpuHash([u64; 2]);
+unsafe impl ocl::OclPrm for GpuHash {}
+
+impl std::fmt::Display for GpuHash {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for block in &self.0 {
+            let bytes = &unsafe { std::mem::transmute::<u64, [u8; 8]>(*block) };
+            for b in bytes {
+                write!(fmt, "{:02x}", b)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl super::Builder for Hash {
@@ -18,7 +34,12 @@ impl super::Builder for Hash {
     }
 }
 
-impl super::Hash for Hash {}
+impl super::Hash for Hash {
+    type GpuArray = GpuHash;
+    fn to_gpu_array(&self) -> Self::GpuArray {
+        GpuHash(unsafe { std::mem::transmute::<u128, [u64; 2]>(self.lo) })
+    }
+}
 
 impl Default for Hash {
     fn default() -> Self {
@@ -155,5 +176,18 @@ mod test {
         assert_eq!(hash_0.cmp(&hash_0b), std::cmp::Ordering::Equal);
         assert_eq!(hash_1.cmp(&hash_2), std::cmp::Ordering::Less);
         assert_eq!(hash_1.cmp(&hash_0), std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn round_trip_gpu() {
+        let expected = Hash {
+            lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
+        };
+        {
+            use super::super::Hash;
+            let gpu_array = expected.to_gpu_array();
+
+            assert_eq!(gpu_array.to_string(), expected.to_string());
+        }
     }
 }
