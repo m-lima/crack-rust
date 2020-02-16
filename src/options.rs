@@ -10,7 +10,7 @@ clap::arg_enum! {
 
 clap::arg_enum! {
     #[derive(PartialEq, Debug, Clone)]
-    pub enum Core {
+    pub enum Device {
         CPU,
         GPU,
     }
@@ -32,7 +32,7 @@ pub struct Decrypt {
     pub thread_count: u8,
     pub number_space: u64,
     pub prefix: String,
-    pub core: Core,
+    pub device: Device,
 }
 
 pub enum Mode {

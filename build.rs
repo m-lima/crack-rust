@@ -59,7 +59,7 @@ fn generate_opencl(algorithm: &str) {
     };
 
     output
-        .write_all(b"pub static SRC: &str = r#\"\n")
+        .write_all(b"r#\"\n")
         .expect(&format!("Failed to write start to {}.cl", algorithm));
     for line in reader.lines() {
         let line = line.expect(&format!("Failed to read line from {}.cl", algorithm));
@@ -68,7 +68,7 @@ fn generate_opencl(algorithm: &str) {
             .expect(&format!("Failed to write body to {}.cl", algorithm));
     }
     output
-        .write_all(b"\"#;\n")
+        .write_all(b"\"#")
         .expect(&format!("Failed to write end to {}.cl", algorithm));
 }
 

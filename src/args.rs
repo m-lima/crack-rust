@@ -12,11 +12,11 @@ macro_rules! algorithm {
     };
 }
 
-macro_rules! core {
-    (options::Core::CPU) => {
+macro_rules! device {
+    (options::Device::CPU) => {
         "CPU"
     };
-    (options::Core::GPU) => {
+    (options::Device::GPU) => {
         "GPU"
     };
 }
@@ -43,7 +43,7 @@ enum _Arg {
     Prefix,
     Salt,
     ThreadCount,
-    Core,
+    Device,
     Verbose,
 }
 
@@ -103,11 +103,11 @@ macro_rules! arg {
             ArgField::Parameter => "COUNT",
         }
     };
-    (_Arg::Core, $f:path) => {
+    (_Arg::Device, $f:path) => {
         match $f {
-            ArgField::Name => "core",
+            ArgField::Name => "device",
             ArgField::Short => "c",
-            ArgField::Parameter => "CORE",
+            ArgField::Parameter => "DEVICE",
         }
     };
     (_Arg::Verbose) => {
@@ -174,14 +174,14 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .validator(|v| v.parse::<u8>().map(|_| ()).map_err(|e| e.to_string())),
         )
         .arg(
-            clap::Arg::with_name(arg!(_Arg::Core, ArgField::Name))
-                .long(arg!(_Arg::Core, ArgField::Name))
-                .short(arg!(_Arg::Core, ArgField::Short))
-                .value_name(arg!(_Arg::Core, ArgField::Parameter))
-                .help("Core to run in [GPU, CPU]")
+            clap::Arg::with_name(arg!(_Arg::Device, ArgField::Name))
+                .long(arg!(_Arg::Device, ArgField::Name))
+                .short(arg!(_Arg::Device, ArgField::Short))
+                .value_name(arg!(_Arg::Device, ArgField::Parameter))
+                .help("Device to run in [GPU, CPU]")
                 .takes_value(true)
-                .default_value(core!(options::Core::GPU))
-                .possible_values(&options::Core::variants())
+                .default_value(device!(options::Device::GPU))
+                .possible_values(&options::Device::variants())
                 .case_insensitive(true),
         )
         .arg(
@@ -322,7 +322,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
         .unwrap()
         .parse::<u8>()
         .unwrap();
-    let core = value_t!(matches, arg!(_Arg::Core, ArgField::Name), options::Core).unwrap();
+    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), options::Device).unwrap();
 
     // let files = Vec::<String>::new();
 
@@ -333,7 +333,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
             length,
             number_space,
             prefix,
-            core,
+            device,
         }),
         parse_verboseness(&matches),
     )

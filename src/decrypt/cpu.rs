@@ -43,8 +43,13 @@ pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
             .shared
             .input
             .iter()
-            .map(|v| v.into_hash().unwrap())
-            .collect::<Vec<hash::Hash>>();
+            .map(|v| {
+                v.into_hash().unwrap_or_else(|err| {
+                    eprintln!("Failed to build build hash: {}", err);
+                    std::process::exit(-1);
+                })
+            })
+            .collect::<Vec<_>>();
         data.sort_unstable();
         data.as_mut_slice()
             .eytzingerize(&mut eytzinger::permutation::InplacePermutator);
@@ -53,9 +58,7 @@ pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
 
     let thread_count = get_optimal_thread_count(options.thread_count, options.number_space);
     let thread_space = options.number_space / u64::from(thread_count);
-    let mut threads = Vec::<std::thread::JoinHandle<(u64, Vec<summary::Decrypted>)>>::with_capacity(
-        thread_count as usize,
-    );
+    let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender { data: &count };
@@ -166,7 +169,7 @@ mod test {
             thread_count: 4,
             number_space: 100,
             prefix,
-            core: options::Core::CPU,
+            device: options::Device::CPU,
         };
 
         if let summary::Mode::Decrypt(decrypt) = execute(&options) {

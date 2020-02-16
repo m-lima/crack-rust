@@ -1,6 +1,14 @@
 #[derive(Debug)]
 pub enum Error {
-    ParseError,
+    Parse(u8),
+}
+impl std::error::Error for Error {}
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match &self {
+            Self::Parse(c) => write!(fmt, "invalid character '{}'", *c as char),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Copy, Clone)]
@@ -15,27 +23,19 @@ impl Default for Hash {
     }
 }
 
-impl std::ops::Shl<u8> for Hash {
-    type Output = Self;
-
-    fn shl(self, rhs: u8) -> Self {
-        Self {
-            lo: self.lo << rhs,
-            hi: (self.hi << rhs) | (self.lo >> (128 - rhs)),
-        }
+impl std::ops::ShlAssign<u8> for Hash {
+    fn shl_assign(&mut self, rhs: u8) {
+        self.hi <<= rhs;
+        self.hi |= self.lo >> (128 - rhs);
+        self.lo <<= rhs;
     }
 }
 
-impl std::ops::BitOr<u8> for Hash {
-    type Output = Self;
-
+impl std::ops::BitOrAssign<u8> for Hash {
     // Allowed because of hot path and certainty of no loss
     #[allow(clippy::cast_lossless)]
-    fn bitor(self, rhs: u8) -> Self {
-        Self {
-            lo: self.lo | rhs as u128,
-            hi: self.hi,
-        }
+    fn bitor_assign(&mut self, rhs: u8) {
+        self.lo |= rhs as u128;
     }
 }
 
@@ -87,13 +87,13 @@ impl Into for String {
                 c if c >= 0x30 && c < 0x3a => c - 0x30,       // decimal
                 c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
                 c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
-                _ => return Err(Error::ParseError),
+                c => return Err(Error::Parse(c)),
             };
             if i % 2 == 0 {
-                hash = hash << 8;
-                hash = hash | int;
+                hash <<= 8;
+                hash |= int;
             } else {
-                hash = hash | (int << 4);
+                hash |= int << 4;
             }
         }
         Ok(hash)
@@ -119,7 +119,7 @@ mod test {
     #[test]
     fn shift() {
         let mut hash = Hash { lo: 1, hi: 8 };
-        hash = hash << 4;
+        hash <<= 4;
         assert_eq!(hash, Hash { hi: 8 * 16, lo: 16 });
     }
 
@@ -129,7 +129,7 @@ mod test {
             lo: (1 << 127) | 1,
             hi: 8,
         };
-        hash = hash << 4;
+        hash <<= 4;
         assert_eq!(
             hash,
             Hash {
