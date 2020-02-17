@@ -117,8 +117,8 @@ impl std::fmt::Display for GpuHash {
 
 #[cfg(test)]
 mod test {
-    use super::super::AlgorithmConverter;
     use super::super::Converter;
+    use super::super::Sha256;
     use super::Hash;
 
     #[test]
@@ -148,7 +148,7 @@ mod test {
     fn parse_string() {
         let input =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let parsed = Converter::<sha2::Sha256>::from_string(&input);
+        let parsed = Sha256::from_string(&input);
 
         let expected = Hash {
             hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
@@ -175,7 +175,7 @@ mod test {
     fn string_round_trip() {
         let string =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let hash = Converter::<sha2::Sha256>::from_string(&string);
+        let hash = Sha256::from_string(&string);
         assert_eq!(format!("{:x}", hash), string);
     }
 
@@ -192,7 +192,7 @@ mod test {
     #[test]
     fn compute() {
         //dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80
-        let hash = Converter::<sha2::Sha256>::digest(&String::from("123"), &String::from("abc"));
+        let hash = Sha256::digest(&String::from("123"), &String::from("abc"));
 
         use sha2::Digest;
         let mut expected_hash = sha2::Sha256::new();

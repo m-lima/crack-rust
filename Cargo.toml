@@ -16,3 +16,6 @@ sha2 = "0.8"
 [dependencies.eytzinger]
 version = "1.0"
 features = ["branchless"]
+
+[dev-dependencies]
+rand = "0.7"

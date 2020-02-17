@@ -93,8 +93,8 @@ impl std::fmt::Display for GpuHash {
 
 #[cfg(test)]
 mod test {
-    use super::super::AlgorithmConverter;
     use super::super::Converter;
+    use super::super::Md5;
     use super::Hash;
 
     #[test]
@@ -115,7 +115,7 @@ mod test {
     fn parse_string() {
         let input =
             String::from("dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80");
-        let parsed = Converter::<md5::Md5>::from_string(&input);
+        let parsed = Md5::from_string(&input);
 
         let expected = Hash {
             lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
@@ -136,7 +136,7 @@ mod test {
     #[test]
     fn string_round_trip() {
         let string = String::from("dd130a849d7b29e5541b05d2f7f86a4a");
-        let hash = Converter::<md5::Md5>::from_string(&string);
+        let hash = Md5::from_string(&string);
         assert_eq!(format!("{:x}", hash), string);
     }
 
@@ -153,9 +153,9 @@ mod test {
     #[test]
     fn compute() {
         //a906449d5769fa7361d7ecc6aa3f6d28
-        let hash = Converter::<md5::Md5>::digest(&String::from("123"), &String::from("abc"));
+        let hash = Md5::digest(&String::from("123"), &String::from("abc"));
 
-        use sha2::Digest;
+        use digest::Digest;
         let mut expected_hash = md5::Md5::new();
         expected_hash.input("123".as_bytes());
         expected_hash.input("abc".as_bytes());

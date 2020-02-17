@@ -2,7 +2,7 @@ use crate::hash;
 use crate::options;
 use crate::summary;
 
-fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
+fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     options: &options::Encrypt,
 ) -> summary::Mode {
     for input in &options.shared.input {
@@ -22,7 +22,7 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
 
 pub fn execute(options: &options::Encrypt) -> summary::Mode {
     match &options.shared.algorithm {
-        options::Algorithm::MD5 => execute_typed::<_, hash::Converter<md5::Md5>>(options),
-        options::Algorithm::SHA256 => execute_typed::<_, hash::Converter<sha2::Sha256>>(options),
+        options::Algorithm::MD5 => execute_typed::<_, hash::Md5>(options),
+        options::Algorithm::SHA256 => execute_typed::<_, hash::Sha256>(options),
     }
 }

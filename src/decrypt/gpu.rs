@@ -14,7 +14,7 @@ fn get_source_for<'a>(algorithm: &options::Algorithm) -> &'a str {
 split_by_algorithm!(execute_typed);
 
 // TODO #[split_algorithm]
-fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
+fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     options: &options::Decrypt,
 ) -> summary::Mode {
     let source = get_source_for(&options.shared.algorithm);
