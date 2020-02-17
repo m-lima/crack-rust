@@ -1,6 +1,6 @@
-macro_rules! convert_algorithm_to_hash {
-    ($algorithm:path, $hash:path) => {
-        impl AlgorithmConverter<$algorithm> for Converter<$algorithm> {
+macro_rules! convert {
+    ($($algorithm:path => $hash:path),+) => {
+        $(impl AlgorithmConverter<$algorithm> for Converter<$algorithm> {
             type Output = $hash;
             fn digest(salted_prefix: &str, number: &str) -> Self::Output {
                 use digest::Digest;
@@ -37,7 +37,7 @@ macro_rules! convert_algorithm_to_hash {
                 }
                 hash
             }
-        }
+        })*
     };
 }
 
@@ -67,5 +67,4 @@ pub struct Converter<D: digest::Digest> {
     phantom: std::marker::PhantomData<D>,
 }
 
-convert_algorithm_to_hash!(md5::Md5, h128::Hash);
-convert_algorithm_to_hash!(sha2::Sha256, h256::Hash);
+convert!(md5::Md5 => h128::Hash, sha2::Sha256 => h256::Hash);

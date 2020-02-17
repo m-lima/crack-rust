@@ -1,4 +1,4 @@
-macro_rules! split_algorithm {
+macro_rules! split_by_algorithm {
     ($func:ident) => {
         pub(super) fn execute(options: &crate::options::Decrypt) -> summary::Mode {
             match &options.shared.algorithm {

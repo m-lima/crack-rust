@@ -11,7 +11,7 @@ fn get_source_for<'a>(algorithm: &options::Algorithm) -> &'a str {
     }
 }
 
-split_algorithm!(execute_typed);
+split_by_algorithm!(execute_typed);
 
 // TODO #[split_algorithm]
 fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
