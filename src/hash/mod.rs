@@ -13,7 +13,7 @@ macro_rules! convert {
                 <$hash>::from_array(result)
             }
 
-            fn from_string(string: &str) -> Self::Output {
+            fn from_str(string: &str) -> Self::Output {
                 <$hash>::from(string)
             }
         })*
@@ -202,7 +202,7 @@ pub trait Hash:
 pub trait Converter<D: digest::Digest> {
     type Output: Hash + 'static;
     fn digest(salted_prefix: &str, number: &str) -> Self::Output;
-    fn from_string(string: &str) -> Self::Output;
+    fn from_str(string: &str) -> Self::Output;
 }
 
 hash!(h128: 128, h256: 256);

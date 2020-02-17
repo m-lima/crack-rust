@@ -55,7 +55,8 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             .shared
             .input
             .iter()
-            .map(|s| C::from_string(s))
+            .map(String::as_str)
+            .map(C::from_str)
             .collect::<Vec<_>>();
         data.sort_unstable();
         data.as_mut_slice()
