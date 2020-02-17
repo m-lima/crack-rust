@@ -17,25 +17,28 @@ macro_rules! convert {
                 <$hash>::from(string)
             }
         })*
+
+        #[cfg(test)]
+        mod test {
+            $(#[test]
+            #[allow(non_snake_case)]
+            fn $name() {
+                use crate::hash::Converter;
+                let hash = super::$name::digest(&String::from("123"), &String::from("abc"));
+
+                use digest::Digest;
+                let mut expected_hash = <$algorithm>::new();
+                expected_hash.input("123".as_bytes());
+                expected_hash.input("abc".as_bytes());
+
+                assert_eq!(
+                    format!("{:x}", hash),
+                    format!("{:x}", expected_hash.result())
+                );
+            })*
+        }
     };
 }
-//
-//            #[test]
-//            fn compute() {
-//                //dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80
-//                let hash = Sha256::digest(&String::from("123"), &String::from("abc"));
-//
-//                use sha2::Digest;
-//                let mut expected_hash = sha2::Sha256::new();
-//                expected_hash.input("123".as_bytes());
-//                expected_hash.input("abc".as_bytes());
-//
-//                assert_eq!(
-//                    format!("{:x}", hash),
-//                    format!("{:x}", expected_hash.result())
-//                );
-//            }
-//        )*
 
 macro_rules! byte_size_of {
     ($size:literal) => {
@@ -43,113 +46,9 @@ macro_rules! byte_size_of {
     };
 }
 
-macro_rules! create_tests {
-    ($name:ident[$size:literal]) => {
-        #[cfg(test)]
-        mod test {
-            #[test]
-            fn shift() {
-                let mut hash = super::Hash::default();
-                for i in 0..byte_size_of!($size) {
-                    hash.0[i] = (i % 8) as u8;
-                }
-                hash <<= 2;
-
-                let mut expected = super::Hash::default();
-                for i in 0..byte_size_of!($size) {
-                    expected.0[i] = (i % 8) as u8 * 4;
-                }
-
-                assert_eq!(hash, expected);
-            }
-
-            #[test]
-            fn shift_overflow() {
-                let mut hash = super::Hash::default();
-                for i in 0..byte_size_of!($size) {
-                    hash.0[i] = 0b1000_0001;
-                }
-                hash <<= 1;
-
-                let mut expected = super::Hash::default();
-                for i in 1..byte_size_of!($size) {
-                    expected.0[i] = 0b0000_0011;
-                }
-                expected.0[0] = 0b0000_0010;
-
-                assert_eq!(hash, expected);
-            }
-
-            #[test]
-            fn cmp() {
-                let mut hash_01 = super::Hash::default();
-                hash_01.0[1] = 1;
-                let mut hash_02 = super::Hash::default();
-                hash_02.0[1] = 2;
-                let mut hash_10 = super::Hash::default();
-                hash_10.0[0] = 1;
-                let mut hash_20 = super::Hash::default();
-                hash_20.0[0] = 2;
-
-                assert_eq!(hash_01.cmp(&hash_01), std::cmp::Ordering::Equal);
-                assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
-                assert_eq!(hash_01.cmp(&hash_20), std::cmp::Ordering::Greater);
-                assert_eq!(hash_01.cmp(&hash_10), std::cmp::Ordering::Greater);
-                assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
-            }
-
-            #[test]
-            fn string_round_trip() {
-                use rand::Rng;
-                let mut random = rand::thread_rng();
-                let mut string = String::new();
-
-                for _ in 0..byte_size_of!($size) {
-                    let value: u8 = random.gen();
-                    string = format!("{}{:02x}", string, value);
-                }
-
-                let hash = super::Hash::from(string.as_str());
-                assert_eq!(format!("{:x}", hash), string);
-            }
-
-            //            #[test]
-            //            fn parse_string() {
-            //                let mut random = rand::thread_rng();
-            //
-            //                let value: $base = random.gen();
-            //                let input = String::from(
-            //                    "dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80",
-            //                );
-            //                let parsed = Sha256::from_string(&input);
-            //
-            //                let expected = super::Hash {
-            //                    hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
-            //                    lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
-            //                };
-            //
-            //                assert_eq!(parsed, expected);
-            //            }
-            //
-            //            #[test]
-            //            fn to_string() {
-            //                let hash = super::Hash {
-            //                    hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
-            //                    lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
-            //                };
-            //
-            //                assert_eq!(
-            //                    format!("{:x}", hash),
-            //                    "dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80"
-            //                );
-            //            }
-        }
-    };
-}
-
-macro_rules! create_hash {
-    ($name:ident[$size:literal]) => {
-        mod $name {
+macro_rules! hash {
+    ($($name:ident: $size:literal),+) => {
+        $(mod $name {
             #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone)]
             pub struct Hash([u8; byte_size_of!($size)]);
 
@@ -164,7 +63,9 @@ macro_rules! create_hash {
                     let mut data = unsafe {
                         std::mem::MaybeUninit::<[u8; byte_size_of!($size)]>::uninit().assume_init()
                     };
-                    data.copy_from_slice(&bytes);
+                    for i in 0..byte_size_of!($size) {
+                        data[i] = bytes[byte_size_of!($size) - 1 - i];
+                    }
                     Self(data)
                 }
             }
@@ -196,24 +97,6 @@ macro_rules! create_hash {
                         }
                     }
                     Some(std::cmp::Ordering::Equal)
-                }
-            }
-
-            // Allowed because clippy cannot interpret this macro
-            #[allow(clippy::suspicious_op_assign_impl)]
-            impl std::ops::ShlAssign<u8> for Hash {
-                fn shl_assign(&mut self, rhs: u8) {
-                    for i in (1..byte_size_of!($size)).rev() {
-                        self.0[i] <<= rhs;
-                        self.0[i] |= self.0[i - 1] >> (8 - rhs);
-                    }
-                    self.0[0] <<= rhs;
-                }
-            }
-
-            impl std::ops::BitOrAssign<u8> for Hash {
-                fn bitor_assign(&mut self, rhs: u8) {
-                    self.0[byte_size_of!($size) - 1] |= rhs;
                 }
             }
 
@@ -269,13 +152,44 @@ macro_rules! create_hash {
                 }
             }
 
-            create_tests!($name[$size]);
-        }
+            #[cfg(test)]
+            mod test {
+                #[test]
+                fn cmp() {
+                    let mut hash_01 = super::Hash::default();
+                    hash_01.0[1] = 1;
+                    let mut hash_02 = super::Hash::default();
+                    hash_02.0[1] = 2;
+                    let mut hash_10 = super::Hash::default();
+                    hash_10.0[0] = 1;
+                    let mut hash_20 = super::Hash::default();
+                    hash_20.0[0] = 2;
+
+                    assert_eq!(hash_01.cmp(&hash_01), std::cmp::Ordering::Equal);
+                    assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
+                    assert_eq!(hash_01.cmp(&hash_20), std::cmp::Ordering::Greater);
+                    assert_eq!(hash_01.cmp(&hash_10), std::cmp::Ordering::Greater);
+                    assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
+                }
+
+                #[test]
+                fn string_round_trip() {
+                    use rand::Rng;
+                    let mut random = rand::thread_rng();
+                    let mut string = String::new();
+
+                    for _ in 0..byte_size_of!($size) {
+                        let value: u8 = random.gen();
+                        string = format!("{}{:02x}", string, value);
+                    }
+
+                    let hash = super::Hash::from(string.as_str());
+                    assert_eq!(format!("{:x}", hash), string);
+                }
+            }
+        })*
     };
 }
-
-create_hash!(h128[128]);
-create_hash!(h256[256]);
 
 pub trait Hash:
     ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + ToString + PartialEq + Eq + PartialOrd + Ord
@@ -291,4 +205,5 @@ pub trait Converter<D: digest::Digest> {
     fn from_string(string: &str) -> Self::Output;
 }
 
+hash!(h128: 128, h256: 256);
 convert!(md5::Md5 => h128::Hash as Md5, sha2::Sha256 => h256::Hash as Sha256);
