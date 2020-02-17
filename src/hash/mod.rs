@@ -17,18 +17,8 @@ macro_rules! convert {
                 <$hash>::from(string)
             }
         })*
-
-//        #[cfg(test)]
-//        mod test {
-//        $(
-//            #[test]
-//            fn string_round_trip() {
-//                let string = String::from(
-//                    "dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80",
-//                );
-//                let hash = Sha256::from_string(&string);
-//                assert_eq!(format!("{:x}", hash), string);
-//            }
+    };
+}
 //
 //            #[test]
 //            fn compute() {
@@ -46,94 +36,28 @@ macro_rules! convert {
 //                );
 //            }
 //        )*
-    };
-}
 
-macro_rules! size_of {
-    ($base:ty) => {
-        std::mem::size_of::<$base>()
-    };
-}
-
-macro_rules! create_gpu_array {
-    ($name:ident[u128; $size:literal]) => {
-        impl super::GpuCompatible for Hash {
-            type GpuArray = GpuHash;
-            fn to_gpu_array(&self) -> Self::GpuArray {
-                unsafe {
-                    let mut blocks = MaybeUninit::<[u64; $size * 2]>::uninit().assume_init();
-                    for i in 0..$size {
-                        let block = transmute::<u128, [u64; 2]>(self.0[i * size_of!($base)]);
-                        blocks[i * 2] = blocks[0];
-                        blocks[(i + 1) * 2] = blocks[1];
-                    }
-                    GpuHash(blocks)
-                }
-            }
-        }
-
-        #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Clone, Copy)]
-        pub struct GpuHash([u64; $size * size_of!($base) / size_of!(u64)]);
-        unsafe impl ocl::OclPrm for GpuHash {}
-
-        impl std::fmt::Display for GpuHash {
-            fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                for block in &self.0 {
-                    let bytes = &unsafe { transmute::<u64, [u8; size_of!(u64)]>(*block) };
-                    for b in bytes {
-                        write!(fmt, "{:02x}", b)?;
-                    }
-                }
-                Ok(())
-            }
-        }
-    };
-
-    ($name:ident[$base:ty; $size:literal]) => {
-        impl super::GpuCompatible for Hash {
-            type GpuArray = GpuHash;
-            fn to_gpu_array(&self) -> Self::GpuArray {
-                unsafe {
-                    let mut blocks = MaybeUninit::<[$base; $size]>::uninit().assume_init();
-                    blocks.copy_from_slice(&self.0);
-                    GpuHash(blocks)
-                }
-            }
-        }
-
-        #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default, Clone, Copy)]
-        pub struct GpuHash([$base; $size]);
-        unsafe impl ocl::OclPrm for GpuHash {}
-
-        impl std::fmt::Display for GpuHash {
-            fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                for block in &self.0 {
-                    let bytes = &unsafe { transmute::<$base, [u8; size_of!($base)]>(*block) };
-                    for b in bytes {
-                        write!(fmt, "{:02x}", b)?;
-                    }
-                }
-                Ok(())
-            }
-        }
+macro_rules! byte_size_of {
+    ($size:literal) => {
+        $size / 8
     };
 }
 
 macro_rules! create_tests {
-    ($name:ident[$base:ty; $size:literal]) => {
+    ($name:ident[$size:literal]) => {
         #[cfg(test)]
         mod test {
             #[test]
             fn shift() {
                 let mut hash = super::Hash::default();
-                for i in 0..$size {
-                    hash.0[i] = i as $base;
+                for i in 0..byte_size_of!($size) {
+                    hash.0[i] = (i % 8) as u8;
                 }
                 hash <<= 2;
 
                 let mut expected = super::Hash::default();
-                for i in 0..$size {
-                    expected.0[i] = i as $base * 4;
+                for i in 0..byte_size_of!($size) {
+                    expected.0[i] = (i % 8) as u8 * 4;
                 }
 
                 assert_eq!(hash, expected);
@@ -142,56 +66,50 @@ macro_rules! create_tests {
             #[test]
             fn shift_overflow() {
                 let mut hash = super::Hash::default();
-                for i in 0..$size {
-                    // Populating with 0b100001
-                    hash.0[i] = (1 << (size_of!($base) * 8 - 1)) | 1;
+                for i in 0..byte_size_of!($size) {
+                    hash.0[i] = 0b1000_0001;
                 }
                 hash <<= 1;
 
                 let mut expected = super::Hash::default();
-                for i in 0..($size - 1) {
-                    expected.0[i] = 3;
+                for i in 1..byte_size_of!($size) {
+                    expected.0[i] = 0b0000_0011;
                 }
-                expected.0[$size - 1] = 2;
+                expected.0[0] = 0b0000_0010;
 
                 assert_eq!(hash, expected);
             }
 
             #[test]
             fn cmp() {
+                let mut hash_01 = super::Hash::default();
+                hash_01.0[1] = 1;
+                let mut hash_02 = super::Hash::default();
+                hash_02.0[1] = 2;
                 let mut hash_10 = super::Hash::default();
                 hash_10.0[0] = 1;
                 let mut hash_20 = super::Hash::default();
                 hash_20.0[0] = 2;
 
-                assert_eq!(hash_10.cmp(&hash_10), std::cmp::Ordering::Equal);
+                assert_eq!(hash_01.cmp(&hash_01), std::cmp::Ordering::Equal);
+                assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
+                assert_eq!(hash_01.cmp(&hash_20), std::cmp::Ordering::Greater);
+                assert_eq!(hash_01.cmp(&hash_10), std::cmp::Ordering::Greater);
                 assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
-
-                if $size > 1 {
-                    let mut hash_01 = super::Hash::default();
-                    hash_01.0[$size - 1] = 1;
-                    let mut hash_02 = super::Hash::default();
-                    hash_02.0[$size - 1] = 2;
-
-                    assert_eq!(hash_10.cmp(&hash_02), std::cmp::Ordering::Greater);
-                    assert_eq!(hash_10.cmp(&hash_01), std::cmp::Ordering::Greater);
-                    assert_eq!(hash_01.cmp(&hash_02), std::cmp::Ordering::Less);
-                }
             }
 
             #[test]
             fn string_round_trip() {
-//                let mut random = rand::thread_rng();
-//                let mut string = String::new();
-//
-//                for _ in 0..$size {
-//                    let value: $base = random.gen();
-//                    string = format!("{}")
-//                }
+                use rand::Rng;
+                let mut random = rand::thread_rng();
+                let mut string = String::new();
 
-                let string = String::from(&"dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80"[0..size_of!($base)*$size*2]);
-                let hash = super::Hash::from(&"dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80"[0..size_of!($base)*$size*2]);
-                println!("{:x} :: {}", hash, string);
+                for _ in 0..byte_size_of!($size) {
+                    let value: u8 = random.gen();
+                    string = format!("{}{:02x}", string, value);
+                }
+
+                let hash = super::Hash::from(string.as_str());
                 assert_eq!(format!("{:x}", hash), string);
             }
 
@@ -225,32 +143,17 @@ macro_rules! create_tests {
             //                    "dd130a849d7b29e5541b05d2f7f86a4acd4f1ec598c1c9438783f56bc4f0ff80"
             //                );
             //            }
-
-            //
-            //            #[test]
-            //            fn round_trip_gpu() {
-            //                let expected = super::Hash {
-            //                    hi: 0x80fff0c46bf5838743c9c198c51e4fcd,
-            //                    lo: 0x4a6af8f7d2051b54e5297b9d840a13dd,
-            //                };
-            //                {
-            //                    use super::super::GpuCompatible;
-            //                    let gpu_array = expected.to_gpu_array();
-            //
-            //                    assert_eq!(gpu_array.to_string(), expected.to_string());
-            //                }
-            //            }
         }
     };
 }
 
 macro_rules! create_hash {
-    ($name:ident[$base:ty; $size:literal]) => {
+    ($name:ident[$size:literal]) => {
         mod $name {
-            use std::mem::{transmute, MaybeUninit};
+            #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone)]
+            pub struct Hash([u8; byte_size_of!($size)]);
 
-            #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-            pub struct Hash([$base; $size]);
+            unsafe impl ocl::OclPrm for Hash {}
 
             // Allowed because clippy cannot interpret this macro
             #[allow(clippy::derive_hash_xor_eq)]
@@ -258,24 +161,41 @@ macro_rules! create_hash {
                 fn from_array<N: digest::generic_array::ArrayLength<u8>>(
                     bytes: digest::generic_array::GenericArray<u8, N>,
                 ) -> Self {
-                    unsafe {
-                        use std::convert::TryInto;
-                        let mut blocks = MaybeUninit::<[$base; $size]>::uninit().assume_init();
-                        for i in 0..$size {
-                            blocks[i] = transmute::<[u8; size_of!($base)], $base>(
-                                bytes[i * size_of!($base)..(i + 1) * size_of!($base)]
-                                    .try_into()
-                                    .expect("Failed transmutation"),
-                            );
-                        }
-                        Self(blocks)
-                    }
+                    let mut data = unsafe {
+                        std::mem::MaybeUninit::<[u8; byte_size_of!($size)]>::uninit().assume_init()
+                    };
+                    data.copy_from_slice(&bytes);
+                    Self(data)
                 }
             }
 
             impl Default for Hash {
                 fn default() -> Self {
-                    Self([0; $size])
+                    Self([0; byte_size_of!($size)])
+                }
+            }
+
+            impl std::cmp::Ord for Hash {
+                fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                    for i in (0..byte_size_of!($size)).rev() {
+                        match self.0[i].cmp(&other.0[i]) {
+                            std::cmp::Ordering::Equal => (),
+                            o => return o,
+                        }
+                    }
+                    std::cmp::Ordering::Equal
+                }
+            }
+
+            impl std::cmp::PartialOrd for Hash {
+                fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                    for i in (0..byte_size_of!($size)).rev() {
+                        match self.0[i].cmp(&other.0[i]) {
+                            std::cmp::Ordering::Equal => (),
+                            o => return Some(o),
+                        }
+                    }
+                    Some(std::cmp::Ordering::Equal)
                 }
             }
 
@@ -283,31 +203,24 @@ macro_rules! create_hash {
             #[allow(clippy::suspicious_op_assign_impl)]
             impl std::ops::ShlAssign<u8> for Hash {
                 fn shl_assign(&mut self, rhs: u8) {
-                    for i in 0..($size - 1) {
+                    for i in (1..byte_size_of!($size)).rev() {
                         self.0[i] <<= rhs;
-                        self.0[i] |= self.0[i + 1] >> ((size_of!($base) * 8) as u8 - rhs);
+                        self.0[i] |= self.0[i - 1] >> (8 - rhs);
                     }
-                    self.0[$size - 1] <<= rhs;
+                    self.0[0] <<= rhs;
                 }
             }
 
-            // Allowed because clippy cannot interpret this macro
-            #[allow(clippy::suspicious_op_assign_impl)]
             impl std::ops::BitOrAssign<u8> for Hash {
-                // Allowed because of hot path and certainty of no loss
-                #[allow(clippy::cast_lossless)]
                 fn bitor_assign(&mut self, rhs: u8) {
-                    self.0[$size - 1] |= rhs as u128;
+                    self.0[byte_size_of!($size) - 1] |= rhs;
                 }
             }
 
             impl std::fmt::LowerHex for Hash {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    for block in &self.0 {
-                        let bytes = &unsafe { transmute::<$base, [u8; size_of!($base)]>(*block) };
-                        for b in bytes {
-                            write!(fmt, "{:02x}", b)?;
-                        }
+                    for b in self.0.iter().rev() {
+                        write!(fmt, "{:02x}", &b)?;
                     }
                     Ok(())
                 }
@@ -315,11 +228,8 @@ macro_rules! create_hash {
 
             impl std::fmt::Binary for Hash {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    for block in &self.0 {
-                        let bytes = &unsafe { transmute::<$base, [u8; size_of!($base)]>(*block) };
-                        for b in bytes {
-                            write!(fmt, "{:08b}", b)?;
-                        }
+                    for b in self.0.iter().rev() {
+                        write!(fmt, "{:08b}", &b)?;
                     }
                     Ok(())
                 }
@@ -333,7 +243,7 @@ macro_rules! create_hash {
 
             impl std::convert::From<&str> for Hash {
                 fn from(string: &str) -> Self {
-                    if (string.len() >> 1)  != size_of!($base) * $size {
+                    if string.len() != $size >> 2 {
                         eprintln!("String does not fit into hash: {}", &string);
                         std::process::exit(-1);
                     }
@@ -350,32 +260,25 @@ macro_rules! create_hash {
                             }
                         };
                         if i & 1 == 0 {
-                            hash <<= 8;
-                            hash |= int;
+                            hash.0[i / 2] |= int
                         } else {
-                            hash |= int << 4;
+                            hash.0[i / 2] |= int << 4;
                         }
                     }
                     hash
                 }
             }
 
-            create_gpu_array!($name[$base; $size]);
-            create_tests!($name[$base; $size]);
+            create_tests!($name[$size]);
         }
     };
 }
 
-create_hash!(h128[u128; 1]);
-create_hash!(h256[u128; 2]);
-
-pub trait GpuCompatible {
-    type GpuArray: ocl::OclPrm;
-    fn to_gpu_array(&self) -> Self::GpuArray;
-}
+create_hash!(h128[128]);
+create_hash!(h256[256]);
 
 pub trait Hash:
-    GpuCompatible + std::fmt::LowerHex + std::fmt::Binary + ToString + PartialEq + Eq + PartialOrd + Ord
+    ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + ToString + PartialEq + Eq + PartialOrd + Ord
 {
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,

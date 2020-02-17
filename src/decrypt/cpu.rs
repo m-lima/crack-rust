@@ -130,51 +130,51 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     })
 }
 
-//#[cfg(test)]
-//mod test {
-//    use super::*;
-//
-//    #[test]
-//    fn test_decryption() {
-//        let salt = String::from("abc");
-//        let prefix = String::from("1");
-//
-//        let expected = vec![
-//            summary::Decrypted {
-//                hash: String::from(
-//                    "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
-//                ),
-//                plain: prefix.clone() + "23",
-//            },
-//            summary::Decrypted {
-//                hash: String::from(
-//                    "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
-//                ),
-//                plain: prefix.clone() + "55",
-//            },
-//            summary::Decrypted {
-//                hash: String::from(
-//                    "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
-//                ),
-//                plain: prefix.clone() + "99",
-//            },
-//        ];
-//
-//        let options = options::Decrypt {
-//            shared: options::Shared {
-//                input: expected.iter().map(|v| v.hash.to_string()).collect(),
-//                algorithm: options::Algorithm::SHA256,
-//                salt,
-//            },
-//            length: 2u8,
-//            thread_count: 4,
-//            number_space: 100,
-//            prefix,
-//            device: options::Device::CPU,
-//        };
-//
-//        if let summary::Mode::Decrypt(decrypt) = execute(&options) {
-//            assert_eq!(decrypt.results, expected);
-//        }
-//    }
-//}
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_decryption() {
+        let salt = String::from("abc");
+        let prefix = String::from("1");
+
+        let expected = vec![
+            summary::Decrypted {
+                hash: String::from(
+                    "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
+                ),
+                plain: prefix.clone() + "23",
+            },
+            summary::Decrypted {
+                hash: String::from(
+                    "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
+                ),
+                plain: prefix.clone() + "55",
+            },
+            summary::Decrypted {
+                hash: String::from(
+                    "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
+                ),
+                plain: prefix.clone() + "99",
+            },
+        ];
+
+        let options = options::Decrypt {
+            shared: options::Shared {
+                input: expected.iter().map(|v| v.hash.to_string()).collect(),
+                algorithm: options::Algorithm::SHA256,
+                salt,
+            },
+            length: 2u8,
+            thread_count: 4,
+            number_space: 100,
+            prefix,
+            device: options::Device::CPU,
+        };
+
+        if let summary::Mode::Decrypt(decrypt) = execute(&options) {
+            assert_eq!(decrypt.results, expected);
+        }
+    }
+}
