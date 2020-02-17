@@ -9,13 +9,11 @@ fn get_source_for<'a>(algorithm: &options::Algorithm) -> &'a str {
         options::Algorithm::MD5 => super::sources::MD5,
         options::Algorithm::SHA256 => super::sources::SHA256,
     }
-    //    r#"
-    //        __kernel void add(__global float* buffer, float scalar) {
-    //            buffer[get_global_id(0)] += scalar;
-    //        }
-    //    "#
 }
 
+split_algorithm!(execute_typed);
+
+// TODO #[split_algorithm]
 fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
     options: &options::Decrypt,
 ) -> summary::Mode {
@@ -83,11 +81,4 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
         std::process::exit(-1);
     });
     super::cpu::execute(options)
-}
-
-pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
-    match &options.shared.algorithm {
-        options::Algorithm::MD5 => execute_typed::<_, hash::Converter<md5::Md5>>(&options),
-        options::Algorithm::SHA256 => execute_typed::<_, hash::Converter<sha2::Sha256>>(&options),
-    }
 }

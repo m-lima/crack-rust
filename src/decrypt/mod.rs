@@ -1,3 +1,18 @@
+macro_rules! split_algorithm {
+    ($func:ident) => {
+        pub(super) fn execute(options: &crate::options::Decrypt) -> summary::Mode {
+            match &options.shared.algorithm {
+                crate::options::Algorithm::MD5 => {
+                    $func::<_, crate::hash::Converter<md5::Md5>>(&options)
+                }
+                crate::options::Algorithm::SHA256 => {
+                    $func::<_, crate::hash::Converter<sha2::Sha256>>(&options)
+                }
+            }
+        }
+    };
+}
+
 mod cpu;
 mod gpu;
 mod sources;

@@ -42,6 +42,8 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
+split_algorithm!(execute_typed);
+
 fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
     options: &options::Decrypt,
 ) -> summary::Mode {
@@ -126,13 +128,6 @@ fn execute_typed<D: digest::Digest, C: hash::AlgorithmConverter<D>>(
         thread_count,
         results,
     })
-}
-
-pub(super) fn execute(options: &options::Decrypt) -> summary::Mode {
-    match &options.shared.algorithm {
-        options::Algorithm::MD5 => execute_typed::<_, hash::Converter<md5::Md5>>(&options),
-        options::Algorithm::SHA256 => execute_typed::<_, hash::Converter<sha2::Sha256>>(&options),
-    }
 }
 
 #[cfg(test)]
