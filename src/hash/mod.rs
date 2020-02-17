@@ -24,7 +24,7 @@ macro_rules! convert {
             #[allow(non_snake_case)]
             fn $name() {
                 use crate::hash::Converter;
-                let hash = super::$name::digest(&String::from("123"), &String::from("abc"));
+                let hash = crate::hash::$name::digest(&String::from("123"), &String::from("abc"));
 
                 use digest::Digest;
                 let mut expected_hash = <$algorithm>::new();
