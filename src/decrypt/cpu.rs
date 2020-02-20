@@ -1,8 +1,7 @@
 use crate::hash;
 use crate::options;
+//use crate::options::Decrypt;
 use crate::summary;
-
-use eytzinger::SliceExt;
 
 static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
 
@@ -50,19 +49,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
-    let input = {
-        let mut data = options
-            .shared
-            .input
-            .iter()
-            .map(String::as_str)
-            .map(C::from_str)
-            .collect::<Vec<_>>();
-        data.sort_unstable();
-        data.as_mut_slice()
-            .eytzingerize(&mut eytzinger::permutation::InplacePermutator);
-        data
-    };
+    let input = options.input_as_eytzinger::<_, C>();
 
     let thread_count = get_optimal_thread_count(options.thread_count, options.number_space);
     let thread_space = options.number_space / u64::from(thread_count);
@@ -84,6 +71,8 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             let mut decrypted = Vec::new();
 
             for n in first..last {
+                use eytzinger::SliceExt;
+
                 if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1
                     && count.load(std::sync::atomic::Ordering::Acquire) == 0
                 {

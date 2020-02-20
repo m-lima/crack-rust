@@ -88,20 +88,22 @@ impl Print {
 
     fn decrypt_options(&self, options: &options::Decrypt) {
         Self::shared_options(&options.shared);
-        println!(
-            "{:15}{}",
-            "Threads:",
-            if options.thread_count == 0 {
-                String::from("Auto")
-            } else {
-                format!("{}", options.thread_count)
-            }
-        );
+        if options::Device::CPU == options.device {
+            println!(
+                "{:15}{}",
+                "Threads:",
+                if options.thread_count == 0 {
+                    String::from("Auto")
+                } else {
+                    format!("{}", options.thread_count)
+                }
+            );
+        }
         println!("{:15}{}", "Prefix:", options.prefix);
         println!(
             "{:15}{}",
             "Length:",
-            usize::from(options.length) + options.prefix.len()
+            options.length + options.prefix_length()
         );
         println!("{:15}{}", "Possibilities:", options.number_space);
         self.input(&options.shared.input);

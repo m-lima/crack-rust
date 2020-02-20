@@ -116,14 +116,14 @@ inline void md5(uint * hash, uint * input) {
  * If LENGTH happens to be larger than 64 bits, only the lower 64 bits
  * are considered
  */
-#ifdef CONST_PREFIX_DECIMAL_PLACES
+#ifdef CONST_LENGTH_ON_CPU
 inline void prepare(unsigned int value,
     unsigned int iteration,
     Value * skeleton) {
   // Filling the "variable" part of the skeleton
-#pragma unroll ((CONST_END - CONST_BEGIN) - CONST_PREFIX_DECIMAL_PLACES)
+#pragma unroll ((CONST_END - CONST_BEGIN) - CONST_LENGTH_ON_CPU)
   for (char index = CONST_END - 1;
-      index >= CONST_BEGIN + CONST_PREFIX_DECIMAL_PLACES;
+      index >= CONST_BEGIN + CONST_LENGTH_ON_CPU;
       index--)
   {
     // Convert numbers to char
@@ -134,8 +134,8 @@ inline void prepare(unsigned int value,
   }
 
   // Filling the iteration part of the skeleton
-#pragma unroll CONST_PREFIX_DECIMAL_PLACES
-  for (char index = CONST_BEGIN + CONST_PREFIX_DECIMAL_PLACES - 1;
+#pragma unroll CONST_LENGTH_ON_CPU
+  for (char index = CONST_BEGIN + CONST_LENGTH_ON_CPU - 1;
       index >= CONST_BEGIN;
       index--)
   {
@@ -166,8 +166,7 @@ inline void prepare(unsigned int value, Value * skeleton) {
 // Defines:
 // CONST_BEGIN {:d} # The index of where the variable part begins
 // CONST_END {:d} # The index past of where the variable part ends
-// CONST_SUFFIX {:d}ul # The suffix (length) for the MD5 algorithm
-// CONST_PREFIX_DECIMAL_PLACES {:d} # Decimal places the iterations are substituting
+// CONST_LENGTH_ON_CPU {:d} # Decimal places the iterations are substituting
 // CONST_TARGET_COUNT {:d} # The number of items in the targets array
 //
 // hashes: Target hashes
@@ -180,6 +179,8 @@ __kernel void crack(constant Hash * targets,
 
   // Inject the prefix and suffix
   Value value;
+
+  // Zero out the bytes
   for (int i = 0; i < 8; i++) {
     value.longs[i] = 0;
   }
@@ -187,7 +188,7 @@ __kernel void crack(constant Hash * targets,
   // %%PREFIX%%
 
   // Inject size
-  value.bytes[56] = CONST_SUFFIX;
+  value.bytes[56] = CONST_END * 8ul;
 
   // Inject padding
   value.bytes[CONST_END] = 0x80;
@@ -195,7 +196,7 @@ __kernel void crack(constant Hash * targets,
   // Buffer for the hash
   Hash hash;
 
-#ifdef CONST_PREFIX_DECIMAL_PLACES
+#ifdef CONST_LENGTH_ON_CPU
   prepare(index, prefix, &value);
 #else
   prepare(index, &value);
