@@ -64,7 +64,7 @@ macro_rules! hash {
                         std::mem::MaybeUninit::<[u8; byte_size_of!($size)]>::uninit().assume_init()
                     };
                     for i in 0..byte_size_of!($size) {
-                        data[i] = bytes[byte_size_of!($size) - 1 - i];
+                        data[i] = bytes[i];
                     }
                     Self(data)
                 }
@@ -102,7 +102,7 @@ macro_rules! hash {
 
             impl std::fmt::LowerHex for Hash {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    for b in self.0.iter().rev() {
+                    for b in self.0.iter() {
                         write!(fmt, "{:02x}", &b)?;
                     }
                     Ok(())
@@ -111,7 +111,7 @@ macro_rules! hash {
 
             impl std::fmt::Binary for Hash {
                 fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    for b in self.0.iter().rev() {
+                    for b in self.0.iter() {
                         write!(fmt, "{:08b}", &b)?;
                     }
                     Ok(())
@@ -132,7 +132,7 @@ macro_rules! hash {
                     }
 
                     let mut hash = Self::default();
-                    for (i, c) in string.chars().rev().enumerate() {
+                    for (i, c) in string.chars().enumerate() {
                         let int = match c as u8 {
                             c if c >= 0x30 && c < 0x3a => c - 0x30, // decimal
                             c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
@@ -143,9 +143,9 @@ macro_rules! hash {
                             }
                         };
                         if i & 1 == 0 {
-                            hash.0[i / 2] |= int
-                        } else {
                             hash.0[i / 2] |= int << 4;
+                        } else {
+                            hash.0[i / 2] |= int
                         }
                     }
                     hash
@@ -170,6 +170,39 @@ macro_rules! hash {
                     assert_eq!(hash_01.cmp(&hash_20), std::cmp::Ordering::Greater);
                     assert_eq!(hash_01.cmp(&hash_10), std::cmp::Ordering::Greater);
                     assert_eq!(hash_10.cmp(&hash_20), std::cmp::Ordering::Less);
+                }
+
+                #[test]
+                fn to_string() {
+                    use rand::Rng;
+                    let mut random = rand::thread_rng();
+                    let mut string = String::new();
+                    let mut hash = super::Hash::default();
+
+                    for i in 0..byte_size_of!($size) {
+                        let value: u8 = random.gen();
+                        hash.0[i] = value;
+                        string.push_str(format!("{:02x}", value).as_str());
+                    }
+
+                    assert_eq!(format!("{:x}", hash), string);
+                }
+
+                #[test]
+                fn from_string() {
+                    use rand::Rng;
+                    let mut random = rand::thread_rng();
+                    let mut string = String::new();
+                    let mut expected = super::Hash::default();
+
+                    for i in 0..byte_size_of!($size) {
+                        let value: u8 = random.gen();
+                        expected.0[i] = value;
+                        string.push_str(format!("{:02x}", value).as_str());
+                    }
+
+                    let hash = super::Hash::from(string.as_str());
+                    assert_eq!(expected, hash);
                 }
 
                 #[test]

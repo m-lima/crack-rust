@@ -53,7 +53,7 @@ fn derive_kernel_parameters(options: &options::Decrypt) -> KernelParameters {
     } else {
         MAX_GPU_LENGTH - options.length
     };
-    let iterations = 10_i32.pow(length_on_cpu as u32);
+    let iterations = 10_i32.pow(u32::from(length_on_cpu));
 
     // Allowed because min(MAX_GPU_RANGE, ...) will always fit in i32
     // Allowed because MAX_GPU_RANGE is positive
@@ -114,7 +114,6 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         .flags(ocl::MemFlags::WRITE_ONLY)
         .len(options.shared.input.len())
         .queue(queue.clone())
-        //        .copy_host_slice(&results)
         .build()
         .unwrap_or_else(|err| {
             eprintln!("OpenCL: Failed to create output buffer: {}", err);
