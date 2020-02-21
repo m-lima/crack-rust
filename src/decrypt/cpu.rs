@@ -1,6 +1,5 @@
 use crate::hash;
 use crate::options;
-//use crate::options::Decrypt;
 use crate::summary;
 
 static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
@@ -84,19 +83,24 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
-                    decrypted.push(summary::Decrypted::new(hash.to_string(), result.clone()));
+                    decrypted.push(summary::Decrypted::new(hash.to_string(), result));
 
                     if input.len() == 1 {
-                        #[cfg(not(test))]
-                        println!("{}{:02$}", &prefix, n, length);
                         return (n - first, decrypted);
                     }
-                    #[cfg(not(test))]
-                    println!("{:x} :: {}", &hash, &result);
                 }
             }
             (last - first, decrypted)
         }));
+    }
+
+    let count_sender = Sender { data: &count };
+    if let Err(err) = ctrlc::set_handler(move || {
+        let count = &count_sender;
+        count.store(0, std::sync::atomic::Ordering::Relaxed);
+    }) {
+        eprintln!("Failed to capture SIGINT: {}", err);
+        eprintln!("CTRL + C will not interrupt the threads");
     }
 
     let (hash_count, results) = threads
@@ -112,10 +116,9 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
     summary::Mode::Decrypt(summary::Decrypt {
         total_count: input.len(),
-        cracked_count: input.len() - count.load(std::sync::atomic::Ordering::Relaxed),
         duration: time.elapsed(),
         hash_count,
-        thread_count,
+        thread_count: u32::from(thread_count),
         results,
     })
 }

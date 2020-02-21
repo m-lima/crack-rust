@@ -120,8 +120,24 @@ impl Print {
         }
 
         println!();
-        println!("Output:");
-        separator();
+    }
+
+    pub fn output(&self, summary: &summary::Mode) {
+        if let Verboseness::None = &self.verboseness {
+        } else {
+            println!("Output:");
+            separator();
+        }
+
+        if let summary::Mode::Decrypt(summary) = summary {
+            if summary.results.len() == 1 {
+                println!("{}", summary.results[0].plain);
+            } else {
+                for result in &summary.results {
+                    println!("{} :: {}", result.hash, result.plain);
+                }
+            }
+        }
     }
 
     pub fn summary(&self, summary: &summary::Mode) {
@@ -144,9 +160,9 @@ impl Print {
             println!(
                 "{:21}{}/{} ({}%)",
                 "Values found:",
-                summary.cracked_count,
+                summary.results.len(),
                 summary.total_count,
-                summary.cracked_count * 100 / summary.total_count
+                summary.results.len() * 100 / summary.total_count
             );
         }
     }

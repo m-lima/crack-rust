@@ -21,5 +21,6 @@ fn main() {
         options::Mode::Decrypt(options) => decrypt::execute(options),
     };
 
+    print.output(&summary);
     print.summary(&summary);
 }

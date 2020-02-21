@@ -209,7 +209,7 @@ __kernel void crack(constant Hash * targets,
 #if CONST_TARGET_COUNT < 10
 #pragma unroll CONST_TARGET_COUNT
   for (int i = 0; i < CONST_TARGET_COUNT; i++) {
-    if (hash.longs[0] == targets[i].longs[0]) {
+    if (hash.longs[0] == targets[i].longs[0] && hash.longs[1] == targets[i].longs[1]) {
       output[i << 1] = index;
       output[(i << 1) + 1] = prefix;
       return;
