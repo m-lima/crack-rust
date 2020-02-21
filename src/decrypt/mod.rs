@@ -11,7 +11,6 @@ macro_rules! split_by_algorithm {
 
 mod cpu;
 mod gpu;
-mod sources;
 
 use crate::options;
 use crate::summary;

@@ -1,10 +1,21 @@
-use super::sources;
 use crate::hash;
 use crate::options;
 use crate::summary;
 
 static MAX_GPU_LENGTH: u8 = 9;
 static MAX_GPU_RANGE: i32 = 1_000_000_000; // 10 ^ MAX_LENGTH
+
+mod source {
+    static MD5: &str = include!(concat!(env!("OUT_DIR"), "/cl/md5.rs"));
+    static SHA256: &str = include!(concat!(env!("OUT_DIR"), "/cl/sha256.rs"));
+
+    pub(super) fn from<'a>(algorithm: &super::options::Algorithm) -> &'a str {
+        match algorithm {
+            super::options::Algorithm::MD5 => MD5,
+            super::options::Algorithm::SHA256 => SHA256,
+        }
+    }
+}
 
 struct KernelParameters {
     iterations: u32,
@@ -14,6 +25,30 @@ struct KernelParameters {
 }
 
 impl KernelParameters {
+    fn from(options: &options::Decrypt) -> Self {
+        let length_on_cpu = if MAX_GPU_LENGTH > options.length {
+            0
+        } else {
+            options.length - MAX_GPU_LENGTH
+        };
+        let iterations = 10_u32.pow(u32::from(length_on_cpu));
+
+        // Allowed because min(MAX_GPU_RANGE, ...) will always fit in i32
+        // Allowed because MAX_GPU_RANGE is positive
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let range = std::cmp::min(MAX_GPU_RANGE as u64, options.number_space) as i32;
+
+        let length_on_gpu = options.length - length_on_cpu;
+
+        Self {
+            iterations,
+            length_on_cpu,
+            range,
+            length_on_gpu,
+        }
+    }
+
+    #[inline(always)]
     fn cpu_length_definition(&self) -> &'static str {
         if self.iterations > 1 {
             "CONST_LENGTH_ON_CPU"
@@ -24,11 +59,19 @@ impl KernelParameters {
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
-struct Output {
+struct OpenclOutput {
     data: [u32; 2],
 }
 
-impl Output {
+unsafe impl ocl::OclPrm for OpenclOutput {}
+
+impl OpenclOutput {
+    fn new(gpu_value: u32, cpu_value: u32) -> Self {
+        Self {
+            data: [gpu_value, cpu_value],
+        }
+    }
+
     #[inline(always)]
     fn gpu_value(&self) -> u32 {
         self.data[0]
@@ -38,43 +81,29 @@ impl Output {
     fn cpu_value(&self) -> u32 {
         self.data[1]
     }
-}
 
-unsafe impl ocl::OclPrm for Output {}
+    #[inline(always)]
+    fn is_valid(&self) -> bool {
+        self.data[0] > 0
+    }
 
-// Allowed because of previous check for options.shared.input.len() <= i32.max_value()
-// Allowed because salted prefix is limited in size
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-fn make_program(
-    salted_prefix: &str,
-    options: &options::Decrypt,
-    kernel_parameters: &KernelParameters,
-    context: &ocl::Context,
-    device: ocl::Device,
-) -> ocl::Program {
-    let source = inject_prefix(
-        salted_prefix,
-        sources::get_source_for(&options.shared.algorithm),
-    );
-
-    ocl::Program::builder()
-        .source(source)
-        .devices(device)
-        .cmplr_def("CONST_BEGIN", salted_prefix.len() as i32)
-        .cmplr_def(
-            "CONST_END",
-            i32::from(salted_prefix.len() as u8 + options.length),
-        )
-        .cmplr_def("CONST_TARGET_COUNT", options.shared.input.len() as i32)
-        .cmplr_def(
-            kernel_parameters.cpu_length_definition(),
-            i32::from(kernel_parameters.length_on_cpu),
-        )
-        .build(context)
-        .unwrap_or_else(|err| {
-            eprintln!("OpenCL: Failed to build program: {}", err);
-            std::process::exit(-1);
-        })
+    fn printable(&self, kernel_parameters: &KernelParameters) -> String {
+        if kernel_parameters.iterations > 1 {
+            format!(
+                "{:02$}{:03$}",
+                self.cpu_value(),
+                self.gpu_value(),
+                usize::from(kernel_parameters.length_on_cpu),
+                usize::from(kernel_parameters.length_on_gpu)
+            )
+        } else {
+            format!(
+                "{:01$}",
+                self.gpu_value(),
+                usize::from(kernel_parameters.length_on_gpu)
+            )
+        }
+    }
 }
 
 fn inject_prefix(salted_prefix: &str, src: &str) -> String {
@@ -96,31 +125,40 @@ fn inject_prefix(salted_prefix: &str, src: &str) -> String {
     output
 }
 
-fn derive_kernel_parameters(options: &options::Decrypt) -> KernelParameters {
-    let length_on_cpu = if MAX_GPU_LENGTH > options.length {
-        0
-    } else {
-        options.length - MAX_GPU_LENGTH
-    };
-    let iterations = 10_u32.pow(u32::from(length_on_cpu));
+// Allowed because of previous check for options.shared.input.len() <= i32.max_value()
+// Allowed because salted prefix is limited in size
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+fn make_program(
+    salted_prefix: &str,
+    options: &options::Decrypt,
+    kernel_parameters: &KernelParameters,
+    context: &ocl::Context,
+    device: ocl::Device,
+) -> ocl::Program {
+    let source = inject_prefix(salted_prefix, source::from(&options.shared.algorithm));
 
-    // Allowed because min(MAX_GPU_RANGE, ...) will always fit in i32
-    // Allowed because MAX_GPU_RANGE is positive
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let range = std::cmp::min(MAX_GPU_RANGE as u64, options.number_space) as i32;
-
-    let length_on_gpu = options.length - length_on_cpu;
-
-    KernelParameters {
-        iterations,
-        length_on_cpu,
-        range,
-        length_on_gpu,
-    }
+    ocl::Program::builder()
+        .source(source)
+        .devices(device)
+        .cmplr_def("CONST_BEGIN", salted_prefix.len() as i32)
+        .cmplr_def(
+            "CONST_END",
+            i32::from(salted_prefix.len() as u8 + options.length),
+        )
+        .cmplr_def("CONST_TARGET_COUNT", options.shared.input.len() as i32)
+        .cmplr_def(
+            kernel_parameters.cpu_length_definition(),
+            i32::from(kernel_parameters.length_on_cpu),
+        )
+        .build(context)
+        .unwrap_or_else(|err| {
+            eprintln!("OpenCL: Failed to build program: {}", err);
+            std::process::exit(-1);
+        })
 }
 
 fn first_gpu() -> (ocl::Platform, ocl::Device) {
-    let mut out = vec![];
+    let mut out = Vec::new();
     for platform in ocl::Platform::list() {
         if let Ok(all_devices) = ocl::Device::list_all(&platform) {
             for device in all_devices {
@@ -165,36 +203,14 @@ fn setup_opencl() -> (ocl::Device, ocl::Context, ocl::Queue) {
     (device, context, queue)
 }
 
-fn create_plain_value(
-    cpu_value: u32,
-    gpu_value: u32,
-    kernel_parameters: &KernelParameters,
-) -> String {
-    if kernel_parameters.iterations > 1 {
-        format!(
-            "{:02$}{:03$}",
-            cpu_value,
-            gpu_value,
-            usize::from(kernel_parameters.length_on_cpu),
-            usize::from(kernel_parameters.length_on_gpu)
-        )
-    } else {
-        format!(
-            "{:01$}",
-            gpu_value,
-            usize::from(kernel_parameters.length_on_gpu)
-        )
-    }
-}
-
-fn get_results<D: digest::Digest, C: hash::Converter<D>>(
+fn compute_results<D: digest::Digest, C: hash::Converter<D>>(
     input: &[C::Output],
-    output: &ocl::Buffer<Output>,
+    output: &ocl::Buffer<OpenclOutput>,
     options: &options::Decrypt,
     salted_prefix: &str,
     kernel_parameters: &KernelParameters,
 ) -> Vec<summary::Decrypted> {
-    let mut cracked = vec![Output::default(); output.len()];
+    let mut cracked = vec![OpenclOutput::default(); output.len()];
     output.read(&mut cracked).enq().unwrap_or_else(|err| {
         eprintln!("OpenCL: Failed to read output buffer: {}", err);
         std::process::exit(-1);
@@ -203,14 +219,10 @@ fn get_results<D: digest::Digest, C: hash::Converter<D>>(
     let mut results = Vec::with_capacity(output.len());
 
     for (i, plain) in cracked.iter().enumerate() {
-        if plain.gpu_value() > 0 {
+        if plain.is_valid() {
             results.push(summary::Decrypted::new(
                 input[i].to_string(),
-                format!(
-                    "{}{}",
-                    &options.prefix,
-                    create_plain_value(plain.cpu_value(), plain.gpu_value(), &kernel_parameters)
-                ),
+                format!("{}{}", &options.prefix, plain.printable(&kernel_parameters)),
             ));
         }
     }
@@ -221,8 +233,8 @@ fn get_results<D: digest::Digest, C: hash::Converter<D>>(
         for i in 0..kernel_parameters.iterations {
             use eytzinger::SliceExt;
 
-            let zeros = create_plain_value(i, 0, &kernel_parameters);
-            let hash = { C::digest(&salted_prefix, &zeros) };
+            let zeros = OpenclOutput::new(0, i).printable(&kernel_parameters);
+            let hash = C::digest(&salted_prefix, &zeros);
 
             if input.eytzinger_search(&hash).is_some() {
                 let result = format!("{}{}", &options.prefix, &zeros);
@@ -257,7 +269,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let salted_prefix = format!("{}{}", options.shared.salt, options.prefix);
     let hashes = options.input_as_eytzinger::<_, C>();
 
-    let kernel_parameters = derive_kernel_parameters(options);
+    let kernel_parameters = KernelParameters::from(options);
     let (device, context, queue) = setup_opencl();
     let program = make_program(
         &salted_prefix,
@@ -278,8 +290,6 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             std::process::exit(-1);
         });
 
-    // The output buffer comprises of [[plain, cpu_iteration_prefix]; input.len()]
-    // Therefore, input.len() * 2
     let output = ocl::Buffer::builder()
         .flags(ocl::MemFlags::WRITE_ONLY)
         .len(options.shared.input.len())
@@ -327,7 +337,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         std::process::exit(-1);
     });
 
-    let results = get_results::<_, C>(
+    let results = compute_results::<_, C>(
         &hashes,
         &output,
         &options,
@@ -335,11 +345,13 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         &kernel_parameters,
     );
 
-    if hashes.len() == 1 {
-        println!("{}", results[0].plain);
-    } else {
-        for result in &results {
-            println!("{} :: {}", result.hash, result.plain);
+    if !results.is_empty() {
+        if hashes.len() == 1 {
+            println!("{}", results[0].plain);
+        } else {
+            for result in &results {
+                println!("{} :: {}", result.hash, result.plain);
+            }
         }
     }
 
