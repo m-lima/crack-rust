@@ -83,11 +83,15 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
-                    decrypted.push(summary::Decrypted::new(hash.to_string(), result));
+                    decrypted.push(summary::Decrypted::new(hash.to_string(), result.clone()));
 
                     if input.len() == 1 {
+                        #[cfg(not(test))]
+                        println!("{}{:02$}", &prefix, n, length);
                         return (n - first, decrypted);
                     }
+                    #[cfg(not(test))]
+                    println!("{:x} :: {}", &hash, &result);
                 }
             }
             (last - first, decrypted)

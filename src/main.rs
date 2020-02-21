@@ -15,12 +15,12 @@ fn main() {
     let print = print::new(verboseness);
 
     print.options(&options);
+    print.output();
 
     let summary = match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
         options::Mode::Decrypt(options) => decrypt::execute(options),
     };
 
-    print.output(&summary);
     print.summary(&summary);
 }
