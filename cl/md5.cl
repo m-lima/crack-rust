@@ -217,20 +217,20 @@ __kernel void crack(constant Hash * targets,
 #else
   unsigned int i = 0;
   while (i < CONST_TARGET_COUNT) {
-    if (hash.longs[1] < targets[i].longs[1]) {
-      i = (i << 1) + 1;
-    } else if (hash.longs[1] > targets[i].longs[1]) {
-      i = (i << 1) + 2;
-    } else {
-      if (hash.longs[0] < targets[i].longs[0]) {
-        i = (i << 1) + 1;
-      } else if (hash.longs[0] > targets[i].longs[0]) {
-        i = (i << 1) + 2;
-      } else {
+    if (hash.longs[1] == targets[i].longs[1]) {
+      if (hash.longs[0] == targets[i].longs[0]) {
         output[i << 1] = index;
         output[(i << 1) + 1] = prefix;
         return;
+      } else {
+        i = hash.longs[0] < targets[i].longs[0]
+          ? (i << 1) + 1
+          : (i << 1) + 2;
       }
+    } else {
+      i = hash.longs[1] < targets[i].longs[1]
+        ? (i << 1) + 1
+        : (i << 1) + 2;
     }
   }
 #endif //#if CONST_TARGET_COUNT
