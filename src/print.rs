@@ -132,7 +132,7 @@ impl Print {
     }
 
     pub fn options(&self, options: &options::Mode) {
-        no_verbose_gate!(self);
+        high_verbose_gate!(self);
 
         println!("Options:");
         separator();

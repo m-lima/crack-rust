@@ -2,8 +2,8 @@ use crate::hash;
 use crate::options;
 use crate::summary;
 
-static MAX_GPU_LENGTH: u8 = 9;
-static MAX_GPU_RANGE: i32 = 1_000_000_000; // 10 ^ MAX_LENGTH
+static MAX_GPU_LENGTH: u8 = 7;
+static MAX_GPU_RANGE: i32 = 10_000_000; // 10 ^ MAX_LENGTH
 
 mod source {
     static MD5: &str = include!(concat!(env!("OUT_DIR"), "/cl/md5.rs"));
