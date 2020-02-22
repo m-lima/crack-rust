@@ -12,15 +12,6 @@ macro_rules! algorithm {
     };
 }
 
-macro_rules! device {
-    (options::Device::CPU) => {
-        "CPU"
-    };
-    (options::Device::GPU) => {
-        "GPU"
-    };
-}
-
 enum _Command {
     Encrypt,
     Decrypt,
@@ -115,6 +106,27 @@ macro_rules! arg {
     };
 }
 
+// Allowed because the count was checked for overflow
+#[allow(clippy::cast_possible_truncation)]
+fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
+    let thread_count = std::cmp::min(
+        number_space / options::OPTIMAL_HASHES_PER_THREAD + 1,
+        if requested_count == 0 {
+            let cores = num_cpus::get();
+            if cores > usize::from(u8::max_value()) {
+                eprintln!("Too many cores.. You have one powerful computer!");
+                std::process::exit(-1);
+            }
+            cores as u64
+        } else {
+            u64::from(requested_count)
+        },
+    );
+
+    // Due to `min`, it will always be less than u8::MAX (255)
+    thread_count as u8
+}
+
 fn create_app<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("Cracker")
         .version("0.1")
@@ -180,7 +192,6 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name(arg!(_Arg::Device, ArgField::Parameter))
                 .help("Device to run in [GPU, CPU]")
                 .takes_value(true)
-                .default_value(device!(options::Device::CPU))
                 .possible_values(&options::Device::variants())
                 .case_insensitive(true),
         )
@@ -318,12 +329,27 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
     #[allow(clippy::cast_possible_truncation)]
     let length = total_length - prefix.len() as u8;
     let number_space = 10_u64.pow(u32::from(length));
-    let thread_count = matches
-        .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
-        .unwrap()
-        .parse::<u8>()
-        .unwrap();
-    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), options::Device).unwrap();
+    let thread_count = get_optimal_thread_count(
+        matches
+            .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
+            .unwrap()
+            .parse::<u8>()
+            .unwrap(),
+        number_space,
+    );
+    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), options::Device)
+        .unwrap_or_else(|_| {
+            eprintln!(
+                "Failed to unwrap!: {} {}",
+                number_space,
+                u64::from(thread_count) * options::OPTIMAL_HASHES_PER_THREAD
+            );
+            if number_space > u64::from(thread_count) * options::OPTIMAL_HASHES_PER_THREAD {
+                options::Device::GPU
+            } else {
+                options::Device::CPU
+            }
+        });
 
     // let files = Vec::<String>::new();
 

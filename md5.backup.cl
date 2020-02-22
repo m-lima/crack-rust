@@ -24,6 +24,19 @@ union Hash {
 };
 typedef union Hash Hash;
 
+inline unsigned char ctz(unsigned int input) {
+  if (!input) return -1;
+  unsigned int count = 32;
+  input &= -(int) input;
+  if (input) count--;
+  if (input & 0x0000FFFF) count -= 16;
+  if (input & 0x00FF00FF) count -= 8;
+  if (input & 0x0F0F0F0F) count -= 4;
+  if (input & 0x33333333) count -= 2;
+  if (input & 0x55555555) count -= 1;
+  return count;
+}
+
 inline void md5(uint * hash, uint * input) {
   hash[0] = 0x67452301;
   hash[1] = 0xefcdab89;
@@ -205,6 +218,8 @@ __kernel void crack(constant Hash * targets,
   // Actually cracking
   md5(hash.ints, value.ints);
 
+#define CONST_BRANCHLESS 1
+  // Limit at 10 iterations
 #if CONST_TARGET_COUNT < 32
 #pragma unroll CONST_TARGET_COUNT
   for (int i = 0; i < CONST_TARGET_COUNT; i++) {
@@ -215,6 +230,57 @@ __kernel void crack(constant Hash * targets,
     }
   }
 #else
+#ifdef CONST_BRANCHLESS
+  unsigned int i = 0;
+  while (i < CONST_TARGET_COUNT) {
+    i = hash.longs[1] <= targets[i].longs[1]
+        || (hash.longs[1] == targets[i].longs[1] && hash.longs[0] <= targets[i].longs[0])
+      ? ((i << 1) + 1)
+      : ((i << 1) + 2);
+  }
+
+  // if (index == 11810) {
+  //   printf("Layout:\n");
+  //   for (int j = 0; j < CONST_TARGET_COUNT; j++) {
+  //     printf("[%02d]: ", j);
+  //     for (int k = 0; k < 16; k++) {
+  //       printf("%02x", targets[j].bytes[k]);
+  //     }
+
+  //     printf(" :: %010u %010u\n", targets[j].longs[1], targets[j].longs[0]);
+  //   }
+
+  //   if (targets[11].longs[1] > targets[12].longs[1]) {
+  //     printf("[1] > [2]\n");
+  //   } else {
+  //     printf("[1] < [2]\n");
+  //   }
+  // }
+
+  if (index == 11810 || index == 11811) {
+    printf("Final i for %d: %d\n", index, i);
+  }
+
+  // clz -> count leading zeros
+  // ctz -> count leading zeros
+  // i = (i + 1) >> (32 - clz(~i & -(~i)));
+//   i = (i + 1) >> (32 - clz(~i & (i + 1)));
+ // i = (i + 1) >> (1 + ctz(~i));
+// i = (i + 1) >> (31 - clz(~i ^ -(~i)));
+  i = (i + 1) >> (1 + ctz(~i));
+
+  if (index == 11810 || index == 11811) {
+    printf("Lookup i for %d: %d\n", index, i);
+  }
+  if (i) {
+    i--;
+    if (hash.longs[0] == targets[i].longs[0] && hash.longs[1] == targets[i].longs[1]) {
+      output[i << 1] = index;
+      output[(i << 1) + 1] = prefix;
+      return;
+    }
+  }
+#else //#ifdef CONST_BRANCHLESS
   unsigned int i = 0;
   while (i < CONST_TARGET_COUNT) {
     if (hash.longs[1] < targets[i].longs[1]) {
@@ -233,5 +299,6 @@ __kernel void crack(constant Hash * targets,
       }
     }
   }
+#endif //#ifdef CONST_BRANCHLESS
 #endif //#if CONST_TARGET_COUNT
 }

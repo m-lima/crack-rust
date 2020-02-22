@@ -110,6 +110,7 @@ impl Print {
 
     fn decrypt_options(&self, options: &options::Decrypt) {
         Self::shared_options(&options.shared);
+        println!("{:15}{}", "Device:", options.device);
         if options::Device::CPU == options.device {
             println!(
                 "{:15}{}",

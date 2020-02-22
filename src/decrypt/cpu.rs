@@ -2,8 +2,6 @@ use crate::hash;
 use crate::options;
 use crate::summary;
 
-static OPTIMAL_HASHES_PER_THREAD: u64 = 1024;
-
 #[derive(Clone)]
 pub struct Sender<T> {
     data: *const T,
@@ -19,27 +17,6 @@ impl<T> std::ops::Deref for Sender<T> {
 
 unsafe impl<T> Send for Sender<T> {}
 
-// Allowed because the count was checked for overflow
-#[allow(clippy::cast_possible_truncation)]
-fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
-    let thread_count = std::cmp::min(
-        number_space / OPTIMAL_HASHES_PER_THREAD + 1,
-        if requested_count == 0 {
-            let cores = num_cpus::get();
-            if cores > usize::from(u8::max_value()) {
-                eprintln!("Too many cores.. You have one powerful computer!");
-                std::process::exit(-1);
-            }
-            cores as u64
-        } else {
-            u64::from(requested_count)
-        },
-    );
-
-    // Due to `min`, it will always be less than u8::MAX (255)
-    thread_count as u8
-}
-
 split_by_algorithm!(execute_typed);
 
 fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
@@ -50,7 +27,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
     let input = options.input_as_eytzinger::<_, C>();
 
-    let thread_count = get_optimal_thread_count(options.thread_count, options.number_space);
+    let thread_count = options.thread_count;
     let thread_space = options.number_space / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
@@ -72,7 +49,8 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             for n in first..last {
                 use eytzinger::SliceExt;
 
-                if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1
+                if n & (options::OPTIMAL_HASHES_PER_THREAD - 1)
+                    == options::OPTIMAL_HASHES_PER_THREAD - 1
                     && count.load(std::sync::atomic::Ordering::Acquire) == 0
                 {
                     return (n - first, decrypted);

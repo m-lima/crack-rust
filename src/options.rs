@@ -2,6 +2,8 @@ use clap::arg_enum;
 
 use crate::hash;
 
+pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
+
 clap::arg_enum! {
     #[derive(PartialEq, Debug, Clone)]
     pub enum Algorithm {
