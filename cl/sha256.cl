@@ -154,19 +154,16 @@ static void sha256_process2(const unsigned int *W, unsigned int *digest) {
   digest[7] += h;
 }
 
-
-// TODO Remove the looping
-
 /* The main hashing function */
-static void sha256(unsigned int * hash, const unsigned int * input, int pass_len) {
-    int plen = pass_len / 4;
-    if (mod(pass_len, 4)) {
-      plen++;
+static void sha256(unsigned int * hash, const unsigned int * input) {
+    int input_len = CONST_END / 4;
+    if (mod(CONST_END, 4)) {
+      input_len++;
     }
 
     unsigned int W[0x10] = {0};
-    int loops = plen;
-    int curloop = 0;
+    int loops = input_len;
+    int current_loop = 0;
     unsigned int State[8] = {0};
     State[0] = 0x6a09e667;
     State[1] = 0xbb67ae85;
@@ -196,25 +193,25 @@ static void sha256(unsigned int * hash, const unsigned int * input, int pass_len
         W[0xF] = 0x0;
 
         for (int m = 0; loops != 0 && m < 16; m++) {
-            W[m] ^= SWAP(input[m + (curloop * 16)]);
+            W[m] ^= SWAP(input[m + (current_loop * 16)]);
             loops--;
         }
 
-        if (loops == 0 && mod(pass_len, 64) != 0) {
-            unsigned int padding = 0x80 << (((pass_len + 4) - ((pass_len + 4) / 4 * 4)) * 8);
-            int v = mod(pass_len, 64);
+        if (loops == 0 && mod(CONST_END, 64) != 0) {
+            unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
+            int v = mod(CONST_END, 64);
             W[v / 4] |= SWAP(padding);
-            if ((pass_len & 0x3B) != 0x3B) {
+            if ((CONST_END & 0x3B) != 0x3B) {
                 /* Let's add length */
-                W[0x0F] = pass_len * 8;
+                W[0x0F] = CONST_END * 8;
             }
         }
 
         sha256_process2(W, State);
-        curloop++;
+        current_loop++;
     }
 
-    if (mod(plen, 16) == 0) {
+    if (mod(input_len, 16) == 0) {
         W[0x0] = 0x0;
         W[0x1] = 0x0;
         W[0x2] = 0x0;
@@ -232,13 +229,13 @@ static void sha256(unsigned int * hash, const unsigned int * input, int pass_len
         W[0xE] = 0x0;
         W[0xF] = 0x0;
 
-        if ((pass_len & 0x3B) != 0x3B) {
-            unsigned int padding = 0x80 << (((pass_len + 4) - ((pass_len + 4) / 4 * 4)) * 8);
+        if ((CONST_END & 0x3B) != 0x3B) {
+            unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
             W[0] |= SWAP(padding);
         }
 
         /* Let's add length */
-        W[0x0F] =pass_len * 8;
+        W[0x0F] = CONST_END * 8;
 
         sha256_process2(W, State);
     }
@@ -360,7 +357,7 @@ __kernel void crack(constant Hash * targets,
 #endif
 
   // Actually cracking
-  sha256(hash.ints, value.ints, CONST_END);
+  sha256(hash.ints, value.ints);
 
 #if CONST_TARGET_COUNT < 32
 #pragma unroll CONST_TARGET_COUNT
