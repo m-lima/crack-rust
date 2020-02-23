@@ -1,13 +1,9 @@
-#define F(x, y, z)	bitselect((z), (y), (x))
-#define G(x, y, z)	bitselect((y), (x), (z))
-#define H(x, y, z)	(((x) ^ (y)) ^ (z))
-#define H2(x, y, z)	((x) ^ ((y) ^ (z)))
-#define I(x, y, z)	((y) ^ ((x) | ~(z)))
-
-#define STEP(f, a, b, c, d, x, t, s)	  \
-  (a) += f((b), (c), (d)) + (x) + (t); \
-  (a) = rotate((a), (uint)(s)); \
-  (a) += (b)
+/*
+    Original:
+    SHA1 OpenCL Optimized kernel
+    (c) B. Kerler 2018
+    MIT License
+*/
 
 union Value {
   unsigned char bytes[64];
@@ -17,96 +13,257 @@ union Value {
 typedef union Value Value;
 
 union Hash {
-  unsigned char bytes[16];
-  unsigned int ints[4];
-  unsigned long longs[2];
+  unsigned char bytes[32];
+  unsigned int ints[8];
+  unsigned long longs[4];
   uint4 vector;
 };
 typedef union Hash Hash;
 
-inline void md5(uint * hash, uint * input) {
-  hash[0] = 0x67452301;
-  hash[1] = 0xefcdab89;
-  hash[2] = 0x98badcfe;
-  hash[3] = 0x10325476;
+#define F1(x,y,z) (bitselect(z,y,x))
+#define F0(x,y,z) (bitselect (x, y, ((x) ^ (z))))
+#define mod(x,y) ((x)-((x)/(y)*(y)))
+#define shr32(x,n) ((x) >> (n))
+#define rotl32(a,n) rotate ((a), (n))
 
-  /* Round 1 */
-  STEP(F, hash[0], hash[1], hash[2], hash[3], input[0], 0xd76aa478, 7);
-  STEP(F, hash[3], hash[0], hash[1], hash[2], input[1], 0xe8c7b756, 12);
-  STEP(F, hash[2], hash[3], hash[0], hash[1], input[2], 0x242070db, 17);
-  STEP(F, hash[1], hash[2], hash[3], hash[0], input[3], 0xc1bdceee, 22);
-  STEP(F, hash[0], hash[1], hash[2], hash[3], input[4], 0xf57c0faf, 7);
-  STEP(F, hash[3], hash[0], hash[1], hash[2], input[5], 0x4787c62a, 12);
-  STEP(F, hash[2], hash[3], hash[0], hash[1], input[6], 0xa8304613, 17);
-  STEP(F, hash[1], hash[2], hash[3], hash[0], input[7], 0xfd469501, 22);
-  STEP(F, hash[0], hash[1], hash[2], hash[3], input[8], 0x698098d8, 7);
-  STEP(F, hash[3], hash[0], hash[1], hash[2], input[9], 0x8b44f7af, 12);
-  STEP(F, hash[2], hash[3], hash[0], hash[1], input[10], 0xffff5bb1, 17);
-  STEP(F, hash[1], hash[2], hash[3], hash[0], input[11], 0x895cd7be, 22);
-  STEP(F, hash[0], hash[1], hash[2], hash[3], input[12], 0x6b901122, 7);
-  STEP(F, hash[3], hash[0], hash[1], hash[2], input[13], 0xfd987193, 12);
-  STEP(F, hash[2], hash[3], hash[0], hash[1], input[14], 0xa679438e, 17);
-  STEP(F, hash[1], hash[2], hash[3], hash[0], input[15], 0x49b40821, 22);
+#define S0(x) (rotl32 ((x), 25u) ^ rotl32 ((x), 14u) ^ shr32 ((x),  3u))
+#define S1(x) (rotl32 ((x), 15u) ^ rotl32 ((x), 13u) ^ shr32 ((x), 10u))
+#define S2(x) (rotl32 ((x), 30u) ^ rotl32 ((x), 19u) ^ rotl32 ((x), 10u))
+#define S3(x) (rotl32 ((x), 26u) ^ rotl32 ((x), 21u) ^ rotl32 ((x),  7u))
 
-  /* Round 2 */
-  STEP(G, hash[0], hash[1], hash[2], hash[3], input[1], 0xf61e2562, 5);
-  STEP(G, hash[3], hash[0], hash[1], hash[2], input[6], 0xc040b340, 9);
-  STEP(G, hash[2], hash[3], hash[0], hash[1], input[11], 0x265e5a51, 14);
-  STEP(G, hash[1], hash[2], hash[3], hash[0], input[0], 0xe9b6c7aa, 20);
-  STEP(G, hash[0], hash[1], hash[2], hash[3], input[5], 0xd62f105d, 5);
-  STEP(G, hash[3], hash[0], hash[1], hash[2], input[10], 0x02441453, 9);
-  STEP(G, hash[2], hash[3], hash[0], hash[1], input[15], 0xd8a1e681, 14);
-  STEP(G, hash[1], hash[2], hash[3], hash[0], input[4], 0xe7d3fbc8, 20);
-  STEP(G, hash[0], hash[1], hash[2], hash[3], input[9], 0x21e1cde6, 5);
-  STEP(G, hash[3], hash[0], hash[1], hash[2], input[14], 0xc33707d6, 9);
-  STEP(G, hash[2], hash[3], hash[0], hash[1], input[3], 0xf4d50d87, 14);
-  STEP(G, hash[1], hash[2], hash[3], hash[0], input[8], 0x455a14ed, 20);
-  STEP(G, hash[0], hash[1], hash[2], hash[3], input[13], 0xa9e3e905, 5);
-  STEP(G, hash[3], hash[0], hash[1], hash[2], input[2], 0xfcefa3f8, 9);
-  STEP(G, hash[2], hash[3], hash[0], hash[1], input[7], 0x676f02d9, 14);
-  STEP(G, hash[1], hash[2], hash[3], hash[0], input[12], 0x8d2a4c8a, 20);
+#define SWAP(val) (rotate(((val) & 0x00FF00FF), 24U) | rotate(((val) & 0xFF00FF00), 8U))
 
-  /* Round 3 */
-  STEP(H, hash[0], hash[1], hash[2], hash[3], input[5], 0xfffa3942, 4);
-  STEP(H2, hash[3], hash[0], hash[1], hash[2], input[8], 0x8771f681, 11);
-  STEP(H, hash[2], hash[3], hash[0], hash[1], input[11], 0x6d9d6122, 16);
-  STEP(H2, hash[1], hash[2], hash[3], hash[0], input[14], 0xfde5380c, 23);
-  STEP(H, hash[0], hash[1], hash[2], hash[3], input[1], 0xa4beea44, 4);
-  STEP(H2, hash[3], hash[0], hash[1], hash[2], input[4], 0x4bdecfa9, 11);
-  STEP(H, hash[2], hash[3], hash[0], hash[1], input[7], 0xf6bb4b60, 16);
-  STEP(H2, hash[1], hash[2], hash[3], hash[0], input[10], 0xbebfbc70, 23);
-  STEP(H, hash[0], hash[1], hash[2], hash[3], input[13], 0x289b7ec6, 4);
-  STEP(H2, hash[3], hash[0], hash[1], hash[2], input[0], 0xeaa127fa, 11);
-  STEP(H, hash[2], hash[3], hash[0], hash[1], input[3], 0xd4ef3085, 16);
-  STEP(H2, hash[1], hash[2], hash[3], hash[0], input[6], 0x04881d05, 23);
-  STEP(H, hash[0], hash[1], hash[2], hash[3], input[9], 0xd9d4d039, 4);
-  STEP(H2, hash[3], hash[0], hash[1], hash[2], input[12], 0xe6db99e5, 11);
-  STEP(H, hash[2], hash[3], hash[0], hash[1], input[15], 0x1fa27cf8, 16);
-  STEP(H2, hash[1], hash[2], hash[3], hash[0], input[2], 0xc4ac5665, 23);
+__constant uint k_sha256[64] =
+{
+  0x428a2f98u, 0x71374491u, 0xb5c0fbcfu, 0xe9b5dba5u,
+  0x3956c25bu, 0x59f111f1u, 0x923f82a4u, 0xab1c5ed5u,
+  0xd807aa98u, 0x12835b01u, 0x243185beu, 0x550c7dc3u,
+  0x72be5d74u, 0x80deb1feu, 0x9bdc06a7u, 0xc19bf174u,
+  0xe49b69c1u, 0xefbe4786u, 0x0fc19dc6u, 0x240ca1ccu,
+  0x2de92c6fu, 0x4a7484aau, 0x5cb0a9dcu, 0x76f988dau,
+  0x983e5152u, 0xa831c66du, 0xb00327c8u, 0xbf597fc7u,
+  0xc6e00bf3u, 0xd5a79147u, 0x06ca6351u, 0x14292967u,
+  0x27b70a85u, 0x2e1b2138u, 0x4d2c6dfcu, 0x53380d13u,
+  0x650a7354u, 0x766a0abbu, 0x81c2c92eu, 0x92722c85u,
+  0xa2bfe8a1u, 0xa81a664bu, 0xc24b8b70u, 0xc76c51a3u,
+  0xd192e819u, 0xd6990624u, 0xf40e3585u, 0x106aa070u,
+  0x19a4c116u, 0x1e376c08u, 0x2748774cu, 0x34b0bcb5u,
+  0x391c0cb3u, 0x4ed8aa4au, 0x5b9cca4fu, 0x682e6ff3u,
+  0x748f82eeu, 0x78a5636fu, 0x84c87814u, 0x8cc70208u,
+  0x90befffau, 0xa4506cebu, 0xbef9a3f7u, 0xc67178f2u,
+};
 
-  /* Round 4 */
-  STEP(I, hash[0], hash[1], hash[2], hash[3], input[0], 0xf4292244, 6);
-  STEP(I, hash[3], hash[0], hash[1], hash[2], input[7], 0x432aff97, 10);
-  STEP(I, hash[2], hash[3], hash[0], hash[1], input[14], 0xab9423a7, 15);
-  STEP(I, hash[1], hash[2], hash[3], hash[0], input[5], 0xfc93a039, 21);
-  STEP(I, hash[0], hash[1], hash[2], hash[3], input[12], 0x655b59c3, 6);
-  STEP(I, hash[3], hash[0], hash[1], hash[2], input[3], 0x8f0ccc92, 10);
-  STEP(I, hash[2], hash[3], hash[0], hash[1], input[10], 0xffeff47d, 15);
-  STEP(I, hash[1], hash[2], hash[3], hash[0], input[1], 0x85845dd1, 21);
-  STEP(I, hash[0], hash[1], hash[2], hash[3], input[8], 0x6fa87e4f, 6);
-  STEP(I, hash[3], hash[0], hash[1], hash[2], input[15], 0xfe2ce6e0, 10);
-  STEP(I, hash[2], hash[3], hash[0], hash[1], input[6], 0xa3014314, 15);
-  STEP(I, hash[1], hash[2], hash[3], hash[0], input[13], 0x4e0811a1, 21);
-  STEP(I, hash[0], hash[1], hash[2], hash[3], input[4], 0xf7537e82, 6);
-  STEP(I, hash[3], hash[0], hash[1], hash[2], input[11], 0xbd3af235, 10);
-  STEP(I, hash[2], hash[3], hash[0], hash[1], input[2], 0x2ad7d2bb, 15);
-  STEP(I, hash[1], hash[2], hash[3], hash[0], input[9], 0xeb86d391, 21);
-
-  hash[0] += 0x67452301;
-  hash[1] += 0xefcdab89;
-  hash[2] += 0x98badcfe;
-  hash[3] += 0x10325476;
+#define SHA256_STEP(F0a,F1a,a,b,c,d,e,f,g,h,x,K) \
+{                                                \
+  h += K;                                        \
+  h += x;                                        \
+  h += S3 (e);                                   \
+  h += F1a (e,f,g);                              \
+  d += h;                                        \
+  h += S2 (a);                                   \
+  h += F0a (a,b,c);                              \
 }
+
+#define SHA256_EXPAND(x,y,z,w) (S1 (x) + y + S0 (z) + w)
+
+static void sha256_process2(const unsigned int *W, unsigned int *digest) {
+  unsigned int a = digest[0];
+  unsigned int b = digest[1];
+  unsigned int c = digest[2];
+  unsigned int d = digest[3];
+  unsigned int e = digest[4];
+  unsigned int f = digest[5];
+  unsigned int g = digest[6];
+  unsigned int h = digest[7];
+
+  unsigned int w0_t = W[0];
+  unsigned int w1_t = W[1];
+  unsigned int w2_t = W[2];
+  unsigned int w3_t = W[3];
+  unsigned int w4_t = W[4];
+  unsigned int w5_t = W[5];
+  unsigned int w6_t = W[6];
+  unsigned int w7_t = W[7];
+  unsigned int w8_t = W[8];
+  unsigned int w9_t = W[9];
+  unsigned int wa_t = W[10];
+  unsigned int wb_t = W[11];
+  unsigned int wc_t = W[12];
+  unsigned int wd_t = W[13];
+  unsigned int we_t = W[14];
+  unsigned int wf_t = W[15];
+
+  #define ROUND_EXPAND(i)                           \
+  {                                                 \
+    w0_t = SHA256_EXPAND (we_t, w9_t, w1_t, w0_t);  \
+    w1_t = SHA256_EXPAND (wf_t, wa_t, w2_t, w1_t);  \
+    w2_t = SHA256_EXPAND (w0_t, wb_t, w3_t, w2_t);  \
+    w3_t = SHA256_EXPAND (w1_t, wc_t, w4_t, w3_t);  \
+    w4_t = SHA256_EXPAND (w2_t, wd_t, w5_t, w4_t);  \
+    w5_t = SHA256_EXPAND (w3_t, we_t, w6_t, w5_t);  \
+    w6_t = SHA256_EXPAND (w4_t, wf_t, w7_t, w6_t);  \
+    w7_t = SHA256_EXPAND (w5_t, w0_t, w8_t, w7_t);  \
+    w8_t = SHA256_EXPAND (w6_t, w1_t, w9_t, w8_t);  \
+    w9_t = SHA256_EXPAND (w7_t, w2_t, wa_t, w9_t);  \
+    wa_t = SHA256_EXPAND (w8_t, w3_t, wb_t, wa_t);  \
+    wb_t = SHA256_EXPAND (w9_t, w4_t, wc_t, wb_t);  \
+    wc_t = SHA256_EXPAND (wa_t, w5_t, wd_t, wc_t);  \
+    wd_t = SHA256_EXPAND (wb_t, w6_t, we_t, wd_t);  \
+    we_t = SHA256_EXPAND (wc_t, w7_t, wf_t, we_t);  \
+    wf_t = SHA256_EXPAND (wd_t, w8_t, w0_t, wf_t);  \
+  }
+
+  #define ROUND_STEP(i)                                                   \
+  {                                                                       \
+    SHA256_STEP (F0, F1, a, b, c, d, e, f, g, h, w0_t, k_sha256[i +  0]); \
+    SHA256_STEP (F0, F1, h, a, b, c, d, e, f, g, w1_t, k_sha256[i +  1]); \
+    SHA256_STEP (F0, F1, g, h, a, b, c, d, e, f, w2_t, k_sha256[i +  2]); \
+    SHA256_STEP (F0, F1, f, g, h, a, b, c, d, e, w3_t, k_sha256[i +  3]); \
+    SHA256_STEP (F0, F1, e, f, g, h, a, b, c, d, w4_t, k_sha256[i +  4]); \
+    SHA256_STEP (F0, F1, d, e, f, g, h, a, b, c, w5_t, k_sha256[i +  5]); \
+    SHA256_STEP (F0, F1, c, d, e, f, g, h, a, b, w6_t, k_sha256[i +  6]); \
+    SHA256_STEP (F0, F1, b, c, d, e, f, g, h, a, w7_t, k_sha256[i +  7]); \
+    SHA256_STEP (F0, F1, a, b, c, d, e, f, g, h, w8_t, k_sha256[i +  8]); \
+    SHA256_STEP (F0, F1, h, a, b, c, d, e, f, g, w9_t, k_sha256[i +  9]); \
+    SHA256_STEP (F0, F1, g, h, a, b, c, d, e, f, wa_t, k_sha256[i + 10]); \
+    SHA256_STEP (F0, F1, f, g, h, a, b, c, d, e, wb_t, k_sha256[i + 11]); \
+    SHA256_STEP (F0, F1, e, f, g, h, a, b, c, d, wc_t, k_sha256[i + 12]); \
+    SHA256_STEP (F0, F1, d, e, f, g, h, a, b, c, wd_t, k_sha256[i + 13]); \
+    SHA256_STEP (F0, F1, c, d, e, f, g, h, a, b, we_t, k_sha256[i + 14]); \
+    SHA256_STEP (F0, F1, b, c, d, e, f, g, h, a, wf_t, k_sha256[i + 15]); \
+  }
+
+  ROUND_STEP (0);
+
+  ROUND_EXPAND();
+  ROUND_STEP(16);
+
+  ROUND_EXPAND();
+  ROUND_STEP(32);
+
+  ROUND_EXPAND();
+  ROUND_STEP(48);
+
+  digest[0] += a;
+  digest[1] += b;
+  digest[2] += c;
+  digest[3] += d;
+  digest[4] += e;
+  digest[5] += f;
+  digest[6] += g;
+  digest[7] += h;
+}
+
+
+// TODO Remove the looping
+
+/* The main hashing function */
+static void sha256(unsigned int * hash, const unsigned int * input, int pass_len) {
+    int plen = pass_len / 4;
+    if (mod(pass_len, 4)) {
+      plen++;
+    }
+
+    unsigned int W[0x10] = {0};
+    int loops = plen;
+    int curloop = 0;
+    unsigned int State[8] = {0};
+    State[0] = 0x6a09e667;
+    State[1] = 0xbb67ae85;
+    State[2] = 0x3c6ef372;
+    State[3] = 0xa54ff53a;
+    State[4] = 0x510e527f;
+    State[5] = 0x9b05688c;
+    State[6] = 0x1f83d9ab;
+    State[7] = 0x5be0cd19;
+
+    while (loops > 0) {
+        W[0x0] = 0x0;
+        W[0x1] = 0x0;
+        W[0x2] = 0x0;
+        W[0x3] = 0x0;
+        W[0x4] = 0x0;
+        W[0x5] = 0x0;
+        W[0x6] = 0x0;
+        W[0x7] = 0x0;
+        W[0x8] = 0x0;
+        W[0x9] = 0x0;
+        W[0xA] = 0x0;
+        W[0xB] = 0x0;
+        W[0xC] = 0x0;
+        W[0xD] = 0x0;
+        W[0xE] = 0x0;
+        W[0xF] = 0x0;
+
+        for (int m = 0; loops != 0 && m < 16; m++) {
+            W[m] ^= SWAP(input[m + (curloop * 16)]);
+            loops--;
+        }
+
+        if (loops == 0 && mod(pass_len, 64) != 0) {
+            unsigned int padding = 0x80 << (((pass_len + 4) - ((pass_len + 4) / 4 * 4)) * 8);
+            int v = mod(pass_len, 64);
+            W[v / 4] |= SWAP(padding);
+            if ((pass_len & 0x3B) != 0x3B) {
+                /* Let's add length */
+                W[0x0F] = pass_len * 8;
+            }
+        }
+
+        sha256_process2(W, State);
+        curloop++;
+    }
+
+    if (mod(plen, 16) == 0) {
+        W[0x0] = 0x0;
+        W[0x1] = 0x0;
+        W[0x2] = 0x0;
+        W[0x3] = 0x0;
+        W[0x4] = 0x0;
+        W[0x5] = 0x0;
+        W[0x6] = 0x0;
+        W[0x7] = 0x0;
+        W[0x8] = 0x0;
+        W[0x9] = 0x0;
+        W[0xA] = 0x0;
+        W[0xB] = 0x0;
+        W[0xC] = 0x0;
+        W[0xD] = 0x0;
+        W[0xE] = 0x0;
+        W[0xF] = 0x0;
+
+        if ((pass_len & 0x3B) != 0x3B) {
+            unsigned int padding = 0x80 << (((pass_len + 4) - ((pass_len + 4) / 4 * 4)) * 8);
+            W[0] |= SWAP(padding);
+        }
+
+        /* Let's add length */
+        W[0x0F] =pass_len * 8;
+
+        sha256_process2(W, State);
+    }
+
+    hash[0] = SWAP(State[0]);
+    hash[1] = SWAP(State[1]);
+    hash[2] = SWAP(State[2]);
+    hash[3] = SWAP(State[3]);
+    hash[4] = SWAP(State[4]);
+    hash[5] = SWAP(State[5]);
+    hash[6] = SWAP(State[6]);
+    hash[7] = SWAP(State[7]);
+    return;
+}
+
+#undef F0
+#undef F1
+#undef S0
+#undef S1
+#undef S2
+#undef S3
+
+#undef mod
+#undef shr32
+#undef rotl32
 
 /*
  * The skeleton is composed of: [SUFFIX + variable + LENGTH]
@@ -116,14 +273,14 @@ inline void md5(uint * hash, uint * input) {
  * If LENGTH happens to be larger than 64 bits, only the lower 64 bits
  * are considered
  */
-#ifdef CONST_PREFIX_DECIMAL_PLACES
+#ifdef CONST_LENGTH_ON_CPU
 inline void prepare(unsigned int value,
     unsigned int iteration,
     Value * skeleton) {
   // Filling the "variable" part of the skeleton
-#pragma unroll ((CONST_END - CONST_BEGIN) - CONST_PREFIX_DECIMAL_PLACES)
+#pragma unroll ((CONST_END - CONST_BEGIN) - CONST_LENGTH_ON_CPU)
   for (char index = CONST_END - 1;
-      index >= CONST_BEGIN + CONST_PREFIX_DECIMAL_PLACES;
+      index >= CONST_BEGIN + CONST_LENGTH_ON_CPU;
       index--)
   {
     // Convert numbers to char
@@ -134,8 +291,8 @@ inline void prepare(unsigned int value,
   }
 
   // Filling the iteration part of the skeleton
-#pragma unroll CONST_PREFIX_DECIMAL_PLACES
-  for (char index = CONST_BEGIN + CONST_PREFIX_DECIMAL_PLACES - 1;
+#pragma unroll CONST_LENGTH_ON_CPU
+  for (char index = CONST_BEGIN + CONST_LENGTH_ON_CPU - 1;
       index >= CONST_BEGIN;
       index--)
   {
@@ -166,11 +323,10 @@ inline void prepare(unsigned int value, Value * skeleton) {
 // Defines:
 // CONST_BEGIN {:d} # The index of where the variable part begins
 // CONST_END {:d} # The index past of where the variable part ends
-// CONST_SUFFIX {:d}ul # The suffix (length) for the MD5 algorithm
-// CONST_PREFIX_DECIMAL_PLACES {:d} # Decimal places the iterations are substituting
+// CONST_LENGTH_ON_CPU {:d} # Decimal places the iterations are substituting
 // CONST_TARGET_COUNT {:d} # The number of items in the targets array
 //
-// hashes: Target hashes
+// targets: Target hashes
 // output: Matched values
 //_____________________________________________________________________________
 __kernel void crack(constant Hash * targets,
@@ -180,6 +336,8 @@ __kernel void crack(constant Hash * targets,
 
   // Inject the prefix and suffix
   Value value;
+
+  // Zero out the bytes
   for (int i = 0; i < 8; i++) {
     value.longs[i] = 0;
   }
@@ -187,7 +345,7 @@ __kernel void crack(constant Hash * targets,
   // %%PREFIX%%
 
   // Inject size
-  value.bytes[56] = CONST_SUFFIX;
+  value.bytes[56] = CONST_END * 8ul;
 
   // Inject padding
   value.bytes[CONST_END] = 0x80;
@@ -195,90 +353,57 @@ __kernel void crack(constant Hash * targets,
   // Buffer for the hash
   Hash hash;
 
-#ifdef CONST_PREFIX_DECIMAL_PLACES
+#ifdef CONST_LENGTH_ON_CPU
   prepare(index, prefix, &value);
 #else
   prepare(index, &value);
 #endif
 
   // Actually cracking
-  md5(hash.ints, value.ints);
+  sha256(hash.ints, value.ints, CONST_END);
 
-  // Limit at 10 iterations
-#if CONST_TARGET_COUNT < 10
+#if CONST_TARGET_COUNT < 32
 #pragma unroll CONST_TARGET_COUNT
   for (int i = 0; i < CONST_TARGET_COUNT; i++) {
-    if (hash.longs[0] == targets[i].longs[0]) {
+    if (hash.longs[3] == targets[i].longs[3]
+        && hash.longs[2] == targets[i].longs[2]
+        && hash.longs[1] == targets[i].longs[1]
+        && hash.longs[0] == targets[i].longs[0]) {
       output[i << 1] = index;
       output[(i << 1) + 1] = prefix;
       return;
     }
   }
-
-  // Limit at 8 iterations
-#elif CONST_TARGET_COUNT < 256
-#ifdef CONST_BRANCHLESS
-  unsigned int i = CONST_TARGET_COUNT;
-  unsigned int reference = 0;
-  unsigned int halfer = (i >> 1);
-  while (i > 1) {
-    halfer = (i >> 1);
-    reference += (targets[reference + halfer].longs[0] < hash.longs[0]) ? halfer : 0;
-    i -= halfer;
-  }
-
-  if (targets[reference].longs[0] == hash.longs[0]) {
-    output[reference << 1] = index;
-    output[(reference << 1) + 1] = prefix;
-    return;
-  }
-#else //#ifdef CONST_BRANCHLESS
-  int start = 0;
-  int end = CONST_TARGET_COUNT;
-  int i = 0;
-
-  while ((end - start) > 0) {
-    i = ((end - start) >> 1) + start;
-
-    if (hash.longs[0] > targets[i].longs[0]) {
-      start = i + 1;
-    } else if (hash.longs[0] < targets[i].longs[0]) {
-      end = i;
-    } else {
-      output[i << 1] = index;
-      output[(i << 1) + 1] = prefix;
-      return;
-    }
-  }
-#endif //#ifdef CONST_BRANCHLESS
 #else
-#ifdef CONST_BRANCHLESS
   unsigned int i = 0;
   while (i < CONST_TARGET_COUNT) {
-    i = (hash.longs[0] <= targets[i].longs[0])
-      ? ((i << 1) + 1)
-      : ((i << 1) + 2);
-  }
-
-  i = (i + 1) >> (32 - clz(~i & -(~i)));
-  if (i) {
-    output[i << 1] = index;
-    output[(i << 1) + 1] = prefix;
-    return;
-  }
-#else //#ifdef CONST_BRANCHLESS
-  unsigned int i = 0;
-  while (i < CONST_TARGET_COUNT) {
-    if (targets[i].longs[0] < hash.longs[0]) {
-      i = (i << 1) + 2;
-    } else if (targets[i].longs[0] > hash.longs[0]) {
-      i = (i << 1) + 1;
+    if (hash.longs[3] == targets[i].longs[3]) {
+      if (hash.longs[2] == targets[i].longs[2]) {
+        if (hash.longs[1] == targets[i].longs[1]) {
+          if (hash.longs[0] == targets[i].longs[0]) {
+            output[i << 1] = index;
+            output[(i << 1) + 1] = prefix;
+            return;
+          } else {
+            i = hash.longs[0] < targets[i].longs[0]
+              ? (i << 1) + 1
+              : (i << 1) + 2;
+          }
+        } else {
+          i = hash.longs[1] < targets[i].longs[1]
+            ? (i << 1) + 1
+            : (i << 1) + 2;
+        }
+      } else {
+        i = hash.longs[2] < targets[i].longs[2]
+          ? (i << 1) + 1
+          : (i << 1) + 2;
+      }
     } else {
-      output[i << 1] = index;
-      output[(i << 1) + 1] = prefix;
-      return;
+      i = hash.longs[3] < targets[i].longs[3]
+        ? (i << 1) + 1
+        : (i << 1) + 2;
     }
   }
-#endif //#ifdef CONST_BRANCHLESS
 #endif //#if CONST_TARGET_COUNT
 }

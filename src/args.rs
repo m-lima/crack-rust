@@ -339,11 +339,6 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
     );
     let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), options::Device)
         .unwrap_or_else(|_| {
-            eprintln!(
-                "Failed to unwrap!: {} {}",
-                number_space,
-                u64::from(thread_count) * options::OPTIMAL_HASHES_PER_THREAD
-            );
             if number_space > u64::from(thread_count) * options::OPTIMAL_HASHES_PER_THREAD {
                 options::Device::GPU
             } else {

@@ -24,7 +24,7 @@ union Hash {
 };
 typedef union Hash Hash;
 
-inline void md5(uint * hash, uint * input) {
+inline void md5(unsigned int * hash, const unsigned int * input) {
   hash[0] = 0x67452301;
   hash[1] = 0xefcdab89;
   hash[2] = 0x98badcfe;
@@ -169,7 +169,7 @@ inline void prepare(unsigned int value, Value * skeleton) {
 // CONST_LENGTH_ON_CPU {:d} # Decimal places the iterations are substituting
 // CONST_TARGET_COUNT {:d} # The number of items in the targets array
 //
-// hashes: Target hashes
+// targets: Target hashes
 // output: Matched values
 //_____________________________________________________________________________
 __kernel void crack(constant Hash * targets,
