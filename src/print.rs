@@ -34,6 +34,18 @@ pub struct Print {
     verboseness: Verboseness,
 }
 
+pub fn progress(progress: u32) {
+    use std::io::Write;
+    eprint!("\rProgress: {:02}%", progress);
+    let _ = std::io::stderr().flush();
+}
+
+pub fn clear_progress() {
+    use std::io::Write;
+    eprint!("\r                  \r");
+    let _ = std::io::stderr().flush();
+}
+
 pub fn new(verboseness: Verboseness) -> Print {
     Print { verboseness }
 }

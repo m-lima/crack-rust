@@ -1,7 +1,7 @@
 # To Do
 
 ## UI
-  [ ] Show progress (based on atomic for CPU and on queue for GPU)
+  [x] Show progress (based on atomic for CPU and on queue for GPU) (use stderr)
   [x] Time taken
 
 ## Input

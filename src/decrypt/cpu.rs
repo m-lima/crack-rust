@@ -1,5 +1,6 @@
 use crate::hash;
 use crate::options;
+use crate::print;
 use crate::summary;
 
 #[derive(Clone)]
@@ -31,6 +32,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let thread_space = options.number_space / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
+    print::progress(0);
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
@@ -51,9 +53,13 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
                 if n & (options::OPTIMAL_HASHES_PER_THREAD - 1)
                     == options::OPTIMAL_HASHES_PER_THREAD - 1
-                    && count.load(std::sync::atomic::Ordering::Acquire) == 0
                 {
-                    return (n - first, decrypted);
+                    if t == 0 {
+                        print::progress((n * 100 / last) as u32);
+                    }
+                    if count.load(std::sync::atomic::Ordering::Acquire) == 0 {
+                        return (n - first, decrypted);
+                    }
                 }
 
                 let number = format!("{:01$}", n, length);
@@ -65,10 +71,12 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
                     if input.len() == 1 {
                         #[cfg(not(test))]
-                        println!("{}{:02$}", &prefix, n, length);
+                        print::clear_progress();
+                        println!("\r{}{:02$}", &prefix, n, length);
                         return (n - first, decrypted);
                     }
                     #[cfg(not(test))]
+                    print::clear_progress();
                     println!("{:x} :: {}", &hash, &result);
                 }
             }
@@ -95,6 +103,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
                 v
             })
         });
+    print::clear_progress();
 
     summary::Mode::Decrypt(summary::Decrypt {
         total_count: input.len(),

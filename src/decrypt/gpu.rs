@@ -1,6 +1,7 @@
 use super::opencl;
 use crate::hash;
 use crate::options;
+use crate::print;
 use crate::summary;
 
 fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
@@ -89,6 +90,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             std::process::exit(-1);
         });
 
+    print::progress(0);
     for i in 0..environment.cpu_iterations() {
         let kernel = ocl::Kernel::builder()
             .program(&program)
@@ -114,6 +116,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         // If we enqueue too many, OpenCL will abort
         // Send every 7th iteration
         if i & 0b111 == 0b111 {
+            print::progress(i * 100 / environment.cpu_iterations());
             environment.queue().finish().unwrap_or_else(|err| {
                 eprintln!(
                     "OpenCL: Failed to wait for queue segment to finish: {}",
@@ -128,6 +131,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         eprintln!("OpenCL: Failed to wait for queue to finish: {}", err);
         std::process::exit(-1);
     });
+    print::clear_progress();
 
     let results = compute_results::<_, C>(&environment, &input, &out_buffer, &options);
 
