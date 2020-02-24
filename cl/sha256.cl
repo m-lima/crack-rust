@@ -20,11 +20,11 @@ union Hash {
 };
 typedef union Hash Hash;
 
-#define F1(x,y,z) (bitselect(z,y,x))
-#define F0(x,y,z) (bitselect (x, y, ((x) ^ (z))))
-#define mod(x,y) ((x)-((x)/(y)*(y)))
-#define shr32(x,n) ((x) >> (n))
-#define rotl32(a,n) rotate ((a), (n))
+#define F1(x, y, z) (bitselect(z,y,x))
+#define F0(x, y, z) (bitselect (x, y, ((x) ^ (z))))
+#define mod(x, y) ((x)-((x)/(y)*(y)))
+#define shr32(x, n) ((x) >> (n))
+#define rotl32(a, n) rotate ((a), (n))
 
 #define S0(x) (rotl32 ((x), 25u) ^ rotl32 ((x), 14u) ^ shr32 ((x),  3u))
 #define S1(x) (rotl32 ((x), 15u) ^ rotl32 ((x), 13u) ^ shr32 ((x), 10u))
@@ -53,20 +53,20 @@ __constant uint k_sha256[64] =
   0x90befffau, 0xa4506cebu, 0xbef9a3f7u, 0xc67178f2u,
 };
 
-#define SHA256_STEP(F0a,F1a,a,b,c,d,e,f,g,h,x,K) \
-{                                                \
-  h += K;                                        \
-  h += x;                                        \
-  h += S3 (e);                                   \
-  h += F1a (e,f,g);                              \
-  d += h;                                        \
-  h += S2 (a);                                   \
-  h += F0a (a,b,c);                              \
+#define SHA256_STEP(F0a, F1a, a, b, c, d, e, f, g, h, x, K) \
+{                                                           \
+  h += K;                                                   \
+  h += x;                                                   \
+  h += S3(e);                                               \
+  h += F1a(e, f, g);                                        \
+  d += h;                                                   \
+  h += S2(a);                                               \
+  h += F0a(a, b, c);                                        \
 }
 
-#define SHA256_EXPAND(x,y,z,w) (S1 (x) + y + S0 (z) + w)
+#define SHA256_EXPAND(x, y, z, w) (S1 (x) + y + S0 (z) + w)
 
-static void sha256_process2(const unsigned int *W, unsigned int *digest) {
+static void sha256_process2(const unsigned int * W, unsigned int * digest) {
   unsigned int a = digest[0];
   unsigned int b = digest[1];
   unsigned int c = digest[2];
@@ -93,7 +93,7 @@ static void sha256_process2(const unsigned int *W, unsigned int *digest) {
   unsigned int we_t = W[14];
   unsigned int wf_t = W[15];
 
-  #define ROUND_EXPAND(i)                           \
+#define ROUND_EXPAND(i)                             \
   {                                                 \
     w0_t = SHA256_EXPAND (we_t, w9_t, w1_t, w0_t);  \
     w1_t = SHA256_EXPAND (wf_t, wa_t, w2_t, w1_t);  \
@@ -113,7 +113,7 @@ static void sha256_process2(const unsigned int *W, unsigned int *digest) {
     wf_t = SHA256_EXPAND (wd_t, w8_t, w0_t, wf_t);  \
   }
 
-  #define ROUND_STEP(i)                                                   \
+#define ROUND_STEP(i)                                                     \
   {                                                                       \
     SHA256_STEP (F0, F1, a, b, c, d, e, f, g, h, w0_t, k_sha256[i +  0]); \
     SHA256_STEP (F0, F1, h, a, b, c, d, e, f, g, w1_t, k_sha256[i +  1]); \
@@ -156,99 +156,99 @@ static void sha256_process2(const unsigned int *W, unsigned int *digest) {
 
 /* The main hashing function */
 static void sha256(unsigned int * hash, const unsigned int * input) {
-    int input_len = CONST_END / 4;
-    if (mod(CONST_END, 4)) {
-      input_len++;
+  int input_len = CONST_END / 4;
+  if (mod(CONST_END, 4)) {
+    input_len++;
+  }
+
+  unsigned int W[0x10] = {0};
+  int loops = input_len;
+  int current_loop = 0;
+  unsigned int State[8] = {0};
+  State[0] = 0x6a09e667;
+  State[1] = 0xbb67ae85;
+  State[2] = 0x3c6ef372;
+  State[3] = 0xa54ff53a;
+  State[4] = 0x510e527f;
+  State[5] = 0x9b05688c;
+  State[6] = 0x1f83d9ab;
+  State[7] = 0x5be0cd19;
+
+  while (loops > 0) {
+    W[0x0] = 0x0;
+    W[0x1] = 0x0;
+    W[0x2] = 0x0;
+    W[0x3] = 0x0;
+    W[0x4] = 0x0;
+    W[0x5] = 0x0;
+    W[0x6] = 0x0;
+    W[0x7] = 0x0;
+    W[0x8] = 0x0;
+    W[0x9] = 0x0;
+    W[0xA] = 0x0;
+    W[0xB] = 0x0;
+    W[0xC] = 0x0;
+    W[0xD] = 0x0;
+    W[0xE] = 0x0;
+    W[0xF] = 0x0;
+
+    for (int m = 0; loops != 0 && m < 16; m++) {
+      W[m] ^= SWAP(input[m + (current_loop * 16)]);
+      loops--;
     }
 
-    unsigned int W[0x10] = {0};
-    int loops = input_len;
-    int current_loop = 0;
-    unsigned int State[8] = {0};
-    State[0] = 0x6a09e667;
-    State[1] = 0xbb67ae85;
-    State[2] = 0x3c6ef372;
-    State[3] = 0xa54ff53a;
-    State[4] = 0x510e527f;
-    State[5] = 0x9b05688c;
-    State[6] = 0x1f83d9ab;
-    State[7] = 0x5be0cd19;
-
-    while (loops > 0) {
-        W[0x0] = 0x0;
-        W[0x1] = 0x0;
-        W[0x2] = 0x0;
-        W[0x3] = 0x0;
-        W[0x4] = 0x0;
-        W[0x5] = 0x0;
-        W[0x6] = 0x0;
-        W[0x7] = 0x0;
-        W[0x8] = 0x0;
-        W[0x9] = 0x0;
-        W[0xA] = 0x0;
-        W[0xB] = 0x0;
-        W[0xC] = 0x0;
-        W[0xD] = 0x0;
-        W[0xE] = 0x0;
-        W[0xF] = 0x0;
-
-        for (int m = 0; loops != 0 && m < 16; m++) {
-            W[m] ^= SWAP(input[m + (current_loop * 16)]);
-            loops--;
-        }
-
-        if (loops == 0 && mod(CONST_END, 64) != 0) {
-            unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
-            int v = mod(CONST_END, 64);
-            W[v / 4] |= SWAP(padding);
-            if ((CONST_END & 0x3B) != 0x3B) {
-                /* Let's add length */
-                W[0x0F] = CONST_END * 8;
-            }
-        }
-
-        sha256_process2(W, State);
-        current_loop++;
-    }
-
-    if (mod(input_len, 16) == 0) {
-        W[0x0] = 0x0;
-        W[0x1] = 0x0;
-        W[0x2] = 0x0;
-        W[0x3] = 0x0;
-        W[0x4] = 0x0;
-        W[0x5] = 0x0;
-        W[0x6] = 0x0;
-        W[0x7] = 0x0;
-        W[0x8] = 0x0;
-        W[0x9] = 0x0;
-        W[0xA] = 0x0;
-        W[0xB] = 0x0;
-        W[0xC] = 0x0;
-        W[0xD] = 0x0;
-        W[0xE] = 0x0;
-        W[0xF] = 0x0;
-
-        if ((CONST_END & 0x3B) != 0x3B) {
-            unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
-            W[0] |= SWAP(padding);
-        }
-
+    if (loops == 0 && mod(CONST_END, 64) != 0) {
+      unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
+      int v = mod(CONST_END, 64);
+      W[v / 4] |= SWAP(padding);
+      if ((CONST_END & 0x3B) != 0x3B) {
         /* Let's add length */
         W[0x0F] = CONST_END * 8;
-
-        sha256_process2(W, State);
+      }
     }
 
-    hash[0] = SWAP(State[0]);
-    hash[1] = SWAP(State[1]);
-    hash[2] = SWAP(State[2]);
-    hash[3] = SWAP(State[3]);
-    hash[4] = SWAP(State[4]);
-    hash[5] = SWAP(State[5]);
-    hash[6] = SWAP(State[6]);
-    hash[7] = SWAP(State[7]);
-    return;
+    sha256_process2(W, State);
+    current_loop++;
+  }
+
+  if (mod(input_len, 16) == 0) {
+    W[0x0] = 0x0;
+    W[0x1] = 0x0;
+    W[0x2] = 0x0;
+    W[0x3] = 0x0;
+    W[0x4] = 0x0;
+    W[0x5] = 0x0;
+    W[0x6] = 0x0;
+    W[0x7] = 0x0;
+    W[0x8] = 0x0;
+    W[0x9] = 0x0;
+    W[0xA] = 0x0;
+    W[0xB] = 0x0;
+    W[0xC] = 0x0;
+    W[0xD] = 0x0;
+    W[0xE] = 0x0;
+    W[0xF] = 0x0;
+
+    if ((CONST_END & 0x3B) != 0x3B) {
+      unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
+      W[0] |= SWAP(padding);
+    }
+
+    /* Let's add length */
+    W[0x0F] = CONST_END * 8;
+
+    sha256_process2(W, State);
+  }
+
+  hash[0] = SWAP(State[0]);
+  hash[1] = SWAP(State[1]);
+  hash[2] = SWAP(State[2]);
+  hash[3] = SWAP(State[3]);
+  hash[4] = SWAP(State[4]);
+  hash[5] = SWAP(State[5]);
+  hash[6] = SWAP(State[6]);
+  hash[7] = SWAP(State[7]);
+  return;
 }
 
 #undef F0
