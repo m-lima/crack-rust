@@ -1,8 +1,5 @@
 use clap::value_t;
 
-use crate::options;
-use crate::print;
-
 macro_rules! algorithm {
     (options::Algorithm::MD5) => {
         "MD5"
@@ -38,6 +35,7 @@ enum _Arg {
     Verbose,
 }
 
+#[derive(Copy, Clone)]
 enum ArgField {
     Name,
     Short,
@@ -110,7 +108,7 @@ macro_rules! arg {
 #[allow(clippy::cast_possible_truncation)]
 fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     let thread_count = std::cmp::min(
-        number_space / options::OPTIMAL_HASHES_PER_THREAD + 1,
+        number_space / super::OPTIMAL_HASHES_PER_THREAD + 1,
         if requested_count == 0 {
             let cores = num_cpus::get();
             if cores > usize::from(u8::max_value()) {
@@ -192,7 +190,7 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name(arg!(_Arg::Device, ArgField::Parameter))
                 .help("Device to run in [GPU, CPU]")
                 .takes_value(true)
-                .possible_values(&options::Device::variants())
+                .possible_values(&super::Device::variants())
                 .case_insensitive(true),
         )
         .arg(
@@ -243,7 +241,7 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
                 .help("Hashing algorithm")
                 .takes_value(true)
                 .default_value(algorithm!(options::Algorithm::SHA256))
-                .possible_values(&options::Algorithm::variants())
+                .possible_values(&super::Algorithm::variants())
                 .case_insensitive(true)
                 .global(true),
         )
@@ -277,37 +275,35 @@ fn get_input(matches: &clap::ArgMatches<'_>) -> Vec<String> {
         .collect()
 }
 
-fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> print::Verboseness {
+fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> super::Verboseness {
     match matches.occurrences_of(arg!(_Arg::Verbose)) {
-        2 => print::Verboseness::High,
-        1 => print::Verboseness::Low,
-        0 | _ => print::Verboseness::None,
+        2 => super::Verboseness::High,
+        1 => super::Verboseness::Low,
+        0 | _ => super::Verboseness::None,
     }
 }
 
-fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> options::Shared {
-    options::Shared {
+fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> super::Shared {
+    super::Shared {
         algorithm: value_t!(
             matches,
             arg!(_Arg::Algorithm, ArgField::Name),
-            options::Algorithm
+            super::Algorithm
         )
         .unwrap(),
         salt: String::from(matches.value_of(arg!(_Arg::Salt, ArgField::Name)).unwrap()),
         input: get_input(matches),
+        verboseness: parse_verboseness(&matches),
     }
 }
 
-fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verboseness) {
-    (
-        options::Mode::Encrypt(options::Encrypt {
-            shared: parse_shared_args(&matches),
-        }),
-        parse_verboseness(&matches),
-    )
+fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
+    super::Mode::Encrypt(super::Encrypt {
+        shared: parse_shared_args(&matches),
+    })
 }
 
-fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verboseness) {
+fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
     let shared = parse_shared_args(&matches);
 
     let prefix = String::from(
@@ -337,31 +333,28 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> (options::Mode, print::Verbo
             .unwrap(),
         number_space,
     );
-    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), options::Device)
+    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), super::Device)
         .unwrap_or_else(|_| {
-            if number_space > u64::from(thread_count) * options::OPTIMAL_HASHES_PER_THREAD {
-                options::Device::GPU
+            if number_space > u64::from(thread_count) * super::OPTIMAL_HASHES_PER_THREAD {
+                super::Device::GPU
             } else {
-                options::Device::CPU
+                super::Device::CPU
             }
         });
 
     // let files = Vec::<String>::new();
 
-    (
-        options::Mode::Decrypt(options::Decrypt {
-            shared,
-            thread_count,
-            length,
-            number_space,
-            prefix,
-            device,
-        }),
-        parse_verboseness(&matches),
-    )
+    super::Mode::Decrypt(super::Decrypt {
+        shared,
+        thread_count,
+        length,
+        number_space,
+        prefix,
+        device,
+    })
 }
 
-pub fn parse() -> (options::Mode, print::Verboseness) {
+pub fn parse() -> super::Mode {
     let matches = setup();
     match matches.subcommand() {
         (cmd!(_Command::Encrypt), Some(sub_matches)) => parse_encrypt(&sub_matches),

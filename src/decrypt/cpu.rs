@@ -3,6 +3,8 @@ use crate::options;
 use crate::print;
 use crate::summary;
 
+use crate::options::SharedAccessor;
+
 #[derive(Clone)]
 pub struct Sender<T> {
     data: *const T,
@@ -25,11 +27,11 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 ) -> summary::Mode {
     let time = std::time::Instant::now();
 
-    let count = std::sync::atomic::AtomicUsize::new(options.shared.input.len());
+    let count = std::sync::atomic::AtomicUsize::new(options.input().len());
     let input = options.input_as_eytzinger::<_, C>();
 
-    let thread_count = options.thread_count;
-    let thread_space = options.number_space / u64::from(thread_count);
+    let thread_count = options.thread_count();
+    let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
     print::progress(0);
@@ -37,11 +39,11 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
 
-        let prefix = options.prefix.clone();
-        let salted_prefix = format!("{}{}", options.shared.salt, options.prefix);
-        let length = options.length as usize;
+        let prefix = String::from(options.prefix());
+        let salted_prefix = format!("{}{}", options.salt(), options.prefix());
+        let length = options.length() as usize;
         let first = t * thread_space;
-        let last = std::cmp::min(first + thread_space, options.number_space);
+        let last = std::cmp::min(first + thread_space, options.number_space());
 
         threads.push(std::thread::spawn(move || {
             let count = &count_sender;
@@ -55,6 +57,9 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
                     == options::OPTIMAL_HASHES_PER_THREAD - 1
                 {
                     if t == 0 {
+                        // Allowed because of division; value will stay in bound
+                        // `n` is less than `last`
+                        #[allow(clippy::cast_possible_truncation)]
                         print::progress((n * 100 / last) as u32);
                     }
                     if count.load(std::sync::atomic::Ordering::Acquire) == 0 {
@@ -71,13 +76,17 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
                     if input.len() == 1 {
                         #[cfg(not(test))]
-                        print::clear_progress();
-                        println!("\r{}{:02$}", &prefix, n, length);
+                        {
+                            print::clear_progress();
+                            println!("\r{}{:02$}", &prefix, n, length);
+                        }
                         return (n - first, decrypted);
                     }
                     #[cfg(not(test))]
-                    print::clear_progress();
-                    println!("{:x} :: {}", &hash, &result);
+                    {
+                        print::clear_progress();
+                        println!("{:x} :: {}", &hash, &result);
+                    }
                 }
             }
             (last - first, decrypted)
@@ -144,18 +153,17 @@ mod test {
             },
         ];
 
-        let options = options::Decrypt {
-            shared: options::Shared {
-                input: expected.iter().map(|v| v.hash.to_string()).collect(),
-                algorithm: options::Algorithm::SHA256,
-                salt,
-            },
-            length: 2u8,
-            thread_count: 4,
-            number_space: 100,
+        let options = options::Decrypt::new(
+            expected.iter().map(|v| v.hash.to_string()).collect(),
+            options::Algorithm::SHA256,
+            salt,
+            options::Verboseness::None,
+            2u8,
+            4,
+            100,
             prefix,
-            device: options::Device::CPU,
-        };
+            options::Device::CPU,
+        );
 
         if let summary::Mode::Decrypt(decrypt) = execute(&options) {
             assert_eq!(decrypt.results, expected);

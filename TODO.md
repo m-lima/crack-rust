@@ -12,3 +12,6 @@
   [x] **GPU**
   [ ] Optimize SHA256 (make assumptions)
   [ ] Share GLSL code between algorithms (structs, prepare, search)
+
+## Design
+  [x] Make options/args self-contained

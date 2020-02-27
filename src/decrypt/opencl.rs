@@ -1,5 +1,7 @@
 use crate::options;
 
+use crate::options::SharedAccessor;
+
 static MAX_GPU_LENGTH: u8 = 7;
 
 pub(super) fn setup_for(options: &options::Decrypt) -> Environment<'_> {
@@ -21,8 +23,8 @@ impl<'a> Environment<'a> {
     // Allowed because salted prefix is limited in size
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub(super) fn make_program(&self) -> ocl::Program {
-        let salted_prefix = format!("{}{}", &self.options.shared.salt, &self.options.prefix);
-        let source = source::from(&self.options.shared.algorithm).with_prefix(&salted_prefix);
+        let salted_prefix = format!("{}{}", &self.options.salt(), &self.options.prefix());
+        let source = source::from(self.options.algorithm()).with_prefix(&salted_prefix);
 
         ocl::Program::builder()
             .source(source.to_string())
@@ -30,9 +32,9 @@ impl<'a> Environment<'a> {
             .cmplr_def("CONST_BEGIN", salted_prefix.len() as i32)
             .cmplr_def(
                 "CONST_END",
-                i32::from(salted_prefix.len() as u8 + self.options.length),
+                i32::from(salted_prefix.len() as u8 + self.options.length()),
             )
-            .cmplr_def("CONST_TARGET_COUNT", self.options.shared.input.len() as i32)
+            .cmplr_def("CONST_TARGET_COUNT", self.options.input().len() as i32)
             .cmplr_def(
                 self.kernel_parameters.cpu_length_definition(),
                 i32::from(self.kernel_parameters.length_on_cpu_iterations),
@@ -125,19 +127,21 @@ struct KernelParameters {
 
 impl KernelParameters {
     fn from(options: &options::Decrypt) -> Self {
-        let length_on_cpu_iterations = if MAX_GPU_LENGTH > options.length {
+        let length_on_cpu_iterations = if MAX_GPU_LENGTH > options.length() {
             0
         } else {
-            options.length - MAX_GPU_LENGTH
+            options.length() - MAX_GPU_LENGTH
         };
         let cpu_iterations = 10_u32.pow(u32::from(length_on_cpu_iterations));
 
         // Allowed because min(MAX_GPU_RANGE, ...) will always fit in u32
         #[allow(clippy::cast_possible_truncation)]
-        let range =
-            std::cmp::min(10_u64.pow(u32::from(MAX_GPU_LENGTH)), options.number_space) as u32;
+        let range = std::cmp::min(
+            10_u64.pow(u32::from(MAX_GPU_LENGTH)),
+            options.number_space(),
+        ) as u32;
 
-        let length_on_gpu_kernel = options.length - length_on_cpu_iterations;
+        let length_on_gpu_kernel = options.length() - length_on_cpu_iterations;
 
         Self {
             cpu_iterations,
@@ -200,7 +204,7 @@ mod source {
     pub(super) struct SourceTemplate<'a>(&'a str);
     pub(super) struct Source(String);
 
-    pub(super) fn from<'a>(algorithm: &super::options::Algorithm) -> SourceTemplate<'a> {
+    pub(super) fn from<'a>(algorithm: super::options::Algorithm) -> SourceTemplate<'a> {
         SourceTemplate(match algorithm {
             super::options::Algorithm::MD5 => MD5,
             super::options::Algorithm::SHA256 => SHA256,

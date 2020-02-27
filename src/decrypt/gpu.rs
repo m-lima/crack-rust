@@ -4,6 +4,8 @@ use crate::options;
 use crate::print;
 use crate::summary;
 
+use crate::options::SharedAccessor;
+
 fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
     environment: &opencl::Environment<'a>,
     input: &[C::Output],
@@ -22,7 +24,7 @@ fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
         if plain.is_valid() {
             results.push(summary::Decrypted::new(
                 input[i].to_string(),
-                format!("{}{}", &options.prefix, plain.printable(&environment)),
+                format!("{}{}", &options.prefix(), plain.printable(&environment)),
             ));
         }
     }
@@ -30,7 +32,7 @@ fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
     // The kernel will output zeros if nothing is found
     // We should hash this in the CPU to make sure it doesn't match anything
     if results.len() < input.len() {
-        let salted_prefix = format!("{}{}", &options.shared.salt, &options.prefix);
+        let salted_prefix = format!("{}{}", &options.salt(), &options.prefix());
 
         for i in 0..environment.cpu_iterations() {
             use eytzinger::SliceExt;
@@ -39,7 +41,7 @@ fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
             let hash = C::digest(&salted_prefix, &zeros);
 
             if input.eytzinger_search(&hash).is_some() {
-                let result = format!("{}{}", &options.prefix, &zeros);
+                let result = format!("{}{}", &options.prefix(), &zeros);
                 results.push(summary::Decrypted::new(hash.to_string(), result));
             }
 
@@ -59,7 +61,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 ) -> summary::Mode {
     let time = std::time::Instant::now();
 
-    if (options.shared.input.len() as u64) >= (i32::max_value() as u64) {
+    if (options.input().len() as u64) >= (i32::max_value() as u64) {
         eprintln!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
         std::process::exit(-1);
     }
@@ -71,7 +73,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
     let in_buffer = ocl::Buffer::builder()
         .flags(ocl::MemFlags::READ_ONLY)
-        .len(options.shared.input.len())
+        .len(options.input().len())
         .queue(environment.queue().clone())
         .copy_host_slice(&input)
         .build()
@@ -82,7 +84,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
     let out_buffer = ocl::Buffer::builder()
         .flags(ocl::MemFlags::WRITE_ONLY)
-        .len(options.shared.input.len())
+        .len(options.input().len())
         .queue(environment.queue().clone())
         .build()
         .unwrap_or_else(|err| {
@@ -148,7 +150,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     summary::Mode::Decrypt(summary::Decrypt {
         total_count: input.len(),
         duration: time.elapsed(),
-        hash_count: options.number_space,
+        hash_count: options.number_space(),
         thread_count: environment.range(),
         results,
     })
