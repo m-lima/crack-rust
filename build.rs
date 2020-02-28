@@ -4,19 +4,27 @@ fn generate_secrets() {
     {
         use std::io::BufRead;
         let path = std::path::Path::new("hidden/secrets");
-        let file = std::fs::File::open(&path).expect("Failed to find 'secrets' file");
-        let reader = std::io::BufReader::new(file);
+        let file_open = std::fs::File::open(&path);
+        match file_open {
+            Ok(file) => {
+                let reader = std::io::BufReader::new(file);
 
-        for line in reader.lines() {
-            let line = line.expect("Failed to read line from 'secrets'");
-            match line.find('=') {
-                Some(pivot) => {
-                    secrets.insert(
-                        String::from(&line[0..pivot]),
-                        String::from(&line[(pivot + 1)..]),
-                    );
+                for line in reader.lines() {
+                    let line = line.expect("Failed to read line from 'secrets'");
+                    match line.find('=') {
+                        Some(pivot) => {
+                            secrets.insert(
+                                String::from(&line[0..pivot]),
+                                String::from(&line[(pivot + 1)..]),
+                            );
+                        }
+                        None => {}
+                    }
                 }
-                None => {}
+            }
+            Err(_) => {
+                eprintln!("No 'secrets' file. Adding dummy values");
+                secrets.insert(String::from("SALT"), String::new());
             }
         }
     }

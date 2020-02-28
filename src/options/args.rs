@@ -245,16 +245,20 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
                 .case_insensitive(true)
                 .global(true),
         )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Salt, ArgField::Name))
+        .arg({
+            let salt = clap::Arg::with_name(arg!(_Arg::Salt, ArgField::Name))
                 .long(arg!(_Arg::Salt, ArgField::Name))
                 .short(arg!(_Arg::Salt, ArgField::Short))
                 .value_name(arg!(_Arg::Salt, ArgField::Parameter))
                 .help("Salt to use")
                 .takes_value(true)
-                .default_value(crate::secrets::SALT)
-                .global(true),
-        )
+                .global(true);
+            if crate::secrets::SALT.is_empty() {
+                salt
+            } else {
+                salt.default_value(crate::secrets::SALT)
+            }
+        })
         .arg(
             clap::Arg::with_name(arg!(_Arg::Verbose))
                 .short(arg!(_Arg::Verbose))
