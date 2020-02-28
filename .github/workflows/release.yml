@@ -62,6 +62,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y clinfo mesa-opencl-icd
         sudo ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
+    - name: Prepare OpenCL (WINDOWS)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install opencl-intel-cpu-runtime
     - name: Build
       uses: actions-rs/cargo@v1
       with:
