@@ -8,7 +8,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v1
-    - name: Prepare
+    - name: Prepare OpenCL
+      run: sudo apt-get update && sudo apt-get install -y clinfo mesa-opencl-icd
+    - name: Prepare Cargo
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -19,7 +21,7 @@ jobs:
       with:
         command: fmt
         args: --all -- --check
-    - name: Build
+    - name: Check
       uses: actions-rs/cargo@v1
       with:
         command: check
