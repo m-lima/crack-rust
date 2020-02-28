@@ -65,6 +65,12 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+    - name: Prepare OpenCL (UBUNTU)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clinfo mesa-opencl-icd
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
     - name: Build
       uses: actions-rs/cargo@v1
       with:
