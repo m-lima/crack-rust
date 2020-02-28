@@ -198,8 +198,8 @@ impl Output {
 }
 
 mod source {
-    static MD5: &str = include!(concat!(env!("OUT_DIR"), "/cl/md5.rs"));
-    static SHA256: &str = include!(concat!(env!("OUT_DIR"), "/cl/sha256.rs"));
+    static MD5: &str = include_str!("../../cl/md5.cl");
+    static SHA256: &str = include_str!("../../cl/sha256.cl");
 
     pub(super) struct SourceTemplate<'a>(&'a str);
     pub(super) struct Source(String);

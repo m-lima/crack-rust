@@ -1,1 +1,1 @@
-include!(concat!(env!("OUT_DIR"), "/secrets.rs"));
+pub static SALT: &str = include_str!("../hidden/salt");
