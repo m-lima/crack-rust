@@ -9,7 +9,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v1
     - name: Prepare OpenCL
-      run: sudo apt-get update && sudo apt-get install -y clinfo mesa-opencl-icd
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clinfo mesa-opencl-icd
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
     - name: Prepare Cargo
       uses: actions-rs/toolchain@v1
       with:
@@ -21,10 +24,10 @@ jobs:
       with:
         command: fmt
         args: --all -- --check
-    - name: Check
+    - name: Build
       uses: actions-rs/cargo@v1
       with:
-        command: check
+        command: build
         args: --verbose --all-targets
     - name: Lint
       uses: actions-rs/clippy-check@v1
