@@ -65,7 +65,7 @@ jobs:
     - name: Prepare OpenCL (WINDOWS)
       if: matrix.os == 'windows-latest'
       run: |
-        choco install opencl-intel-cpu-runtime
+        choco install --debug --verbose opencl-intel-cpu-runtime
     - name: Build
       uses: actions-rs/cargo@v1
       with:
