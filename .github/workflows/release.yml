@@ -98,7 +98,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.recover_url.outputs.upload_url }}
+        upload_url: ${{ steps.load_release.outputs.upload_url }}
         asset_path: ./target/release/hasher.exe
         asset_name: hasher-${{ steps.load_release.outputs.os_name }}.exe
         asset_content_type: application/octet-stream
