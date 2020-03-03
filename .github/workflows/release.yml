@@ -65,7 +65,9 @@ jobs:
     - name: Prepare OpenCL (WINDOWS)
       if: matrix.os == 'windows-latest'
       run: |
-        choco install --debug --verbose opencl-intel-cpu-runtime
+        Invoke-WebRequest -Uri https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip -OutFile lightOCLSDK.zip
+        Expand-Archive -Path lightOCLSDK.zip
+        mv lightOCLSDK/lib/x86_64/OpenCL.lib .
     - name: Build
       uses: actions-rs/cargo@v1
       with:
