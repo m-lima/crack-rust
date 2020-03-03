@@ -79,8 +79,9 @@ jobs:
         name: release_url
     - name: Load release
       id: load_release
-      run: echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
-      run: echo "::set-output name=os_name::$(echo ${{ matrix.os }} | cut -d'-' -f1)"
+      run: |
+        echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
+        echo "::set-output name=os_name::$(echo ${{ matrix.os }} | cut -d'-' -f1)"
     - name: Upload asset (UNIX)
       if: matrix.os != 'windows-latest'
       uses: actions/upload-release-asset@v1.0.1
