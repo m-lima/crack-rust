@@ -295,7 +295,11 @@ fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> super::Shared {
             super::Algorithm
         )
         .unwrap(),
-        salt: String::from(matches.value_of(arg!(_Arg::Salt, ArgField::Name)).unwrap()),
+        salt: String::from(
+            matches
+                .value_of(arg!(_Arg::Salt, ArgField::Name))
+                .unwrap_or(crate::secrets::SALT),
+        ),
         input: get_input(matches),
         verboseness: parse_verboseness(&matches),
     }
