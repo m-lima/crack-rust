@@ -275,7 +275,7 @@ inline void prepare(unsigned int value,
     unsigned int iteration,
     Value * skeleton) {
   // Filling the "variable" part of the skeleton
-#pragma unroll ((CONST_END - CONST_BEGIN) - CONST_LENGTH_ON_CPU)
+#pragma unroll
   for (char index = CONST_END - 1;
       index >= CONST_BEGIN + CONST_LENGTH_ON_CPU;
       index--)
@@ -288,7 +288,7 @@ inline void prepare(unsigned int value,
   }
 
   // Filling the iteration part of the skeleton
-#pragma unroll CONST_LENGTH_ON_CPU
+#pragma unroll
   for (char index = CONST_BEGIN + CONST_LENGTH_ON_CPU - 1;
       index >= CONST_BEGIN;
       index--)
@@ -303,7 +303,7 @@ inline void prepare(unsigned int value,
 #else
 inline void prepare(unsigned int value, Value * skeleton) {
   // Filling the "variable" part of the skeleton
-#pragma unroll (CONST_END - CONST_BEGIN)
+#pragma unroll
   for (char index = CONST_END - 1; index >= CONST_BEGIN; index--) {
     // Convert numbers to char
     skeleton->bytes[index] = (value % 10) + 48;
@@ -360,7 +360,7 @@ __kernel void crack(constant Hash * targets,
   sha256(hash.ints, value.ints);
 
 #if CONST_TARGET_COUNT < 32
-#pragma unroll CONST_TARGET_COUNT
+#pragma unroll
   for (int i = 0; i < CONST_TARGET_COUNT; i++) {
     if (hash.longs[3] == targets[i].longs[3]
         && hash.longs[2] == targets[i].longs[2]
