@@ -283,7 +283,7 @@ fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> super::Verboseness {
     match matches.occurrences_of(arg!(_Arg::Verbose)) {
         2 => super::Verboseness::High,
         1 => super::Verboseness::Low,
-        0 | _ => super::Verboseness::None,
+        _ => super::Verboseness::None,
     }
 }
 
