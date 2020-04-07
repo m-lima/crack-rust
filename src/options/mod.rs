@@ -86,7 +86,9 @@ impl SharedAccessor for Decrypt {
 }
 
 impl Decrypt {
+    // Allowed because it is only for tests
     #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         input: Vec<String>,
         algorithm: Algorithm,

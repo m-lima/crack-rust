@@ -158,7 +158,7 @@ mod test {
             options::Algorithm::SHA256,
             salt,
             options::Verboseness::None,
-            2u8,
+            2_u8,
             4,
             100,
             prefix,
