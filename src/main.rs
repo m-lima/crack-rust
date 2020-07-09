@@ -12,6 +12,19 @@ mod summary;
 use crate::options::SharedAccessor;
 
 fn main() {
+    std::panic::set_hook(Box::new(|info| {
+        let payload = info.payload();
+        if let Some(message) = payload.downcast_ref::<&str>() {
+            eprintln!("{}", message);
+            return;
+        }
+        if let Some(message) = payload.downcast_ref::<String>() {
+            eprintln!("{}", message);
+            return;
+        }
+        eprintln!("unhandled exception");
+    }));
+
     let options = options::parse();
 
     print::options(options.verboseness(), &options);

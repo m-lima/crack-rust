@@ -50,13 +50,13 @@ macro_rules! arg {
             ArgField::Parameter => "ALGORITHM",
         }
     };
-    // (_Arg::File, $f:path) => {
-    //     match $f {
-    //         ArgField::Name => "file",
-    //         ArgField::Short => "f",
-    //         ArgField::Parameter => "FILE",
-    //     }
-    // };
+    (_Arg::File, $f:path) => {
+        match $f {
+            ArgField::Name => "file",
+            ArgField::Short => "f",
+            ArgField::Parameter => "FILE",
+        }
+    };
     (_Arg::Input, $f:path) => {
         match $f {
             ArgField::Name => "input",
@@ -112,8 +112,7 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
         if requested_count == 0 {
             let cores = num_cpus::get();
             if cores > usize::from(u8::max_value()) {
-                eprintln!("Too many cores.. You have one powerful computer!");
-                std::process::exit(-1);
+                panic!("Too many cores.. You have one powerful computer!");
             }
             cores as u64
         } else {
@@ -143,28 +142,25 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name(arg!(_Arg::Input, ArgField::Parameter))
                 .help("Input values to crack")
                 .takes_value(true)
-                .multiple(true)
-                // .required_unless(arg!(_Arg::File, ArgField::Name)),
-                .required(true),
+                .multiple(true),
         )
-        // .arg(
-        //     clap::Arg::with_name(arg!(_Arg::File, ArgField::Name))
-        //         .long(arg!(_Arg::File, ArgField::Name))
-        //         .short(arg!(_Arg::File, ArgField::Short))
-        //         .value_name(arg!(_Arg::File, ArgField::Parameter))
-        //         .help("Path to a file containing hashes to crack")
-        //         .takes_value(true)
-        //         .multiple(true)
-        //         .validator(|v| {
-        //             let path = std::path::Path::new(&v);
-        //             if path.exists() && path.is_file() {
-        //                 Ok(())
-        //             } else {
-        //                 Err(String::from(format!("\"{}\" is not a file", v)))
-        //             }
-        //         })
-        //         .required_unless(arg!(_Arg::Input, ArgField::Name)),
-        // )
+        .arg(
+            clap::Arg::with_name(arg!(_Arg::File, ArgField::Name))
+                .long(arg!(_Arg::File, ArgField::Name))
+                .short(arg!(_Arg::File, ArgField::Short))
+                .value_name(arg!(_Arg::File, ArgField::Parameter))
+                .help("Path to a file containing hashes to crack")
+                .takes_value(true)
+                .multiple(true)
+                .validator(|v| {
+                    let path = std::path::Path::new(&v);
+                    if path.exists() && path.is_file() {
+                        Ok(())
+                    } else {
+                        Err(format!("\"{}\" is not a file", v))
+                    }
+                }),
+        )
         .arg(
             clap::Arg::with_name(arg!(_Arg::Prefix, ArgField::Name))
                 .long(arg!(_Arg::Prefix, ArgField::Name))
@@ -226,8 +222,7 @@ fn setup_encrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .value_name(arg!(_Arg::Input, ArgField::Parameter))
                 .help("Input values to hash")
                 .takes_value(true)
-                .multiple(true)
-                .required(true),
+                .multiple(true), // .required(true),
         )
 }
 
@@ -272,11 +267,19 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
 }
 
 fn get_input(matches: &clap::ArgMatches<'_>) -> Vec<String> {
-    matches
-        .values_of(arg!(_Arg::Input, ArgField::Name))
-        .unwrap()
-        .map(String::from)
-        .collect()
+    if let Some(values) = matches.values_of(arg!(_Arg::Input, ArgField::Name)) {
+        values.map(String::from).collect()
+    } else {
+        Vec::new()
+    }
+}
+
+fn get_files(matches: &clap::ArgMatches<'_>) -> Vec<std::path::PathBuf> {
+    if let Some(values) = matches.values_of(arg!(_Arg::File, ArgField::Name)) {
+        values.map(std::path::PathBuf::from).collect()
+    } else {
+        Vec::new()
+    }
 }
 
 fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> super::Verboseness {
@@ -325,8 +328,7 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
         .parse::<u8>()
         .unwrap();
     if prefix.len() > usize::from(total_length) {
-        eprintln!("Prefix is too long");
-        std::process::exit(-1);
+        panic!("Prefix is too long");
     }
 
     // Allowed because the length was checked for overflow
@@ -350,10 +352,11 @@ fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
             }
         });
 
-    // let files = Vec::<String>::new();
+    let files = get_files(&matches);
 
     super::Mode::Decrypt(super::Decrypt {
         shared,
+        files,
         thread_count,
         length,
         number_space,

@@ -14,8 +14,7 @@ fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
 ) -> Vec<summary::Decrypted> {
     let mut output = vec![opencl::Output::default(); out_buffer.len()];
     out_buffer.read(&mut output).enq().unwrap_or_else(|err| {
-        eprintln!("OpenCL: Failed to read output buffer: {}", err);
-        std::process::exit(-1);
+        panic!("OpenCL: Failed to read output buffer: {}", err);
     });
 
     let mut results = Vec::with_capacity(out_buffer.len());
@@ -62,8 +61,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
-        eprintln!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
-        std::process::exit(-1);
+        panic!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
     }
 
     let input = options.input_as_eytzinger::<_, C>();
@@ -78,8 +76,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         .copy_host_slice(&input)
         .build()
         .unwrap_or_else(|err| {
-            eprintln!("OpenCL: Failed to create input buffer: {}", err);
-            std::process::exit(-1);
+            panic!("OpenCL: Failed to create input buffer: {}", err);
         });
 
     let out_buffer = ocl::Buffer::builder()
@@ -88,8 +85,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         .queue(environment.queue().clone())
         .build()
         .unwrap_or_else(|err| {
-            eprintln!("OpenCL: Failed to create output buffer: {}", err);
-            std::process::exit(-1);
+            panic!("OpenCL: Failed to create output buffer: {}", err);
         });
 
     print::progress(0);
@@ -104,14 +100,12 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             .arg(i)
             .build()
             .unwrap_or_else(|err| {
-                eprintln!("OpenCL: Failed to build kernel: {}", err);
-                std::process::exit(-1);
+                panic!("OpenCL: Failed to build kernel: {}", err);
             });
 
         unsafe {
             kernel.enq().unwrap_or_else(|err| {
-                eprintln!("OpenCL: Failed to enqueue kernel: {}", err);
-                std::process::exit(-1);
+                panic!("OpenCL: Failed to enqueue kernel: {}", err);
             });
         }
 
@@ -120,18 +114,16 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         if i & 0b111 == 0b111 {
             print::progress(i * 100 / environment.cpu_iterations());
             environment.queue().finish().unwrap_or_else(|err| {
-                eprintln!(
+                panic!(
                     "OpenCL: Failed to wait for queue segment to finish: {}",
                     err
                 );
-                std::process::exit(-1);
             });
         }
     }
 
     environment.queue().finish().unwrap_or_else(|err| {
-        eprintln!("OpenCL: Failed to wait for queue to finish: {}", err);
-        std::process::exit(-1);
+        panic!("OpenCL: Failed to wait for queue to finish: {}", err);
     });
     print::clear_progress();
 

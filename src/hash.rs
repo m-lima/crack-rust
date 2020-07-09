@@ -7,9 +7,9 @@ macro_rules! convert {
             fn digest(salted_prefix: &str, number: &str) -> Self::Output {
                 use digest::Digest;
                 let mut digest = <$algorithm>::new();
-                digest.input(salted_prefix.as_bytes());
-                digest.input(number.as_bytes());
-                let result = digest.result();
+                digest.update(salted_prefix.as_bytes());
+                digest.update(number.as_bytes());
+                let result = digest.finalize();
                 <$hash>::from_array(result)
             }
 
@@ -28,12 +28,12 @@ macro_rules! convert {
 
                 use digest::Digest;
                 let mut expected_hash = <$algorithm>::new();
-                expected_hash.input("123".as_bytes());
-                expected_hash.input("abc".as_bytes());
+                expected_hash.update("123".as_bytes());
+                expected_hash.update("abc".as_bytes());
 
                 assert_eq!(
                     format!("{:x}", hash),
-                    format!("{:x}", expected_hash.result())
+                    format!("{:x}", expected_hash.finalize())
                 );
             })*
         }
@@ -127,8 +127,7 @@ macro_rules! hash {
             impl std::convert::From<&str> for Hash {
                 fn from(string: &str) -> Self {
                     if string.len() != $size >> 2 {
-                        eprintln!("String does not fit into hash: {}", &string);
-                        std::process::exit(-1);
+                        panic!("String does not fit into hash: '{}'", &string);
                     }
 
                     let mut hash = Self::default();
@@ -138,8 +137,7 @@ macro_rules! hash {
                             c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
                             c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
                             c => {
-                                eprintln!("Failed to build hash: invalid character {}", c as char);
-                                std::process::exit(-1);
+                                panic!("Failed to build hash: invalid character {}", c as char);
                             }
                         };
                         if i & 1 == 0 {

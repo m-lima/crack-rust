@@ -41,8 +41,7 @@ impl<'a> Environment<'a> {
             )
             .build(&self.configuration.context)
             .unwrap_or_else(|err| {
-                eprintln!("OpenCL: Failed to build program: {}", err);
-                std::process::exit(-1);
+                panic!("OpenCL: Failed to build program: {}", err);
             })
     }
 
@@ -73,8 +72,7 @@ impl Configuration {
             .devices(device)
             .build()
             .unwrap_or_else(|err| {
-                eprintln!("OpenCL: Failed to create context: {}", err);
-                std::process::exit(-1);
+                panic!("OpenCL: Failed to create context: {}", err);
             });
         let queue = ocl::Queue::new(&context, device, None).unwrap();
 
@@ -111,8 +109,7 @@ impl Configuration {
         });
 
         if out.first().is_none() {
-            eprintln!("OpenCL: Failed to find any OpenCL devices");
-            std::process::exit(-1);
+            panic!("OpenCL: Failed to find any OpenCL devices");
         }
         *out.first().unwrap()
     }
@@ -240,7 +237,7 @@ mod source {
 
     #[cfg(test)]
     mod test {
-        use super::*;
+        use super::SourceTemplate;
 
         #[test]
         fn test_prefix_injection() {

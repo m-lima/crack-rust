@@ -125,7 +125,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{execute, options, summary};
 
     #[test]
     fn test_decryption() {
@@ -155,6 +155,7 @@ mod test {
 
         let options = options::Decrypt::new(
             expected.iter().map(|v| v.hash.to_string()).collect(),
+            Vec::new(),
             options::Algorithm::SHA256,
             salt,
             options::Verboseness::None,

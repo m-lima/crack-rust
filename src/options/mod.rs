@@ -1,13 +1,39 @@
-use clap::arg_enum;
-
 mod args;
 
 use crate::hash;
+use clap::arg_enum;
 
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
 pub fn parse() -> Mode {
-    args::parse()
+    let mut args = args::parse();
+
+    if !atty::is(atty::Stream::Stdin) {
+        args.insert_input_from_stream(std::io::stdin().lock());
+    }
+
+    if let Mode::Decrypt(ref mut mode) = args {
+        mode.files
+            .iter()
+            .filter_map(|file| match std::fs::File::open(file) {
+                Ok(f) => Some(f),
+                Err(e) => {
+                    eprintln!("Could not open '{}': {}", file.display(), e);
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .iter()
+            .for_each(|file| {
+                let reader = std::io::BufReader::new(file);
+                args.insert_input_from_stream(reader);
+            });
+    }
+
+    if args.input().is_empty() {
+        panic!("No valid input provided");
+    }
+    args
 }
 
 #[derive(Copy, Clone)]
@@ -30,6 +56,27 @@ clap::arg_enum! {
     pub enum Device {
         CPU,
         GPU,
+    }
+}
+
+fn regex_for(algorithm: Algorithm) -> &'static regex::Regex {
+    use lazy_static::lazy_static;
+
+    match algorithm {
+        Algorithm::MD5 => {
+            lazy_static! {
+                static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{32}\\b")
+                    .expect("Could not build regex for MD5");
+            }
+            &RE
+        }
+        Algorithm::SHA256 => {
+            lazy_static! {
+                static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{64}\\b")
+                    .expect("Could not build regex for SHA256");
+            }
+            &RE
+        }
     }
 }
 
@@ -72,6 +119,7 @@ impl SharedAccessor for Encrypt {
 
 pub struct Decrypt {
     shared: Shared,
+    files: Vec<std::path::PathBuf>,
     length: u8,
     thread_count: u8,
     number_space: u64,
@@ -91,6 +139,7 @@ impl Decrypt {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         input: Vec<String>,
+        files: Vec<std::path::PathBuf>,
         algorithm: Algorithm,
         salt: String,
         verboseness: Verboseness,
@@ -107,6 +156,7 @@ impl Decrypt {
                 salt,
                 verboseness,
             },
+            files,
             length,
             thread_count,
             number_space,
@@ -160,6 +210,33 @@ impl Decrypt {
 pub enum Mode {
     Encrypt(Encrypt),
     Decrypt(Decrypt),
+}
+
+impl Mode {
+    fn insert_input_from_stream(&mut self, mut stream: impl std::io::BufRead) {
+        let mut buffer = String::new();
+        match self {
+            Self::Encrypt(ref mut mode) => {
+                if let Ok(bytes) = stream.read_to_string(&mut buffer) {
+                    if bytes > 0 {
+                        mode.shared.input.push(buffer);
+                    }
+                }
+            }
+            Self::Decrypt(ref mut mode) => {
+                let regex = regex_for(mode.shared.algorithm);
+                while let Ok(bytes) = stream.read_line(&mut buffer) {
+                    if bytes == 0 {
+                        return;
+                    }
+
+                    mode.shared
+                        .input
+                        .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
+                }
+            }
+        }
+    }
 }
 
 impl SharedAccessor for Mode {
