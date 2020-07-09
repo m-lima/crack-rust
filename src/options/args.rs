@@ -126,7 +126,7 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
 
 fn create_app<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("Cracker")
-        .version("0.1")
+        .version("0.2")
         .author("Marcelo Lima")
         .about("MD5 and SHA256 cracker")
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
@@ -149,7 +149,7 @@ fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
                 .long(arg!(_Arg::File, ArgField::Name))
                 .short(arg!(_Arg::File, ArgField::Short))
                 .value_name(arg!(_Arg::File, ArgField::Parameter))
-                .help("Path to a file containing hashes to crack")
+                .help("Paths to files containing hashes to crack")
                 .takes_value(true)
                 .multiple(true)
                 .validator(|v| {
