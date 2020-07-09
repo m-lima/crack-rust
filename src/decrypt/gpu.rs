@@ -57,7 +57,7 @@ split_by_algorithm!(execute_typed);
 
 fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     options: &options::Decrypt,
-) -> summary::Mode {
+) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
@@ -139,11 +139,11 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         }
     }
 
-    summary::Mode::Decrypt(summary::Decrypt {
+    summary::Decrypt {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count: options.number_space(),
         thread_count: environment.range(),
         results,
-    })
+    }
 }

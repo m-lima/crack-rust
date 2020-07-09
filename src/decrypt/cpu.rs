@@ -24,7 +24,7 @@ split_by_algorithm!(execute_typed);
 
 fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     options: &options::Decrypt,
-) -> summary::Mode {
+) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
@@ -114,13 +114,13 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         });
     print::clear_progress();
 
-    summary::Mode::Decrypt(summary::Decrypt {
+    summary::Decrypt {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count,
         thread_count: u32::from(thread_count),
         results,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -166,8 +166,6 @@ mod test {
             options::Device::CPU,
         );
 
-        if let summary::Mode::Decrypt(decrypt) = execute(&options) {
-            assert_eq!(decrypt.results, expected);
-        }
+        assert_eq!(execute(&options).results, expected);
     }
 }

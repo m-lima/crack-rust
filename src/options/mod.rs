@@ -33,6 +33,9 @@ pub fn parse() -> Mode {
     if args.input().is_empty() {
         panic!("No valid input provided");
     }
+
+    args.dedup();
+
     args
 }
 
@@ -51,32 +54,34 @@ clap::arg_enum! {
     }
 }
 
+impl Algorithm {
+    pub fn regex(self) -> &'static regex::Regex {
+        use lazy_static::lazy_static;
+
+        match self {
+            Algorithm::MD5 => {
+                lazy_static! {
+                    static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{32}\\b")
+                        .expect("Could not build regex for MD5");
+                }
+                &RE
+            }
+            Algorithm::SHA256 => {
+                lazy_static! {
+                    static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{64}\\b")
+                        .expect("Could not build regex for SHA256");
+                }
+                &RE
+            }
+        }
+    }
+}
+
 clap::arg_enum! {
     #[derive(PartialEq, Debug, Copy, Clone)]
     pub enum Device {
         CPU,
         GPU,
-    }
-}
-
-fn regex_for(algorithm: Algorithm) -> &'static regex::Regex {
-    use lazy_static::lazy_static;
-
-    match algorithm {
-        Algorithm::MD5 => {
-            lazy_static! {
-                static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{32}\\b")
-                    .expect("Could not build regex for MD5");
-            }
-            &RE
-        }
-        Algorithm::SHA256 => {
-            lazy_static! {
-                static ref RE: regex::Regex = regex::Regex::new("\\b[0-9a-fA-F]{64}\\b")
-                    .expect("Could not build regex for SHA256");
-            }
-            &RE
-        }
     }
 }
 
@@ -165,6 +170,10 @@ impl Decrypt {
         }
     }
 
+    pub fn files(&self) -> &[std::path::PathBuf] {
+        &self.files
+    }
+
     pub fn length(&self) -> u8 {
         self.length
     }
@@ -224,7 +233,7 @@ impl Mode {
                 }
             }
             Self::Decrypt(ref mut mode) => {
-                let regex = regex_for(mode.shared.algorithm);
+                let regex = mode.algorithm().regex();
                 while let Ok(bytes) = stream.read_line(&mut buffer) {
                     if bytes == 0 {
                         return;
@@ -234,6 +243,21 @@ impl Mode {
                         .input
                         .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
                 }
+            }
+        }
+    }
+
+    fn dedup(&mut self) {
+        match self {
+            Self::Encrypt(ref mut mode) => {
+                mode.shared.input.sort_unstable();
+                mode.shared.input.dedup();
+            }
+            Self::Decrypt(ref mut mode) => {
+                mode.shared.input.sort_unstable();
+                mode.shared.input.dedup();
+                mode.files.sort_unstable();
+                mode.files.dedup();
             }
         }
     }
