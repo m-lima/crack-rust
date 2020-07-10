@@ -98,17 +98,21 @@ fn write_output_file(
     let mut buffer = String::new();
     let mut reader = std::io::BufReader::new(input);
     let mut writer = std::io::BufWriter::new(output);
+    let mut replaced = false;
     let regex = options.algorithm().regex();
 
     loop {
         buffer.clear();
         if let Ok(bytes) = reader.read_line(&mut buffer) {
             if bytes == 0 {
-                return None;
+                return if replaced { None } else { Some(output_path) };
             }
 
             if regex.is_match(&buffer) {
                 for decrypted in &summary.results {
+                    if !replaced {
+                        replaced = buffer.contains(&decrypted.hash);
+                    }
                     buffer = buffer.replace(&decrypted.hash, &decrypted.plain);
                 }
             }
@@ -123,7 +127,6 @@ fn write_output_file(
 }
 
 fn clean_unwritten_file(file: std::path::PathBuf) {
-    eprintln!("Removing incomplete file '{}'", file.display());
     let _ = std::fs::remove_file(file);
 }
 
