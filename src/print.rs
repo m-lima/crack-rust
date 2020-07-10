@@ -93,11 +93,9 @@ pub fn input<'a>(
 ) {
     high_verbose_gate!(verboseness);
 
-    println!();
     println!("Input:");
     separator();
     input.for_each(|i| println!("{}", i));
-    println!();
 }
 
 fn shared_options<O: options::SharedAccessor>(options: &O) {
@@ -137,6 +135,7 @@ fn decrypt_options(options: &options::Decrypt) {
 pub fn options(verboseness: options::Verboseness, options: &options::Mode) {
     high_verbose_gate!(verboseness);
 
+    println!();
     println!("Options:");
     separator();
     match options {
@@ -149,6 +148,7 @@ pub fn options(verboseness: options::Verboseness, options: &options::Mode) {
 
 pub fn output(verboseness: options::Verboseness) {
     no_verbose_gate!(verboseness);
+    println!();
     println!("Output:");
     separator();
 }
