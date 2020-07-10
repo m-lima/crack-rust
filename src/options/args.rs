@@ -1,107 +1,132 @@
-use clap::value_t;
+use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
 
-macro_rules! algorithm {
-    (options::Algorithm::MD5) => {
-        "MD5"
-    };
-    (options::Algorithm::SHA256) => {
-        "SHA256"
-    };
+use clap::Clap;
+
+#[derive(Clap, Debug)]
+#[clap(
+    name = "Hasher",
+    version = "0.3",
+    author = "Marcelo Lima",
+    about = "MD5 and SHA256 hasher/cracker"
+)]
+pub enum RawMode {
+    Encrypt(RawEncrypt),
+    Decrypt(RawDecrypt),
 }
 
-enum _Command {
-    Encrypt,
-    Decrypt,
+#[derive(Clap, Debug)]
+pub struct RawShared {
+    #[clap(short, long, about = "Salt to use")]
+    salt: Option<String>,
+
+    #[clap(short, long, about = "Verbose", parse(from_occurrences))]
+    verbose: u8,
+
+    #[clap(short, long, about = "Hashing algorithm", default_value = "SHA256", parse(try_from_str = to_algorithm))]
+    algorithm: Algorithm,
+
+    #[clap(short, long, about = "Input values")]
+    input: Vec<String>,
 }
 
-macro_rules! cmd {
-    (_Command::Encrypt) => {
-        "encrypt"
-    };
-    (_Command::Decrypt) => {
-        "decrypt"
-    };
+#[derive(Clap, Debug)]
+pub struct RawEncrypt {
+    #[clap(flatten)]
+    shared: RawShared,
 }
 
-enum _Arg {
-    Algorithm,
-    // File,
-    Input,
-    Length,
-    Prefix,
-    Salt,
-    ThreadCount,
-    Device,
-    Verbose,
+#[derive(Clap, Debug)]
+pub struct RawDecrypt {
+    #[clap(flatten)]
+    shared: RawShared,
+
+    #[clap(short, long, about = "Input files", parse(try_from_str = to_path))]
+    files: Vec<std::path::PathBuf>,
+
+    #[clap(short, long, about = "Known prefix of hashed values")]
+    prefix: Option<String>,
+
+    #[clap(
+        short,
+        long,
+        about = "Number of threads to spawn (0 for auto)",
+        default_value = "0"
+    )]
+    thread_count: u8,
+
+    #[clap(short, long, about = "Device to run in (auto-detection if omitted)", parse(try_from_str = to_device))]
+    device: Option<Device>,
+
+    #[clap(short, long, about = "Length of hashed values", default_value = "12")]
+    length: u8,
 }
 
-#[derive(Copy, Clone)]
-enum ArgField {
-    Name,
-    Short,
-    Parameter,
+impl std::convert::Into<Mode> for RawMode {
+    fn into(self) -> Mode {
+        match self {
+            Self::Encrypt(encrypt) => Mode::Encrypt(Encrypt {
+                shared: encrypt.shared.into(),
+            }),
+            Self::Decrypt(decrypt) => {
+                let prefix = if let Some(prefix) = decrypt.prefix {
+                    prefix
+                } else {
+                    String::new()
+                };
+
+                let total_length = decrypt.length;
+                if prefix.len() > usize::from(total_length) {
+                    panic!("Prefix is too long");
+                }
+
+                // Allowed because the length was checked for overflow
+                #[allow(clippy::cast_possible_truncation)]
+                let length = total_length - prefix.len() as u8;
+
+                let number_space = 10_u64.pow(u32::from(length));
+
+                let thread_count = get_optimal_thread_count(decrypt.thread_count, number_space);
+
+                let device = if let Some(device) = decrypt.device {
+                    device
+                } else if number_space > u64::from(thread_count) * super::OPTIMAL_HASHES_PER_THREAD
+                {
+                    Device::GPU
+                } else {
+                    Device::CPU
+                };
+
+                Mode::Decrypt(Decrypt {
+                    shared: decrypt.shared.into(),
+                    files: decrypt.files.into_iter().collect(),
+                    length,
+                    thread_count,
+                    number_space,
+                    prefix,
+                    device,
+                })
+            }
+        }
+    }
 }
 
-macro_rules! arg {
-    (_Arg::Algorithm, $f:path) => {
-        match $f {
-            ArgField::Name => "algorithm",
-            ArgField::Short => "a",
-            ArgField::Parameter => "ALGORITHM",
+impl std::convert::Into<Shared> for RawShared {
+    fn into(self) -> Shared {
+        Shared {
+            input: self.input.into_iter().collect(),
+            verboseness: match self.verbose {
+                0 => Verboseness::None,
+                1 => Verboseness::Low,
+                _ => Verboseness::High,
+            },
+            algorithm: self.algorithm,
+            salt: if let Some(salt) = self.salt {
+                salt
+            } else {
+                String::from(crate::secrets::SALT)
+            },
         }
-    };
-    (_Arg::File, $f:path) => {
-        match $f {
-            ArgField::Name => "file",
-            ArgField::Short => "f",
-            ArgField::Parameter => "FILE",
-        }
-    };
-    (_Arg::Input, $f:path) => {
-        match $f {
-            ArgField::Name => "input",
-            ArgField::Short => "i",
-            ArgField::Parameter => "INPUT",
-        }
-    };
-    (_Arg::Length, $f:path) => {
-        match $f {
-            ArgField::Name => "length",
-            ArgField::Short => "l",
-            ArgField::Parameter => "LENGTH",
-        }
-    };
-    (_Arg::Prefix, $f:path) => {
-        match $f {
-            ArgField::Name => "prefix",
-            ArgField::Short => "p",
-            ArgField::Parameter => "PREFIX",
-        }
-    };
-    (_Arg::Salt, $f:path) => {
-        match $f {
-            ArgField::Name => "salt",
-            ArgField::Short => "s",
-            ArgField::Parameter => "SALT",
-        }
-    };
-    (_Arg::ThreadCount, $f:path) => {
-        match $f {
-            ArgField::Name => "thread-count",
-            ArgField::Short => "n",
-            ArgField::Parameter => "COUNT",
-        }
-    };
-    (_Arg::Device, $f:path) => {
-        match $f {
-            ArgField::Name => "device",
-            ArgField::Short => "d",
-            ArgField::Parameter => "DEVICE",
-        }
-    };
-    (_Arg::Verbose) => {
-        "v"
-    };
+    }
 }
 
 // Allowed because the count was checked for overflow
@@ -124,252 +149,50 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     thread_count as u8
 }
 
-fn create_app<'a, 'b>() -> clap::App<'a, 'b> {
-    clap::App::new("Cracker")
-        .version("0.2")
-        .author("Marcelo Lima")
-        .about("MD5 and SHA256 cracker")
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-}
-
-fn setup_decrypt<'a, 'b>() -> clap::App<'a, 'b> {
-    clap::SubCommand::with_name(cmd!(_Command::Decrypt))
-        .about("Attempts to crack the given input")
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
-                .long(arg!(_Arg::Input, ArgField::Name))
-                .short(arg!(_Arg::Input, ArgField::Short))
-                .value_name(arg!(_Arg::Input, ArgField::Parameter))
-                .help("Input values to crack")
-                .takes_value(true)
-                .multiple(true),
-        )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::File, ArgField::Name))
-                .long(arg!(_Arg::File, ArgField::Name))
-                .short(arg!(_Arg::File, ArgField::Short))
-                .value_name(arg!(_Arg::File, ArgField::Parameter))
-                .help("Paths to files containing hashes to crack")
-                .takes_value(true)
-                .multiple(true)
-                .validator(|v| {
-                    let path = std::path::Path::new(&v);
-                    if path.exists() && path.is_file() {
-                        Ok(())
-                    } else {
-                        Err(format!("\"{}\" is not a file", v))
-                    }
-                }),
-        )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Prefix, ArgField::Name))
-                .long(arg!(_Arg::Prefix, ArgField::Name))
-                .short(arg!(_Arg::Prefix, ArgField::Short))
-                .value_name(arg!(_Arg::Prefix, ArgField::Parameter))
-                .help("Known prefix of hashed value")
-                .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::ThreadCount, ArgField::Name))
-                .long(arg!(_Arg::ThreadCount, ArgField::Name))
-                .short(arg!(_Arg::ThreadCount, ArgField::Short))
-                .value_name(arg!(_Arg::ThreadCount, ArgField::Parameter))
-                .help("Number of threads to spawn (0 for auto)")
-                .takes_value(true)
-                .default_value("0")
-                .validator(|v| v.parse::<u8>().map(|_| ()).map_err(|e| e.to_string())),
-        )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Device, ArgField::Name))
-                .long(arg!(_Arg::Device, ArgField::Name))
-                .short(arg!(_Arg::Device, ArgField::Short))
-                .value_name(arg!(_Arg::Device, ArgField::Parameter))
-                .help("Device to run in [GPU, CPU]")
-                .takes_value(true)
-                .possible_values(&super::Device::variants())
-                .case_insensitive(true),
-        )
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Length, ArgField::Name))
-                .long(arg!(_Arg::Length, ArgField::Name))
-                .short(arg!(_Arg::Length, ArgField::Short))
-                .value_name(arg!(_Arg::Length, ArgField::Parameter))
-                .help("Length of hashed value")
-                .takes_value(true)
-                .default_value("12")
-                .validator(|v| {
-                    v.parse::<u8>().map_err(|e| e.to_string()).and_then(|v| {
-                        if v > 0 {
-                            Ok(())
-                        } else {
-                            Err(format!(
-                                "{} must be a positive integer",
-                                arg!(_Arg::Length, ArgField::Name)
-                            ))
-                        }
-                    })
-                }),
-        )
-}
-
-fn setup_encrypt<'a, 'b>() -> clap::App<'a, 'b> {
-    clap::SubCommand::with_name(cmd!(_Command::Encrypt))
-        .about("Hashes the given input")
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Input, ArgField::Name))
-                .long(arg!(_Arg::Input, ArgField::Name))
-                .short(arg!(_Arg::Input, ArgField::Short))
-                .value_name(arg!(_Arg::Input, ArgField::Parameter))
-                .help("Input values to hash")
-                .takes_value(true)
-                .multiple(true), // .required(true),
-        )
-}
-
-fn setup<'a>() -> clap::ArgMatches<'a> {
-    create_app()
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Algorithm, ArgField::Name))
-                .long(arg!(_Arg::Algorithm, ArgField::Name))
-                .short(arg!(_Arg::Algorithm, ArgField::Short))
-                .value_name(arg!(_Arg::Algorithm, ArgField::Parameter))
-                .help("Hashing algorithm")
-                .takes_value(true)
-                .default_value(algorithm!(options::Algorithm::SHA256))
-                .possible_values(&super::Algorithm::variants())
-                .case_insensitive(true)
-                .global(true),
-        )
-        .arg({
-            let salt = clap::Arg::with_name(arg!(_Arg::Salt, ArgField::Name))
-                .long(arg!(_Arg::Salt, ArgField::Name))
-                .short(arg!(_Arg::Salt, ArgField::Short))
-                .value_name(arg!(_Arg::Salt, ArgField::Parameter))
-                .help("Salt to use")
-                .takes_value(true)
-                .global(true);
-            if crate::secrets::SALT.is_empty() {
-                salt
-            } else {
-                salt.default_value(crate::secrets::SALT)
-            }
-        })
-        .arg(
-            clap::Arg::with_name(arg!(_Arg::Verbose))
-                .short(arg!(_Arg::Verbose))
-                .help("Verbose")
-                .multiple(true)
-                .global(true),
-        )
-        .subcommand(setup_decrypt())
-        .subcommand(setup_encrypt())
-        .get_matches()
-}
-
-fn get_input(matches: &clap::ArgMatches<'_>) -> std::collections::HashSet<String> {
-    if let Some(values) = matches.values_of(arg!(_Arg::Input, ArgField::Name)) {
-        values.map(String::from).collect()
+fn to_path(value: &str) -> Result<std::path::PathBuf, ParseError> {
+    let path = std::path::PathBuf::from(value);
+    if path.exists() && path.is_file() {
+        Ok(path)
     } else {
-        std::collections::HashSet::new()
+        Err(ParseError::new(format!("'{}' is not a file", value)))
     }
 }
 
-fn get_files(matches: &clap::ArgMatches<'_>) -> std::collections::HashSet<std::path::PathBuf> {
-    if let Some(values) = matches.values_of(arg!(_Arg::File, ArgField::Name)) {
-        values.map(std::path::PathBuf::from).collect()
-    } else {
-        std::collections::HashSet::new()
+fn to_algorithm(value: &str) -> Result<Algorithm, ParseError> {
+    match value.to_uppercase().as_str() {
+        "MD5" => Ok(Algorithm::MD5),
+        "SHA256" => Ok(Algorithm::SHA256),
+        _ => Err(ParseError::new(String::from(
+            "possible values are [MD5, SHA256]",
+        ))),
     }
 }
 
-fn parse_verboseness(matches: &clap::ArgMatches<'_>) -> super::Verboseness {
-    match matches.occurrences_of(arg!(_Arg::Verbose)) {
-        2 => super::Verboseness::High,
-        1 => super::Verboseness::Low,
-        _ => super::Verboseness::None,
+fn to_device(value: &str) -> Result<Device, ParseError> {
+    match value.to_uppercase().as_str() {
+        "CPU" => Ok(Device::CPU),
+        "GPU" => Ok(Device::GPU),
+        _ => Err(ParseError::new(String::from(
+            "possible values are [CPU, GPU]",
+        ))),
     }
 }
 
-fn parse_shared_args(matches: &clap::ArgMatches<'_>) -> super::Shared {
-    super::Shared {
-        algorithm: value_t!(
-            matches,
-            arg!(_Arg::Algorithm, ArgField::Name),
-            super::Algorithm
-        )
-        .unwrap(),
-        salt: String::from(
-            matches
-                .value_of(arg!(_Arg::Salt, ArgField::Name))
-                .unwrap_or(crate::secrets::SALT),
-        ),
-        input: get_input(matches),
-        verboseness: parse_verboseness(&matches),
+#[derive(Debug)]
+struct ParseError {
+    message: String,
+}
+
+impl ParseError {
+    fn new(message: String) -> Self {
+        Self { message }
     }
 }
 
-fn parse_encrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
-    super::Mode::Encrypt(super::Encrypt {
-        shared: parse_shared_args(&matches),
-    })
-}
+impl std::error::Error for ParseError {}
 
-fn parse_decrypt(matches: &clap::ArgMatches<'_>) -> super::Mode {
-    let shared = parse_shared_args(&matches);
-
-    let prefix = String::from(
-        matches
-            .value_of(arg!(_Arg::Prefix, ArgField::Name))
-            .unwrap_or(""),
-    );
-    let total_length = matches
-        .value_of(arg!(_Arg::Length, ArgField::Name))
-        .unwrap()
-        .parse::<u8>()
-        .unwrap();
-    if prefix.len() > usize::from(total_length) {
-        panic!("Prefix is too long");
-    }
-
-    // Allowed because the length was checked for overflow
-    #[allow(clippy::cast_possible_truncation)]
-    let length = total_length - prefix.len() as u8;
-    let number_space = 10_u64.pow(u32::from(length));
-    let thread_count = get_optimal_thread_count(
-        matches
-            .value_of(arg!(_Arg::ThreadCount, ArgField::Name))
-            .unwrap()
-            .parse::<u8>()
-            .unwrap(),
-        number_space,
-    );
-    let device = value_t!(matches, arg!(_Arg::Device, ArgField::Name), super::Device)
-        .unwrap_or_else(|_| {
-            if number_space > u64::from(thread_count) * super::OPTIMAL_HASHES_PER_THREAD {
-                super::Device::GPU
-            } else {
-                super::Device::CPU
-            }
-        });
-
-    let files = get_files(&matches);
-
-    super::Mode::Decrypt(super::Decrypt {
-        shared,
-        files,
-        thread_count,
-        length,
-        number_space,
-        prefix,
-        device,
-    })
-}
-
-pub fn parse() -> super::Mode {
-    let matches = setup();
-    match matches.subcommand() {
-        (cmd!(_Command::Encrypt), Some(sub_matches)) => parse_encrypt(&sub_matches),
-        (cmd!(_Command::Decrypt), Some(sub_matches)) => parse_decrypt(&sub_matches),
-        _ => unreachable!(),
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{}", self.message)
     }
 }

@@ -5,8 +5,8 @@
   [x] Time taken
 
 ## Input
-  [ ] Get input from stdin
-  [ ] Get input from file(s)
+  [x] Get input from stdin
+  [x] Get input from file(s)
 
 ## OpenCL
   [x] **GPU**

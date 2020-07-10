@@ -1,13 +1,13 @@
 [package]
 name = "hasher"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
 build = "build.rs"
 
 [dependencies]
 atty = "0.2"
-clap = "2"
+clap = "3.0.0-beta.1"
 ctrlc = "3"
 lazy_static = "1"
 digest = "0.9"

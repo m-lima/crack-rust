@@ -2,23 +2,25 @@ mod args;
 
 use crate::hash;
 use crate::print;
-use clap::arg_enum;
+
+use clap::Clap;
 
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
 pub fn parse() -> Mode {
-    let mut args = args::parse();
+    let mut mode: Mode = args::RawMode::parse().into();
 
     if !atty::is(atty::Stream::Stdin) {
-        print::loading(args.verboseness(), "stdin");
-        args.insert_input_from_stream(std::io::stdin().lock(), None);
+        print::loading(mode.verboseness(), "stdin");
+        mode.insert_input_from_stream(std::io::stdin().lock(), None);
     }
 
-    if let Mode::Decrypt(ref mut mode) = args {
-        mode.files
+    if let Mode::Decrypt(ref mut decrypt) = mode {
+        decrypt
+            .files
             .iter()
             .inspect(|file| {
-                print::loading(mode.shared.verboseness, &file.display().to_string());
+                print::loading(decrypt.shared.verboseness, &file.display().to_string());
             })
             .filter_map(|file| match std::fs::File::open(file) {
                 Ok(f) => Some(f),
@@ -32,15 +34,15 @@ pub fn parse() -> Mode {
             .for_each(|file| {
                 let total_bytes = file.metadata().map(|f| f.len()).ok();
                 let reader = std::io::BufReader::new(file);
-                args.insert_input_from_stream(reader, total_bytes);
+                mode.insert_input_from_stream(reader, total_bytes);
             });
     }
 
-    if args.input().is_empty() {
+    if mode.input().is_empty() {
         panic!("No valid input provided");
     }
 
-    args
+    mode
 }
 
 #[derive(Copy, Clone)]
@@ -50,12 +52,10 @@ pub enum Verboseness {
     High,
 }
 
-clap::arg_enum! {
-    #[derive(PartialEq, Debug, Copy, Clone)]
-    pub enum Algorithm {
-        MD5 = 32,
-        SHA256 = 64,
-    }
+#[derive(Clap, PartialEq, Debug, Copy, Clone)]
+pub enum Algorithm {
+    MD5 = 32,
+    SHA256 = 64,
 }
 
 impl Algorithm {
@@ -81,11 +81,27 @@ impl Algorithm {
     }
 }
 
-clap::arg_enum! {
-    #[derive(PartialEq, Debug, Copy, Clone)]
-    pub enum Device {
-        CPU,
-        GPU,
+impl std::fmt::Display for Algorithm {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MD5 => write!(fmt, "MD5"),
+            Self::SHA256 => write!(fmt, "SHA256"),
+        }
+    }
+}
+
+#[derive(Clap, PartialEq, Debug, Copy, Clone)]
+pub enum Device {
+    CPU,
+    GPU,
+}
+
+impl std::fmt::Display for Device {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CPU => write!(fmt, "CPU"),
+            Self::GPU => write!(fmt, "GPU"),
+        }
     }
 }
 
