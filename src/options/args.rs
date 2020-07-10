@@ -266,19 +266,19 @@ fn setup<'a>() -> clap::ArgMatches<'a> {
         .get_matches()
 }
 
-fn get_input(matches: &clap::ArgMatches<'_>) -> Vec<String> {
+fn get_input(matches: &clap::ArgMatches<'_>) -> std::collections::HashSet<String> {
     if let Some(values) = matches.values_of(arg!(_Arg::Input, ArgField::Name)) {
         values.map(String::from).collect()
     } else {
-        Vec::new()
+        std::collections::HashSet::new()
     }
 }
 
-fn get_files(matches: &clap::ArgMatches<'_>) -> Vec<std::path::PathBuf> {
+fn get_files(matches: &clap::ArgMatches<'_>) -> std::collections::HashSet<std::path::PathBuf> {
     if let Some(values) = matches.values_of(arg!(_Arg::File, ArgField::Name)) {
         values.map(std::path::PathBuf::from).collect()
     } else {
-        Vec::new()
+        std::collections::HashSet::new()
     }
 }
 

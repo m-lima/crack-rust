@@ -1,6 +1,7 @@
 mod args;
 
 use crate::hash;
+use crate::print;
 use clap::arg_enum;
 
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
@@ -9,12 +10,16 @@ pub fn parse() -> Mode {
     let mut args = args::parse();
 
     if !atty::is(atty::Stream::Stdin) {
-        args.insert_input_from_stream(std::io::stdin().lock());
+        print::loading(args.verboseness(), "stdin");
+        args.insert_input_from_stream(std::io::stdin().lock(), None);
     }
 
     if let Mode::Decrypt(ref mut mode) = args {
         mode.files
             .iter()
+            .inspect(|file| {
+                print::loading(mode.shared.verboseness, &file.display().to_string());
+            })
             .filter_map(|file| match std::fs::File::open(file) {
                 Ok(f) => Some(f),
                 Err(e) => {
@@ -25,16 +30,15 @@ pub fn parse() -> Mode {
             .collect::<Vec<_>>()
             .iter()
             .for_each(|file| {
+                let total_bytes = file.metadata().map(|f| f.len()).ok();
                 let reader = std::io::BufReader::new(file);
-                args.insert_input_from_stream(reader);
+                args.insert_input_from_stream(reader, total_bytes);
             });
     }
 
     if args.input().is_empty() {
         panic!("No valid input provided");
     }
-
-    args.dedup();
 
     args
 }
@@ -86,7 +90,7 @@ clap::arg_enum! {
 }
 
 pub struct Shared {
-    input: Vec<String>,
+    input: std::collections::HashSet<String>,
     algorithm: Algorithm,
     salt: String,
     verboseness: Verboseness,
@@ -95,7 +99,7 @@ pub struct Shared {
 pub trait SharedAccessor {
     fn shared(&self) -> &Shared;
 
-    fn input(&self) -> &[String] {
+    fn input(&self) -> &std::collections::HashSet<String> {
         &self.shared().input
     }
 
@@ -124,7 +128,7 @@ impl SharedAccessor for Encrypt {
 
 pub struct Decrypt {
     shared: Shared,
-    files: Vec<std::path::PathBuf>,
+    files: std::collections::HashSet<std::path::PathBuf>,
     length: u8,
     thread_count: u8,
     number_space: u64,
@@ -143,8 +147,8 @@ impl Decrypt {
     #[cfg(test)]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        input: Vec<String>,
-        files: Vec<std::path::PathBuf>,
+        input: std::collections::HashSet<String>,
+        files: std::collections::HashSet<std::path::PathBuf>,
         algorithm: Algorithm,
         salt: String,
         verboseness: Verboseness,
@@ -170,7 +174,7 @@ impl Decrypt {
         }
     }
 
-    pub fn files(&self) -> &[std::path::PathBuf] {
+    pub fn files(&self) -> &std::collections::HashSet<std::path::PathBuf> {
         &self.files
     }
 
@@ -222,44 +226,50 @@ pub enum Mode {
 }
 
 impl Mode {
-    fn insert_input_from_stream(&mut self, mut stream: impl std::io::BufRead) {
+    fn insert_input_from_stream(
+        &mut self,
+        mut stream: impl std::io::BufRead,
+        total_bytes: Option<u64>,
+    ) {
         let mut buffer = String::new();
         match self {
             Self::Encrypt(ref mut mode) => {
                 if let Ok(bytes) = stream.read_to_string(&mut buffer) {
                     if bytes > 0 {
-                        mode.shared.input.push(buffer);
+                        mode.shared.input.insert(buffer);
+                    } else {
+                        return;
                     }
                 }
             }
-            Self::Decrypt(ref mut mode) => {
+            Mode::Decrypt(ref mut mode) => {
                 let regex = mode.algorithm().regex();
+
+                if total_bytes.is_some() {
+                    print::progress(0);
+                }
+
+                let mut bytes_read = 0;
                 while let Ok(bytes) = stream.read_line(&mut buffer) {
                     if bytes == 0 {
+                        print::clear_progress();
                         return;
+                    }
+
+                    if let Some(total) = total_bytes {
+                        bytes_read += bytes;
+                        print::progress(((bytes_read * 100) as u64 / total) as u32);
                     }
 
                     mode.shared
                         .input
                         .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
+
+                    buffer.clear();
                 }
             }
         }
-    }
-
-    fn dedup(&mut self) {
-        match self {
-            Self::Encrypt(ref mut mode) => {
-                mode.shared.input.sort_unstable();
-                mode.shared.input.dedup();
-            }
-            Self::Decrypt(ref mut mode) => {
-                mode.shared.input.sort_unstable();
-                mode.shared.input.dedup();
-                mode.files.sort_unstable();
-                mode.files.dedup();
-            }
-        }
+        eprintln!("There was a problem reading the file");
     }
 }
 

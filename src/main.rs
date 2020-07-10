@@ -28,7 +28,7 @@ fn main() {
     let options = options::parse();
 
     print::options(options.verboseness(), &options);
-    print::input(options.verboseness(), &options.input());
+    print::input(options.verboseness(), options.input().iter());
     print::output(options.verboseness());
 
     let summary = match &options {

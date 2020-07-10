@@ -82,15 +82,22 @@ fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
     println!("{:.2}s ({}ms)", seconds, millis);
 }
 
-pub fn input(verboseness: options::Verboseness, input: &[String]) {
+pub fn loading(verboseness: options::Verboseness, file: &str) {
+    no_verbose_gate!(verboseness);
+    println!("Loading '{}'", file);
+}
+
+pub fn input<'a>(
+    verboseness: options::Verboseness,
+    input: impl std::iter::Iterator<Item = &'a String>,
+) {
     high_verbose_gate!(verboseness);
 
     println!();
     println!("Input:");
     separator();
-    for i in input {
-        println!("{}", i);
-    }
+    input.for_each(|i| println!("{}", i));
+    println!();
 }
 
 fn shared_options<O: options::SharedAccessor>(options: &O) {
