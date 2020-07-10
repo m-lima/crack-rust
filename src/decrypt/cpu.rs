@@ -85,7 +85,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
                     #[cfg(not(test))]
                     {
                         print::clear_progress();
-                        println!("{:x} :: {}", &hash, &result);
+                        println!("{:x}:{}", &hash, &result);
                     }
                 }
             }
@@ -155,7 +155,7 @@ mod test {
 
         let options = options::Decrypt::new(
             expected.iter().map(|v| v.hash.to_string()).collect(),
-            Vec::new(),
+            std::collections::HashSet::new(),
             options::Algorithm::SHA256,
             salt,
             options::Verboseness::None,

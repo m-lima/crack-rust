@@ -134,7 +134,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
             println!("{}", results[0].plain);
         } else {
             for result in &results {
-                println!("{} :: {}", result.hash, result.plain);
+                println!("{}:{}", result.hash, result.plain);
             }
         }
     }

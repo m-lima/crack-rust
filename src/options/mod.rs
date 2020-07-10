@@ -258,6 +258,9 @@ impl Mode {
 
                     if let Some(total) = total_bytes {
                         bytes_read += bytes;
+
+                        // Allowed because this will be a percentage (less than 100)
+                        #[allow(clippy::cast_possible_truncation)]
                         print::progress(((bytes_read * 100) as u64 / total) as u32);
                     }
 

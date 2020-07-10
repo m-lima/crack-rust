@@ -11,6 +11,28 @@ mod summary;
 
 use crate::options::SharedAccessor;
 
+fn run() -> i32 {
+    let options = options::parse();
+
+    print::options(options.verboseness(), &options);
+    print::input(options.verboseness(), options.input().iter());
+    print::output(options.verboseness());
+
+    let summary = match &options {
+        options::Mode::Encrypt(options) => encrypt::execute(options),
+        options::Mode::Decrypt(options) => decrypt::execute(options),
+    };
+
+    print::summary(options.verboseness(), &summary);
+
+    if let summary::Mode::Decrypt(decrypt) = summary {
+        if decrypt.results.len() < options.input().len() {
+            return -1;
+        }
+    }
+    0
+}
+
 fn main() {
     std::panic::set_hook(Box::new(|info| {
         let payload = info.payload();
@@ -25,16 +47,5 @@ fn main() {
         eprintln!("unhandled exception");
     }));
 
-    let options = options::parse();
-
-    print::options(options.verboseness(), &options);
-    print::input(options.verboseness(), options.input().iter());
-    print::output(options.verboseness());
-
-    let summary = match &options {
-        options::Mode::Encrypt(options) => encrypt::execute(options),
-        options::Mode::Decrypt(options) => decrypt::execute(options),
-    };
-
-    print::summary(options.verboseness(), &summary);
+    std::process::exit(run());
 }

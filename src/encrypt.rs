@@ -11,7 +11,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         if options.input().len() == 1 {
             println!("{:x}", C::digest(&options.salt(), &input));
         } else {
-            println!("{} :: {:x}", &input, C::digest(&options.salt(), &input));
+            println!("{}:{:x}", &input, C::digest(&options.salt(), &input));
         }
     }
 
