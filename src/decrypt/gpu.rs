@@ -143,7 +143,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count: options.number_space(),
-        thread_count: environment.range(),
+        threads: environment.range(),
         results,
     }
 }

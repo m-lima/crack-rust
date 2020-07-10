@@ -30,7 +30,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
     let input = options.input_as_eytzinger::<_, C>();
 
-    let thread_count = options.thread_count();
+    let thread_count = options.threads();
     let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
@@ -118,7 +118,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count,
-        thread_count: u32::from(thread_count),
+        threads: u32::from(thread_count),
         results,
     }
 }

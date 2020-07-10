@@ -2,7 +2,7 @@ pub struct Decrypt {
     pub total_count: usize,
     pub duration: std::time::Duration,
     pub hash_count: u64,
-    pub thread_count: u32,
+    pub threads: u32,
     pub results: Vec<Decrypted>,
 }
 

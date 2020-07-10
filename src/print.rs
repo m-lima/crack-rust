@@ -116,10 +116,10 @@ fn decrypt_options(options: &options::Decrypt) {
         println!(
             "{:15}{}",
             "Threads:",
-            if options.thread_count() == 0 {
+            if options.threads() == 0 {
                 String::from("Auto")
             } else {
-                format!("{}", options.thread_count())
+                format!("{}", options.threads())
             }
         );
     }
@@ -162,7 +162,7 @@ pub fn summary(verboseness: options::Verboseness, summary: &summary::Mode) {
         println!(
             "{:21}{}",
             "Threads launched:",
-            number(u64::from(summary.thread_count))
+            number(u64::from(summary.threads))
         );
         duration("Time elapsed:", 21, &summary.duration);
         println!("{:21}{}", "Hashes:", number(summary.hash_count));

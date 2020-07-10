@@ -52,7 +52,7 @@ pub struct RawDecrypt {
         about = "Number of threads to spawn (0 for auto)",
         default_value = "0"
     )]
-    thread_count: u8,
+    threads: u8,
 
     #[clap(short, long, about = "Device to run in (auto-detection if omitted)", parse(try_from_str = to_device))]
     device: Option<Device>,
@@ -85,12 +85,11 @@ impl std::convert::Into<Mode> for RawMode {
 
                 let number_space = 10_u64.pow(u32::from(length));
 
-                let thread_count = get_optimal_thread_count(decrypt.thread_count, number_space);
+                let threads = optimal_thread_count(decrypt.threads, number_space);
 
                 let device = if let Some(device) = decrypt.device {
                     device
-                } else if number_space > u64::from(thread_count) * super::OPTIMAL_HASHES_PER_THREAD
-                {
+                } else if number_space > u64::from(threads) * super::OPTIMAL_HASHES_PER_THREAD {
                     Device::GPU
                 } else {
                     Device::CPU
@@ -100,7 +99,7 @@ impl std::convert::Into<Mode> for RawMode {
                     shared: decrypt.shared.into(),
                     files: decrypt.files.into_iter().collect(),
                     length,
-                    thread_count,
+                    threads,
                     number_space,
                     prefix,
                     device,
@@ -131,8 +130,8 @@ impl std::convert::Into<Shared> for RawShared {
 
 // Allowed because the count was checked for overflow
 #[allow(clippy::cast_possible_truncation)]
-fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
-    let thread_count = std::cmp::min(
+fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
+    let threads = std::cmp::min(
         number_space / super::OPTIMAL_HASHES_PER_THREAD + 1,
         if requested_count == 0 {
             let cores = num_cpus::get();
@@ -146,7 +145,7 @@ fn get_optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     );
 
     // Due to `min`, it will always be less than u8::MAX (255)
-    thread_count as u8
+    threads as u8
 }
 
 fn to_path(value: &str) -> Result<std::path::PathBuf, ParseError> {

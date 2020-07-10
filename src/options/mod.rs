@@ -146,7 +146,7 @@ pub struct Decrypt {
     shared: Shared,
     files: std::collections::HashSet<std::path::PathBuf>,
     length: u8,
-    thread_count: u8,
+    threads: u8,
     number_space: u64,
     prefix: String,
     device: Device,
@@ -169,7 +169,7 @@ impl Decrypt {
         salt: String,
         verboseness: Verboseness,
         length: u8,
-        thread_count: u8,
+        threads: u8,
         number_space: u64,
         prefix: String,
         device: Device,
@@ -183,7 +183,7 @@ impl Decrypt {
             },
             files,
             length,
-            thread_count,
+            threads,
             number_space,
             prefix,
             device,
@@ -198,8 +198,8 @@ impl Decrypt {
         self.length
     }
 
-    pub fn thread_count(&self) -> u8 {
-        self.thread_count
+    pub fn threads(&self) -> u8 {
+        self.threads
     }
 
     pub fn number_space(&self) -> u64 {
