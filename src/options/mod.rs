@@ -1,9 +1,8 @@
-mod args;
-
-use crate::hash;
-use crate::print;
-
 use clap::Clap;
+
+use crate::{error::Error, hash, print};
+
+mod args;
 
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
@@ -11,8 +10,11 @@ pub fn parse() -> Mode {
     let mut mode: Mode = args::RawMode::parse().into();
 
     if !atty::is(atty::Stream::Stdin) {
-        print::loading(mode.verboseness(), "stdin");
-        mode.insert_input_from_stream(std::io::stdin().lock(), None);
+        print::loading_start(mode.verboseness(), "stdin");
+        print::loading_done(
+            mode.verboseness(),
+            mode.insert_input_from_stream(std::io::stdin().lock()),
+        );
     }
 
     if let Mode::Decrypt(ref mut decrypt) = mode {
@@ -20,21 +22,23 @@ pub fn parse() -> Mode {
             .files
             .iter()
             .inspect(|file| {
-                print::loading(decrypt.shared.verboseness, &file.display().to_string());
+                print::loading_start(decrypt.shared.verboseness, &file.display().to_string());
             })
             .filter_map(|file| match std::fs::File::open(file) {
                 Ok(f) => Some(f),
                 Err(e) => {
-                    eprintln!("Could not open '{}': {}", file.display(), e);
+                    print::loading_done(
+                        decrypt.shared.verboseness,
+                        error!(e; "Could not open '{}'", file.display()),
+                    );
                     None
                 }
             })
             .collect::<Vec<_>>()
             .iter()
             .for_each(|file| {
-                let total_bytes = file.metadata().map(|f| f.len()).ok();
                 let reader = std::io::BufReader::new(file);
-                mode.insert_input_from_stream(reader, total_bytes);
+                print::loading_done(mode.verboseness(), mode.insert_input_from_stream(reader));
             });
     }
 
@@ -79,6 +83,10 @@ impl Algorithm {
             }
         }
     }
+
+    fn variants() -> &'static [&'static str] {
+        &["MD5", "SHA256"]
+    }
 }
 
 impl std::fmt::Display for Algorithm {
@@ -94,6 +102,12 @@ impl std::fmt::Display for Algorithm {
 pub enum Device {
     CPU,
     GPU,
+}
+
+impl Device {
+    fn variants() -> &'static [&'static str] {
+        &["CPU", "GPU"]
+    }
 }
 
 impl std::fmt::Display for Device {
@@ -242,53 +256,40 @@ pub enum Mode {
 }
 
 impl Mode {
-    fn insert_input_from_stream(
-        &mut self,
-        mut stream: impl std::io::BufRead,
-        total_bytes: Option<u64>,
-    ) {
+    fn insert_input_from_stream(&mut self, mut stream: impl std::io::BufRead) -> Result<(), Error> {
         let mut buffer = String::new();
         match self {
             Self::Encrypt(ref mut mode) => {
                 if let Ok(bytes) = stream.read_to_string(&mut buffer) {
                     if bytes > 0 {
                         mode.shared.input.insert(buffer);
-                    } else {
-                        return;
                     }
                 }
+                Ok(())
             }
             Mode::Decrypt(ref mut mode) => {
                 let regex = mode.algorithm().regex();
 
-                if total_bytes.is_some() {
-                    print::progress(0);
-                }
-
-                let mut bytes_read = 0;
-                while let Ok(bytes) = stream.read_line(&mut buffer) {
-                    if bytes == 0 {
-                        print::clear_progress();
-                        return;
-                    }
-
-                    if let Some(total) = total_bytes {
-                        bytes_read += bytes;
-
-                        // Allowed because this will be a percentage (less than 100)
-                        #[allow(clippy::cast_possible_truncation)]
-                        print::progress(((bytes_read * 100) as u64 / total) as u32);
-                    }
-
-                    mode.shared
-                        .input
-                        .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
-
+                loop {
                     buffer.clear();
+                    match stream.read_line(&mut buffer) {
+                        Ok(bytes) => {
+                            if bytes == 0 {
+                                break;
+                            }
+
+                            mode.shared
+                                .input
+                                .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
+                        }
+                        Err(e) => {
+                            return error!(e; "Error reading");
+                        }
+                    }
                 }
+                Ok(())
             }
         }
-        eprintln!("There was a problem reading the file");
     }
 }
 

@@ -1,5 +1,4 @@
-use crate::options;
-use crate::summary;
+use crate::{error::Error, options, summary};
 
 macro_rules! no_verbose_gate {
     ($verboseness:ident) => {
@@ -37,7 +36,7 @@ pub fn clear_progress() {
 }
 
 fn separator() {
-    println!(separator!());
+    eprintln!(separator!());
 }
 
 // Allowed because all casts are prepended with check
@@ -64,12 +63,12 @@ fn number(number: u64) -> String {
 
 fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
     let millis = duration.as_millis();
-    print!("{:1$}", prefix, width);
+    eprint!("{:1$}", prefix, width);
 
     {
         let minutes = millis / 60_000;
         if minutes > 0 {
-            print!("{}m ", minutes);
+            eprint!("{}m ", minutes);
         }
     }
 
@@ -79,12 +78,23 @@ fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
         let seconds = f32::from((millis % 60_000) as u16);
         seconds / 1000_f32
     };
-    println!("{:.2}s ({}ms)", seconds, millis);
+    eprintln!("{:.2}s ({}ms)", seconds, millis);
 }
 
-pub fn loading(verboseness: options::Verboseness, file: &str) {
+pub fn loading_start(verboseness: options::Verboseness, file: &str) {
+    use std::io::Write;
+
     no_verbose_gate!(verboseness);
-    println!("Loading '{}'", file);
+    eprint!("Loading '{}'.. ", file);
+    let _ = std::io::stderr().flush();
+}
+
+pub fn loading_done(verboseness: options::Verboseness, result: Result<(), Error>) {
+    no_verbose_gate!(verboseness);
+    match result {
+        Ok(_) => eprintln!("Done"),
+        Err(e) => eprintln!("Fail: {}", e),
+    }
 }
 
 pub fn input<'a>(
@@ -93,15 +103,15 @@ pub fn input<'a>(
 ) {
     high_verbose_gate!(verboseness);
 
-    println!("Input:");
+    eprintln!("Input:");
     separator();
-    input.for_each(|i| println!("{}", i));
+    input.for_each(|i| eprintln!("{}", i));
 }
 
 fn shared_options<O: options::SharedAccessor>(options: &O) {
-    println!("{:15}{}", "Algorithm:", options.algorithm());
+    eprintln!("{:15}{}", "Algorithm:", options.algorithm());
     if !options.salt().is_empty() {
-        println!("{:15}{}", "Salt:", options.salt());
+        eprintln!("{:15}{}", "Salt:", options.salt());
     }
 }
 
@@ -111,9 +121,9 @@ fn encrypt_options(options: &options::Encrypt) {
 
 fn decrypt_options(options: &options::Decrypt) {
     shared_options(options);
-    println!("{:15}{}", "Device:", options.device());
+    eprintln!("{:15}{}", "Device:", options.device());
     if options::Device::CPU == options.device() {
-        println!(
+        eprintln!(
             "{:15}{}",
             "Threads:",
             if options.threads() == 0 {
@@ -123,56 +133,56 @@ fn decrypt_options(options: &options::Decrypt) {
             }
         );
     }
-    println!("{:15}{}", "Prefix:", options.prefix());
-    println!(
+    eprintln!("{:15}{}", "Prefix:", options.prefix());
+    eprintln!(
         "{:15}{}",
         "Length:",
         options.length() + options.prefix_length()
     );
-    println!("{:15}{}", "Possibilities:", number(options.number_space()));
+    eprintln!("{:15}{}", "Possibilities:", number(options.number_space()));
 }
 
 pub fn options(verboseness: options::Verboseness, options: &options::Mode) {
     high_verbose_gate!(verboseness);
 
-    println!();
-    println!("Options:");
+    eprintln!();
+    eprintln!("Options:");
     separator();
     match options {
         options::Mode::Encrypt(options) => encrypt_options(options),
         options::Mode::Decrypt(options) => decrypt_options(options),
     }
 
-    println!();
+    eprintln!();
 }
 
 pub fn output(verboseness: options::Verboseness) {
     no_verbose_gate!(verboseness);
-    println!();
-    println!("Output:");
+    eprintln!();
+    eprintln!("Output:");
     separator();
 }
 
 pub fn summary(verboseness: options::Verboseness, summary: &summary::Mode) {
     no_verbose_gate!(verboseness);
     if let summary::Mode::Decrypt(summary) = summary {
-        println!();
-        println!("Summary:");
+        eprintln!();
+        eprintln!("Summary:");
         separator();
-        println!(
+        eprintln!(
             "{:21}{}",
             "Threads launched:",
             number(u64::from(summary.threads))
         );
         duration("Time elapsed:", 21, &summary.duration);
-        println!("{:21}{}", "Hashes:", number(summary.hash_count));
+        eprintln!("{:21}{}", "Hashes:", number(summary.hash_count));
         if summary.duration.as_micros() == 0 {
-            println!("Hashes per millisec: NaN");
+            eprintln!("Hashes per millisec: NaN");
         } else {
             // Allowed because division by micros will not go over u64::max_value()
             #[allow(clippy::cast_possible_truncation)]
             {
-                println!(
+                eprintln!(
                     "Hashes per millisec: {}",
                     number(
                         ((u128::from(summary.hash_count) * 1_000) / summary.duration.as_micros())
@@ -181,7 +191,7 @@ pub fn summary(verboseness: options::Verboseness, summary: &summary::Mode) {
                 );
             }
         };
-        println!(
+        eprintln!(
             "{:21}{}/{} ({}%)",
             "Values found:",
             summary.results.len(),

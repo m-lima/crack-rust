@@ -1,31 +1,47 @@
 use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
+use crate::error::Error;
 
 use clap::Clap;
 
+/// MD5 and SHA256 hasher/cracker
 #[derive(Clap, Debug)]
 #[clap(
     name = "Hasher",
-    version = "0.3",
-    author = "Marcelo Lima",
-    about = "MD5 and SHA256 hasher/cracker"
+    version,
+    after_help = "Input can be provided through stdin or as parameters"
 )]
 pub enum RawMode {
+    /// Generate hashes
     Encrypt(RawEncrypt),
+    /// Crack hashes
+    #[clap(
+        after_help = "The cracker will exit with an error if any of the input hashes could not be cracked"
+    )]
     Decrypt(RawDecrypt),
 }
 
 #[derive(Clap, Debug)]
 pub struct RawShared {
-    #[clap(short, long, about = "Salt to use")]
-    salt: Option<String>,
+    /// Salt to prepend when generating hash [env: HASHER_SALT]
+    #[clap(short, long)]
+    #[allow(clippy::option_option)]
+    salt: Option<Option<String>>,
 
-    #[clap(short, long, about = "Verbose", parse(from_occurrences))]
+    /// Verbose mode (-v, -vv)
+    ///
+    /// All verboseness will be printed to stderr
+    #[clap(short, parse(from_occurrences))]
     verbose: u8,
 
-    #[clap(short, long, about = "Hashing algorithm", default_value = "SHA256", parse(try_from_str = to_algorithm))]
+    /// Hashing algorithm
+    #[clap(short, long, possible_values = Algorithm::variants(), default_value = "SHA256", parse(try_from_str = to_algorithm))]
     algorithm: Algorithm,
 
-    #[clap(short, long, about = "Input values")]
+    /// Input values
+    ///
+    /// If a single input is given, only the output will be printed to stdout. If more than one input
+    /// is given, the pairs <input>:<output> will be printed to stdout, one per line
+    #[clap(short, long)]
     input: Vec<String>,
 }
 
@@ -40,24 +56,27 @@ pub struct RawDecrypt {
     #[clap(flatten)]
     shared: RawShared,
 
-    #[clap(short, long, about = "Input files", parse(try_from_str = to_path))]
+    /// Input files
+    ///
+    /// If any hash from a given file is cracked, a copy of the file will be created in the same
+    /// directory with the ".cracked" extension containing all cracked hashes substituted in place
+    #[clap(short, long, parse(try_from_str = to_path))]
     files: Vec<std::path::PathBuf>,
 
-    #[clap(short, long, about = "Known prefix of hashed values")]
+    /// Known prefix of hashed values
+    #[clap(short, long)]
     prefix: Option<String>,
 
-    #[clap(
-        short,
-        long,
-        about = "Number of threads to spawn (0 for auto)",
-        default_value = "0"
-    )]
+    /// Number of threads to spawn (0 for auto)
+    #[clap(short, long, default_value = "0")]
     threads: u8,
 
-    #[clap(short, long, about = "Device to run in (auto-detection if omitted)", parse(try_from_str = to_device))]
+    /// Device to run in (auto-detection if omitted)
+    #[clap(short, long, possible_values = Device::variants(), parse(try_from_str = to_device))]
     device: Option<Device>,
 
-    #[clap(short, long, about = "Length of hashed values", default_value = "12")]
+    /// Length of hashed values
+    #[clap(short, long, default_value = "12")]
     length: u8,
 }
 
@@ -120,9 +139,10 @@ impl std::convert::Into<Shared> for RawShared {
             },
             algorithm: self.algorithm,
             salt: if let Some(salt) = self.salt {
-                salt
+                salt.unwrap_or_default()
             } else {
-                String::from(crate::secrets::SALT)
+                std::env::var(crate::SALT_ENV)
+                    .unwrap_or_else(|_| String::from(crate::secrets::SALT))
             },
         }
     }
@@ -148,50 +168,31 @@ fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     threads as u8
 }
 
-fn to_path(value: &str) -> Result<std::path::PathBuf, ParseError> {
+fn to_path(value: &str) -> Result<std::path::PathBuf, Error> {
     let path = std::path::PathBuf::from(value);
     if path.exists() && path.is_file() {
         Ok(path)
     } else {
-        Err(ParseError::new(format!("'{}' is not a file", value)))
+        Err(Error::Simple(format!("'{}' is not a file", value)))
     }
 }
 
-fn to_algorithm(value: &str) -> Result<Algorithm, ParseError> {
+fn to_algorithm(value: &str) -> Result<Algorithm, Error> {
     match value.to_uppercase().as_str() {
         "MD5" => Ok(Algorithm::MD5),
         "SHA256" => Ok(Algorithm::SHA256),
-        _ => Err(ParseError::new(String::from(
+        _ => Err(Error::Simple(String::from(
             "possible values are [MD5, SHA256]",
         ))),
     }
 }
 
-fn to_device(value: &str) -> Result<Device, ParseError> {
+fn to_device(value: &str) -> Result<Device, Error> {
     match value.to_uppercase().as_str() {
         "CPU" => Ok(Device::CPU),
         "GPU" => Ok(Device::GPU),
-        _ => Err(ParseError::new(String::from(
+        _ => Err(Error::Simple(String::from(
             "possible values are [CPU, GPU]",
         ))),
-    }
-}
-
-#[derive(Debug)]
-struct ParseError {
-    message: String,
-}
-
-impl ParseError {
-    fn new(message: String) -> Self {
-        Self { message }
-    }
-}
-
-impl std::error::Error for ParseError {}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(fmt, "{}", self.message)
     }
 }

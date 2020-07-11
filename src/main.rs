@@ -1,6 +1,9 @@
 #![deny(warnings, clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 
+#[macro_use]
+mod error;
+
 mod decrypt;
 mod encrypt;
 mod hash;
@@ -10,6 +13,8 @@ mod secrets;
 mod summary;
 
 use crate::options::SharedAccessor;
+
+pub static SALT_ENV: &str = "HASHER_SALT";
 
 fn run() -> i32 {
     let options = options::parse();

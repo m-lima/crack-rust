@@ -1,38 +1,6 @@
-#[derive(Debug)]
-struct Error {
-    message: String,
-    error: Option<Box<dyn std::error::Error>>,
-}
+use crate::{error::Error, options, summary};
 
-impl Error {
-    fn simple(message: String) -> Self {
-        Self {
-            message,
-            error: None,
-        }
-    }
-
-    fn new(message: String, error: impl 'static + std::error::Error) -> Self {
-        Self {
-            message,
-            error: Some(Box::new(error)),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(error) = &self.error {
-            write!(fmt, "{}: {}", &self.message, error)
-        } else {
-            write!(fmt, "{}", &self.message)
-        }
-    }
-}
-
-pub(super) fn export(options: &crate::options::Decrypt, summary: &crate::summary::Decrypt) {
+pub(super) fn export(options: &options::Decrypt, summary: &summary::Decrypt) {
     options
         .files()
         .iter()
@@ -48,18 +16,19 @@ fn create_file(
     let input_file = match std::fs::File::open(input) {
         Ok(file) => file,
         Err(e) => {
-            return Err(Error::new(
-                format!("Could not open '{}' for reading", input.display()),
-                e,
-            ));
+            return error!(e; "Could not open '{}' for reading", input.display());
         }
     };
 
-    let file_name = input
+    let file_name = if let Some(file_name) = input
         .file_name()
         .and_then(std::ffi::OsStr::to_str)
         .map(String::from)
-        .expect("Could not generate output file name");
+    {
+        file_name
+    } else {
+        return error!("Could not generate output file name");
+    };
 
     let mut output = input.with_file_name(format!("{}.cracked", file_name));
 
@@ -70,29 +39,27 @@ fn create_file(
     }
 
     if output.exists() {
-        Err(Error::simple(format!(
-            "Could not create output file for '{}'",
-            file_name
-        )))
+        error!("Could not create output file for '{}'", file_name)
     } else {
         match std::fs::File::create(&output) {
             Ok(file) => Ok((input_file, file, output)),
-            Err(e) => Err(Error::new(
-                format!("Could not open output file for '{}'", file_name),
-                e,
-            )),
+            Err(e) => error!(
+                e;
+                "Could not open output file for '{}'",
+                file_name,
+            ),
         }
     }
 }
 
 fn write_output_file(
-    options: &crate::options::Decrypt,
-    summary: &crate::summary::Decrypt,
+    options: &options::Decrypt,
+    summary: &summary::Decrypt,
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,
 ) -> Option<std::path::PathBuf> {
-    use crate::options::SharedAccessor;
+    use options::SharedAccessor;
     use std::io::{BufRead, Write};
 
     let mut buffer = String::new();
