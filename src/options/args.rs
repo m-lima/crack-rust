@@ -1,7 +1,8 @@
-use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
+use clap::Clap;
+
 use crate::error::Error;
 
-use clap::Clap;
+use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
 
 /// MD5 and SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -84,7 +85,7 @@ impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
             Self::Encrypt(encrypt) => Mode::Encrypt(Encrypt {
-                shared: encrypt.shared.into(),
+                shared: encrypt.shared.into(|s| Some(s)),
             }),
             Self::Decrypt(decrypt) => {
                 let prefix = if let Some(prefix) = decrypt.prefix {
@@ -114,8 +115,17 @@ impl std::convert::Into<Mode> for RawMode {
                     Device::CPU
                 };
 
+                let regex = decrypt.shared.algorithm.regex();
+                let algorithm_name = decrypt.shared.algorithm.to_string();
                 Mode::Decrypt(Decrypt {
-                    shared: decrypt.shared.into(),
+                    shared: decrypt.shared.into(|h| {
+                        if regex.is_match(&h) {
+                            Some(h)
+                        } else {
+                            eprintln!("Input is not a valid {} hash: {}", algorithm_name, h);
+                            None
+                        }
+                    }),
                     files: decrypt.files.into_iter().collect(),
                     length,
                     threads,
@@ -128,10 +138,10 @@ impl std::convert::Into<Mode> for RawMode {
     }
 }
 
-impl std::convert::Into<Shared> for RawShared {
-    fn into(self) -> Shared {
+impl RawShared {
+    fn into<F: Fn(String) -> Option<String>>(self, filter: F) -> Shared {
         Shared {
-            input: self.input.into_iter().collect(),
+            input: self.input.into_iter().filter_map(filter).collect(),
             verboseness: match self.verbose {
                 0 => Verboseness::None,
                 1 => Verboseness::Low,
