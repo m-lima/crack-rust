@@ -58,8 +58,8 @@ pub enum Verboseness {
 
 #[derive(Clap, PartialEq, Debug, Copy, Clone)]
 pub enum Algorithm {
-    MD5 = 32,
-    SHA256 = 64,
+    MD5,
+    SHA256,
 }
 
 impl Algorithm {
@@ -83,10 +83,6 @@ impl Algorithm {
             }
         }
     }
-
-    fn variants() -> &'static [&'static str] {
-        &["MD5", "SHA256"]
-    }
 }
 
 impl std::fmt::Display for Algorithm {
@@ -106,7 +102,7 @@ pub enum Device {
 
 impl Device {
     fn variants() -> &'static [&'static str] {
-        &["CPU", "GPU"]
+        &["cpu", "gpu"]
     }
 }
 

@@ -1,6 +1,6 @@
 use clap::Clap;
 
-use crate::error::Error;
+use crate::{error::Error, hash};
 
 use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
 
@@ -12,13 +12,20 @@ use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
     after_help = "Input can be provided through stdin or as parameters"
 )]
 pub enum RawMode {
-    /// Generate hashes
-    Encrypt(RawEncrypt),
-    /// Crack hashes
+    /// Generate sha256 hashes
+    Hash(RawHash),
+    /// Generate md5 hashes
+    HashMd5(RawHash),
+    /// Crack sha256 hashes
     #[clap(
         after_help = "The cracker will exit with an error if any of the input hashes could not be cracked"
     )]
-    Decrypt(RawDecrypt),
+    Crack(RawCrack),
+    /// Crack md5 hashes
+    #[clap(
+        after_help = "The cracker will exit with an error if any of the input hashes could not be cracked"
+    )]
+    CrackMd5(RawCrackMd5),
 }
 
 #[derive(Clap, Debug)]
@@ -33,31 +40,54 @@ pub struct RawShared {
     /// All verboseness will be printed to stderr
     #[clap(short, parse(from_occurrences))]
     verbose: u8,
+}
 
-    /// Hashing algorithm
-    #[clap(short, long, possible_values = Algorithm::variants(), default_value = "SHA256", parse(try_from_str = to_algorithm))]
-    algorithm: Algorithm,
+#[derive(Clap, Debug)]
+pub struct RawHash {
+    #[clap(flatten)]
+    shared: RawShared,
 
-    /// Input values
+    /// Values to hash
     ///
-    /// If a single input is given, only the output will be printed to stdout. If more than one input
-    /// is given, the pairs <input>:<output> will be printed to stdout, one per line
-    #[clap(short, long)]
+    /// If a single input is given, only the hash will be printed to stdout. If more than one input
+    /// is given, the pairs <input>:<hash> will be printed to stdout, one per line
     input: Vec<String>,
 }
 
 #[derive(Clap, Debug)]
-pub struct RawEncrypt {
+pub struct RawCrack {
     #[clap(flatten)]
-    shared: RawShared,
+    shared: RawCrackShared,
+
+    /// Sha256 values to crack. Expected to be the hash of a numeric value
+    ///
+    /// If a single hash is given, only the cracked value will be printed to stdout.
+    /// If more than one hash is given, the pairs <hash>:<cracked value> will be printed to stdout,
+    /// one per line
+    #[clap(parse(try_from_str = <hash::Sha256 as hash::Converter>::from_str))]
+    input: Vec<<hash::Sha256 as hash::Converter>::Output>,
 }
 
 #[derive(Clap, Debug)]
-pub struct RawDecrypt {
+pub struct RawCrackMd5 {
+    #[clap(flatten)]
+    shared: RawCrackShared,
+
+    /// MD5 values to crack. Expected to be the hash of a numeric value
+    ///
+    /// If a single hash is given, only the cracked value will be printed to stdout.
+    /// If more than one hash is given, the pairs <hash>:<cracked value> will be printed to stdout,
+    /// one per line
+    #[clap(parse(try_from_str = <hash::Md5 as hash::Converter>::from_str))]
+    input: Vec<<hash::Md5 as hash::Converter>::Output>,
+}
+
+#[derive(Clap, Debug)]
+pub struct RawCrackShared {
     #[clap(flatten)]
     shared: RawShared,
 
-    /// Input files
+    /// Input files. Will be scanned for hashes to crack
     ///
     /// If any hash from a given file is cracked, a copy of the file will be created in the same
     /// directory with the ".cracked" extension containing all cracked hashes substituted in place
@@ -84,70 +114,73 @@ pub struct RawDecrypt {
 impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
-            Self::Encrypt(encrypt) => Mode::Encrypt(Encrypt {
-                shared: encrypt.shared.into(Some),
-            }),
-            Self::Decrypt(decrypt) => {
-                let prefix = if let Some(prefix) = decrypt.prefix {
-                    prefix
-                } else {
-                    String::new()
-                };
-
-                let total_length = decrypt.length;
-                if prefix.len() > usize::from(total_length) {
-                    panic!("Prefix is too long");
-                }
-
-                // Allowed because the length was checked for overflow
-                #[allow(clippy::cast_possible_truncation)]
-                let length = total_length - prefix.len() as u8;
-
-                let number_space = 10_u64.pow(u32::from(length));
-
-                let threads = optimal_thread_count(decrypt.threads, number_space);
-
-                let device = if let Some(device) = decrypt.device {
-                    device
-                } else if number_space > u64::from(threads) * super::OPTIMAL_HASHES_PER_THREAD {
-                    Device::GPU
-                } else {
-                    Device::CPU
-                };
-
-                let regex = decrypt.shared.algorithm.regex();
-                let algorithm_name = decrypt.shared.algorithm.to_string();
-                Mode::Decrypt(Decrypt {
-                    shared: decrypt.shared.into(|h| {
-                        if regex.is_match(&h) {
-                            Some(h)
-                        } else {
-                            eprintln!("Input is not a valid {} hash: {}", algorithm_name, h);
-                            None
-                        }
-                    }),
-                    files: decrypt.files.into_iter().collect(),
-                    length,
-                    threads,
-                    number_space,
-                    prefix,
-                    device,
-                })
-            }
+            Self::Hash(encrypt) => compose_hash(encrypt.input, encrypt.shared, Algorithm::SHA256),
+            Self::HashMd5(encrypt) => compose_hash(encrypt.input, encrypt.shared, Algorithm::MD5),
+            Self::Crack(decrypt) => compose_crack(decrypt.shared, Algorithm::SHA256, decrypt.input),
+            Self::CrackMd5(decrypt) => compose_crack(decrypt.shared, Algorithm::MD5, decrypt.input),
         }
     }
 }
 
+fn compose_hash(input: Vec<String>, shared: RawShared, algorithm: Algorithm) -> Mode {
+    Mode::Encrypt(Encrypt {
+        shared: shared.into(input, algorithm),
+    })
+}
+
+fn compose_crack<T: std::fmt::Display>(
+    shared: RawCrackShared,
+    algorithm: Algorithm,
+    input: Vec<T>,
+) -> Mode {
+    let prefix = if let Some(prefix) = shared.prefix {
+        prefix
+    } else {
+        String::new()
+    };
+
+    let total_length = shared.length;
+    if prefix.len() > usize::from(total_length) {
+        panic!("Prefix is too long");
+    }
+
+    // Allowed because the length was checked for overflow
+    #[allow(clippy::cast_possible_truncation)]
+    let length = total_length - prefix.len() as u8;
+
+    let number_space = 10_u64.pow(u32::from(length));
+
+    let threads = optimal_thread_count(shared.threads, number_space);
+
+    let device = if let Some(device) = shared.device {
+        device
+    } else if number_space > u64::from(threads) * super::OPTIMAL_HASHES_PER_THREAD {
+        Device::GPU
+    } else {
+        Device::CPU
+    };
+
+    Mode::Decrypt(Decrypt {
+        shared: shared.shared.into(input, algorithm),
+        files: shared.files.into_iter().collect(),
+        length,
+        threads,
+        number_space,
+        prefix,
+        device,
+    })
+}
+
 impl RawShared {
-    fn into<F: Fn(String) -> Option<String>>(self, filter: F) -> Shared {
+    fn into<T: std::fmt::Display>(self, input: Vec<T>, algorithm: Algorithm) -> Shared {
         Shared {
-            input: self.input.into_iter().filter_map(filter).collect(),
+            input: input.into_iter().map(|i| i.to_string()).collect(),
             verboseness: match self.verbose {
                 0 => Verboseness::None,
                 1 => Verboseness::Low,
                 _ => Verboseness::High,
             },
-            algorithm: self.algorithm,
+            algorithm,
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {
@@ -184,16 +217,6 @@ fn to_path(value: &str) -> Result<std::path::PathBuf, Error> {
         Ok(path)
     } else {
         Err(Error::Simple(format!("'{}' is not a file", value)))
-    }
-}
-
-fn to_algorithm(value: &str) -> Result<Algorithm, Error> {
-    match value.to_uppercase().as_str() {
-        "MD5" => Ok(Algorithm::MD5),
-        "SHA256" => Ok(Algorithm::SHA256),
-        _ => Err(Error::Simple(String::from(
-            "possible values are [MD5, SHA256]",
-        ))),
     }
 }
 
