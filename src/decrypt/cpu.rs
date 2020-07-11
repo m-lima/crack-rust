@@ -22,13 +22,11 @@ unsafe impl<T> Send for Sender<T> {}
 
 split_by_algorithm!(execute_typed);
 
-fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
-    options: &options::Decrypt,
-) -> summary::Decrypt {
+fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
-    let input = options.input_as_eytzinger::<_, C>();
+    let input = options.input_as_eytzinger::<C>();
 
     let thread_count = options.threads();
     let thread_space = options.number_space() / u64::from(thread_count);

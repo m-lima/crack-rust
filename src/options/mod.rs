@@ -228,7 +228,7 @@ impl Decrypt {
         self.device
     }
 
-    pub fn input_as_eytzinger<D: digest::Digest, C: hash::Converter<D>>(&self) -> Vec<C::Output> {
+    pub fn input_as_eytzinger<C: hash::Converter>(&self) -> Vec<C::Output> {
         use eytzinger::SliceExt;
         let mut data = self
             .shared
@@ -236,6 +236,7 @@ impl Decrypt {
             .iter()
             .map(String::as_str)
             .map(C::from_str)
+            .filter_map(Result::ok)
             .collect::<Vec<_>>();
         data.sort_unstable();
         data.as_mut_slice()

@@ -6,7 +6,7 @@ use crate::summary;
 
 use crate::options::SharedAccessor;
 
-fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
+fn compute_results<'a, C: hash::Converter>(
     environment: &opencl::Environment<'a>,
     input: &[C::Output],
     out_buffer: &ocl::Buffer<opencl::Output>,
@@ -55,16 +55,14 @@ fn compute_results<'a, D: digest::Digest, C: hash::Converter<D>>(
 
 split_by_algorithm!(execute_typed);
 
-fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
-    options: &options::Decrypt,
-) -> summary::Decrypt {
+fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
         panic!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
     }
 
-    let input = options.input_as_eytzinger::<_, C>();
+    let input = options.input_as_eytzinger::<C>();
 
     let environment = opencl::setup_for(options);
     let program = environment.make_program();
@@ -127,7 +125,7 @@ fn execute_typed<D: digest::Digest, C: hash::Converter<D>>(
     });
     print::clear_progress();
 
-    let results = compute_results::<_, C>(&environment, &input, &out_buffer, &options);
+    let results = compute_results::<C>(&environment, &input, &out_buffer, &options);
 
     if !results.is_empty() {
         if input.len() == 1 {

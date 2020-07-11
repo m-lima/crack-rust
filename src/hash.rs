@@ -2,7 +2,7 @@ macro_rules! convert {
     ($($algorithm:ty => $hash:ty as $name:ident),+) => {
         $(pub struct $name;
 
-        impl Converter<$algorithm> for $name {
+        impl Converter for $name {
             type Output = $hash;
             fn digest(salted_prefix: &str, number: &str) -> Self::Output {
                 use digest::Digest;
@@ -13,8 +13,8 @@ macro_rules! convert {
                 <$hash>::from_array(result)
             }
 
-            fn from_str(string: &str) -> Self::Output {
-                <$hash>::from(string)
+            fn from_str(string: &str) -> Result<Self::Output, $crate::error::Error> {
+                <$hash>::from_str(string)
             }
         })*
 
@@ -67,6 +67,30 @@ macro_rules! hash {
                         data[i] = bytes[i];
                     }
                     Self(data)
+                }
+
+                fn from_str(string: &str) -> Result<Self, $crate::error::Error> {
+                    if string.len() != $size >> 2 {
+                        return error!("String does not fit into hash: '{}'", &string);
+                    }
+
+                    let mut hash = Self::default();
+                    for (i, c) in string.chars().enumerate() {
+                        let int = match c as u8 {
+                            c if c >= 0x30 && c < 0x3a => c - 0x30, // decimal
+                            c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
+                            c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
+                            c => {
+                                return error!("Failed to build hash: invalid character {}", c as char);
+                            }
+                        };
+                        if i & 1 == 0 {
+                            hash.0[i / 2] |= int << 4;
+                        } else {
+                            hash.0[i / 2] |= int
+                        }
+                    }
+                    Ok(hash)
                 }
             }
 
@@ -126,27 +150,11 @@ macro_rules! hash {
 
             impl std::convert::From<&str> for Hash {
                 fn from(string: &str) -> Self {
-                    if string.len() != $size >> 2 {
-                        panic!("String does not fit into hash: '{}'", &string);
+                    use $crate::hash::Hash;
+                    match Self::from_str(string) {
+                        Ok(hash) => hash,
+                        Err(e) => { panic!("{}", e); },
                     }
-
-                    let mut hash = Self::default();
-                    for (i, c) in string.chars().enumerate() {
-                        let int = match c as u8 {
-                            c if c >= 0x30 && c < 0x3a => c - 0x30, // decimal
-                            c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
-                            c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
-                            c => {
-                                panic!("Failed to build hash: invalid character {}", c as char);
-                            }
-                        };
-                        if i & 1 == 0 {
-                            hash.0[i / 2] |= int << 4;
-                        } else {
-                            hash.0[i / 2] |= int
-                        }
-                    }
-                    hash
                 }
             }
 
@@ -228,12 +236,13 @@ pub trait Hash:
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self;
+    fn from_str(string: &str) -> Result<Self, crate::error::Error>;
 }
 
-pub trait Converter<D: digest::Digest> {
+pub trait Converter {
     type Output: Hash + 'static;
     fn digest(salted_prefix: &str, number: &str) -> Self::Output;
-    fn from_str(string: &str) -> Self::Output;
+    fn from_str(string: &str) -> Result<Self::Output, crate::error::Error>;
 }
 
 hash!(h128: 128, h256: 256);

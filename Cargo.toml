@@ -1,6 +1,6 @@
 [package]
 name = "hasher"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
 build = "build.rs"

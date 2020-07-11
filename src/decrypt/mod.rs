@@ -2,8 +2,8 @@ macro_rules! split_by_algorithm {
     ($func:ident) => {
         pub(super) fn execute(options: &crate::options::Decrypt) -> summary::Decrypt {
             match options.algorithm() {
-                crate::options::Algorithm::MD5 => $func::<_, crate::hash::Md5>(&options),
-                crate::options::Algorithm::SHA256 => $func::<_, crate::hash::Sha256>(&options),
+                crate::options::Algorithm::MD5 => $func::<crate::hash::Md5>(&options),
+                crate::options::Algorithm::SHA256 => $func::<crate::hash::Sha256>(&options),
             }
         }
     };

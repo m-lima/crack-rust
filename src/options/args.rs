@@ -85,7 +85,7 @@ impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
             Self::Encrypt(encrypt) => Mode::Encrypt(Encrypt {
-                shared: encrypt.shared.into(|s| Some(s)),
+                shared: encrypt.shared.into(Some),
             }),
             Self::Decrypt(decrypt) => {
                 let prefix = if let Some(prefix) = decrypt.prefix {
