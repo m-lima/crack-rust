@@ -39,17 +39,17 @@ pub fn io_start(read: bool, file: &str) {
     use std::io::Write;
 
     if read {
-        eprint!("Loading '{}'.. ", file);
+        eprint!("Loading \x1b[34m{}\x1b[m .... ", file);
     } else {
-        eprint!("Writing '{}'.. ", file);
+        eprint!("Writing \x1b[34m{}\x1b[m .... ", file);
     }
     let _ = std::io::stderr().flush();
 }
 
 pub fn io_done(result: Result<(), error::Error>) {
     match result {
-        Ok(_) => eprintln!("Done"),
-        Err(e) => eprintln!("Fail: {}", e),
+        Ok(_) => eprintln!("\x1b[32mDone\x1b[m"),
+        Err(e) => eprintln!("\x1b[91mFail:\x1b[m {}", e),
     }
 }
 

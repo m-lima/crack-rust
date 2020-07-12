@@ -91,7 +91,10 @@ fn create_file(
     }
 
     if output.exists() {
-        error!("Could not create output file for '{}'", file_name)
+        error!(
+            "Could not create output file name for '{}': too many name collisions",
+            file_name
+        )
     } else {
         match std::fs::File::create(&output) {
             Ok(file) => Ok((input_file, file, output)),
@@ -181,6 +184,7 @@ fn insert_from_stream<H: hash::Hash>(
         match reader.read_line(&mut buffer) {
             Ok(bytes) => {
                 if bytes == 0 {
+                    print::io_done(Ok(()));
                     break;
                 }
 
