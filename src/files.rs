@@ -11,39 +11,47 @@ pub fn read<H: hash::Hash>(
     paths
         .iter()
         .inspect(|path| print::io_start(true, &path.display().to_string()))
-        .map(std::fs::File::open)
         .filter_map(|file| {
-            file.map_err(|e| {
-                print::io_done(error!(e; "Could not open file"));
-            })
-            .ok()
+            std::fs::File::open(file)
+                .map_err(|e| {
+                    print::io_done(error!(e; "Could not open file"));
+                })
+                .ok()
+                .map(std::io::BufReader::new)
         })
-        .map(std::io::BufReader::new)
         .fold(input, insert_from_stream)
 }
 
-// pub fn read_string_from_stdin(
-//     input: std::collections::HashSet<String>,
-// ) -> std::collections::HashSet<String> {
-//     if !atty::is(atty::Stream::Stdin) {
-//         print::io_start(true, "stdin");
-//         insert_from_stream(input, std::io::stdin().lock())
-//     } else {
-//         input
-//     }
-// }
+pub fn read_string_from_stdin(
+    mut input: std::collections::HashSet<String>,
+) -> std::collections::HashSet<String> {
+    if !atty::is(atty::Stream::Stdin) {
+        use std::io::Read;
+
+        print::io_start(true, "stdin");
+        let mut buffer = String::new();
+        if let Ok(bytes) = std::io::stdin().read_to_string(&mut buffer) {
+            if bytes > 0 {
+                input.insert(buffer);
+            }
+        }
+    }
+    input
+}
 
 pub fn read_hash_from_stdin<H: hash::Hash>(
     input: std::collections::HashSet<H>,
 ) -> std::collections::HashSet<H> {
-    if !atty::is(atty::Stream::Stdin) {
+    if atty::is(atty::Stream::Stdin) {
+        input
+    } else {
         print::io_start(true, "stdin");
         insert_from_stream(input, std::io::stdin().lock())
-    } else {
-        input
     }
 }
 
+// Allowed because it look better, dang it!
+#[allow(clippy::filter_map)]
 pub fn write<H: hash::Hash>(options: &options::Decrypt<H>, summary: &summary::Decrypt) {
     options
         .files()

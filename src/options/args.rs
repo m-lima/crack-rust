@@ -117,17 +117,22 @@ pub struct RawCrackShared {
 impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
-            Self::Hash(encrypt) => Mode::Encrypt(Encrypt::<hash::sha256::Hash>::new(
-                encrypt.shared.into(encrypt.input.into_iter().collect()),
-            )),
-            Self::HashMd5(encrypt) => Mode::EncryptMd5(Encrypt::<hash::md5::Hash>::new(
-                encrypt.shared.into(encrypt.input.into_iter().collect()),
-            )),
+            Self::Hash(encrypt) => Mode::Encrypt(compose_hash::<hash::sha256::Hash>(encrypt)),
+            Self::HashMd5(encrypt) => Mode::EncryptMd5(compose_hash::<hash::md5::Hash>(encrypt)),
             Self::Crack(decrypt) => Mode::Decrypt(compose_crack(decrypt.shared, decrypt.input)),
             Self::CrackMd5(decrypt) => {
                 Mode::DecryptMd5(compose_crack(decrypt.shared, decrypt.input))
             }
         }
+    }
+}
+
+fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> Encrypt<H> {
+    Encrypt::<H> {
+        shared: encrypt.shared.into(files::read_string_from_stdin(
+            encrypt.input.into_iter().collect(),
+        )),
+        _phantom: std::marker::PhantomData::<H>::default(),
     }
 }
 

@@ -72,15 +72,6 @@ pub struct Encrypt<H: hash::Hash> {
     _phantom: std::marker::PhantomData<H>,
 }
 
-impl<H: hash::Hash> Encrypt<H> {
-    fn new(shared: Shared<String>) -> Self {
-        Self {
-            shared,
-            _phantom: std::marker::PhantomData::<H>::default(),
-        }
-    }
-}
-
 impl<H: hash::Hash> SharedAccessor<String> for Encrypt<H> {
     fn shared(&self) -> &Shared<String> {
         &self.shared
