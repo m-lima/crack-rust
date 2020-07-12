@@ -1,11 +1,11 @@
+use crate::hash;
 use crate::options;
 
-use crate::hash::Hash;
 use crate::options::SharedAccessor;
 
 static MAX_GPU_LENGTH: u8 = 7;
 
-pub(super) fn setup_for<H: Hash>(options: &options::Decrypt<H>) -> Environment<'_, H> {
+pub(super) fn setup_for<H: hash::Hash>(options: &options::Decrypt<H>) -> Environment<'_, H> {
     Environment {
         options,
         configuration: Configuration::new(),
@@ -13,13 +13,13 @@ pub(super) fn setup_for<H: Hash>(options: &options::Decrypt<H>) -> Environment<'
     }
 }
 
-pub(super) struct Environment<'a, H: Hash> {
+pub(super) struct Environment<'a, H: hash::Hash> {
     options: &'a options::Decrypt<H>, // The environment is locked to the options. It must not change
     configuration: Configuration,
     kernel_parameters: KernelParameters,
 }
 
-impl<'a, H: Hash> Environment<'a, H> {
+impl<'a, H: hash::Hash> Environment<'a, H> {
     // Allowed because of previous check for options.shared.input.len() <= i32.max_value()
     // Allowed because salted prefix is limited in size
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
@@ -124,7 +124,7 @@ struct KernelParameters {
 }
 
 impl KernelParameters {
-    fn from<H: Hash>(options: &options::Decrypt<H>) -> Self {
+    fn from<H: hash::Hash>(options: &options::Decrypt<H>) -> Self {
         let length_on_cpu_iterations = if MAX_GPU_LENGTH > options.length() {
             0
         } else {
@@ -176,7 +176,7 @@ impl Output {
         self.data[0] > 0
     }
 
-    pub(super) fn printable<H: Hash>(self, environment: &Environment<'_, H>) -> String {
+    pub(super) fn printable<H: hash::Hash>(self, environment: &Environment<'_, H>) -> String {
         if environment.cpu_iterations() > 1 {
             format!(
                 "{:02$}{:03$}",

@@ -1,6 +1,7 @@
 use clap::Clap;
 
 use crate::error;
+use crate::files;
 use crate::hash;
 use crate::Input;
 
@@ -40,8 +41,8 @@ pub struct RawShared {
     /// Verbose mode (-v, -vv)
     ///
     /// All verboseness will be printed to stderr
-    #[clap(short, parse(from_occurrences))]
-    verbose: u8,
+    #[clap(short, parse(from_occurrences = to_verboseness))]
+    verbose: Verboseness,
 }
 
 #[derive(Clap, Debug)]
@@ -117,10 +118,10 @@ impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
             Self::Hash(encrypt) => Mode::Encrypt(Encrypt::<hash::sha256::Hash>::new(
-                encrypt.shared.into(encrypt.input),
+                encrypt.shared.into(encrypt.input.into_iter().collect()),
             )),
             Self::HashMd5(encrypt) => Mode::EncryptMd5(Encrypt::<hash::md5::Hash>::new(
-                encrypt.shared.into(encrypt.input),
+                encrypt.shared.into(encrypt.input.into_iter().collect()),
             )),
             Self::Crack(decrypt) => Mode::Decrypt(compose_crack(decrypt.shared, decrypt.input)),
             Self::CrackMd5(decrypt) => {
@@ -158,9 +159,12 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decryp
         Device::CPU
     };
 
+    let files = shared.files.into_iter().collect();
+    let input = files::read(input.into_iter().collect(), &files);
+
     Decrypt {
-        shared: shared.shared.into(input),
-        files: shared.files.into_iter().collect(),
+        shared: shared.shared.into(files::read_hash_from_stdin(input)),
+        files,
         length,
         threads,
         number_space,
@@ -170,14 +174,10 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decryp
 }
 
 impl RawShared {
-    fn into<T: Input>(self, input: Vec<T>) -> Shared<T> {
+    fn into<T: Input>(self, input: std::collections::HashSet<T>) -> Shared<T> {
         Shared {
-            input: input.into_iter().collect(),
-            verboseness: match self.verbose {
-                0 => Verboseness::None,
-                1 => Verboseness::Low,
-                _ => Verboseness::High,
-            },
+            input,
+            verboseness: self.verbose,
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {
@@ -222,5 +222,13 @@ fn to_device(value: &str) -> Result<Device, error::Error> {
         "CPU" => Ok(Device::CPU),
         "GPU" => Ok(Device::GPU),
         _ => error!("possible values are [CPU, GPU]",),
+    }
+}
+
+fn to_verboseness(value: u64) -> Verboseness {
+    match value {
+        0 => Verboseness::None,
+        1 => Verboseness::Low,
+        _ => Verboseness::High,
     }
 }

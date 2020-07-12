@@ -1,7 +1,6 @@
 use clap::Clap;
 
 use crate::hash;
-// use crate::print;
 use crate::Input;
 
 mod args;
@@ -11,47 +10,14 @@ pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 pub fn parse() -> Mode {
     let mode: Mode = args::RawMode::parse().into();
 
-    // if !atty::is(atty::Stream::Stdin) {
-    //     print::loading_start(mode.verboseness(), "stdin");
-    //     print::loading_done(
-    //         mode.verboseness(),
-    //         mode.insert_input_from_stream(std::io::stdin().lock()),
-    //     );
-    // }
-
-    // if let Mode::Decrypt(ref mut decrypt) = mode {
-    //     decrypt
-    //         .files
-    //         .iter()
-    //         .inspect(|file| {
-    //             print::loading_start(decrypt.shared.verboseness, &file.display().to_string());
-    //         })
-    //         .filter_map(|file| match std::fs::File::open(file) {
-    //             Ok(f) => Some(f),
-    //             Err(e) => {
-    //                 print::loading_done(
-    //                     decrypt.shared.verboseness,
-    //                     error!(e; "Could not open '{}'", file.display()),
-    //                 );
-    //                 None
-    //             }
-    //         })
-    //         .collect::<Vec<_>>()
-    //         .iter()
-    //         .for_each(|file| {
-    //             let reader = std::io::BufReader::new(file);
-    //             print::loading_done(mode.verboseness(), mode.insert_input_from_stream(reader));
-    //         });
-    // }
-
-    // if mode.input().is_empty() {
-    //     panic!("No valid input provided");
-    // }
+    if mode.input_len() == 0 {
+        panic!("No valid input provided");
+    }
 
     mode
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Verboseness {
     None = 0,
     Low = 1,
@@ -218,52 +184,6 @@ pub enum Mode {
     DecryptMd5(Decrypt<hash::md5::Hash>),
 }
 
-// impl Mode {
-//     fn insert_input_from_stream(&mut self, mut stream: impl std::io::BufRead) -> Result<(), Error> {
-//         let mut buffer = String::new();
-//         match self {
-//             Self::Encrypt(ref mut mode) => {
-//                 if let Ok(bytes) = stream.read_to_string(&mut buffer) {
-//                     if bytes > 0 {
-//                         mode.shared.input.insert(buffer);
-//                     }
-//                 }
-//                 Ok(())
-//             }
-//             Self::EncryptMd5(ref mut mode) => {
-//                 if let Ok(bytes) = stream.read_to_string(&mut buffer) {
-//                     if bytes > 0 {
-//                         mode.shared.input.insert(buffer);
-//                     }
-//                 }
-//                 Ok(())
-//             }
-//             Self::Decrypt(ref mut mode) | Self::DecryptMd5(ref mut mode) => {
-//                 let regex = mode.algorithm().regex();
-//
-//                 loop {
-//                     buffer.clear();
-//                     match stream.read_line(&mut buffer) {
-//                         Ok(bytes) => {
-//                             if bytes == 0 {
-//                                 break;
-//                             }
-//
-//                             mode.shared
-//                                 .input
-//                                 .extend(regex.find_iter(&buffer).map(|m| String::from(m.as_str())));
-//                         }
-//                         Err(e) => {
-//                             return error!(e; "Error reading");
-//                         }
-//                     }
-//                 }
-//                 Ok(())
-//             }
-//         }
-//     }
-// }
-
 impl Mode {
     pub fn verboseness(&self) -> Verboseness {
         match &self {
@@ -283,14 +203,3 @@ impl Mode {
         }
     }
 }
-
-// impl<T> SharedAccessor<T> for Mode {
-//     fn shared(&self) -> &Shared<T> {
-//         match &self {
-//             Self::Encrypt(mode) => mode.shared.verboseness,
-//             Self::EncryptMd5(mode) => mode.shared.verboseness,
-//             Self::Decrypt(mode) => mode.shared.verboseness,
-//             Self::DecryptMd5(mode) => mode.shared.verboseness,
-//         }
-//     }
-// }

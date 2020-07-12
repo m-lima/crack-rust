@@ -6,6 +6,7 @@ mod error;
 
 mod decrypt;
 mod encrypt;
+mod files;
 mod hash;
 mod options;
 mod print;
@@ -49,14 +50,14 @@ fn main() {
     std::panic::set_hook(Box::new(|info| {
         let payload = info.payload();
         if let Some(message) = payload.downcast_ref::<&str>() {
-            eprintln!("{}", message);
+            eprintln!("\x1b[91mError:\x1b[m {}", message);
             return;
         }
         if let Some(message) = payload.downcast_ref::<String>() {
-            eprintln!("{}", message);
+            eprintln!("\x1b[91mError:\x1b[m {}", message);
             return;
         }
-        eprintln!("unhandled exception");
+        eprintln!("\x1b[91mError:\x1b[m unhandled exception");
     }));
 
     std::process::exit(run());

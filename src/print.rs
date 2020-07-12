@@ -1,4 +1,4 @@
-// use crate::error;
+use crate::error;
 use crate::hash;
 use crate::options;
 use crate::summary;
@@ -35,23 +35,23 @@ pub fn clear_progress() {
     let _ = std::io::stderr().flush();
 }
 
-// pub fn loading_start(verboseness: options::Verboseness, file: &str) {
-//     if verboseness as u8 > 1 {
-//         use std::io::Write;
-//
-//         eprint!("Loading '{}'.. ", file);
-//         let _ = std::io::stderr().flush();
-//     }
-// }
-//
-// pub fn loading_done(verboseness: options::Verboseness, result: Result<(), error::Error>) {
-//     if verboseness as u8 > 1 {
-//         match result {
-//             Ok(_) => eprintln!("Done"),
-//             Err(e) => eprintln!("Fail: {}", e),
-//         }
-//     }
-// }
+pub fn io_start(read: bool, file: &str) {
+    use std::io::Write;
+
+    if read {
+        eprint!("Loading '{}'.. ", file);
+    } else {
+        eprint!("Writing '{}'.. ", file);
+    }
+    let _ = std::io::stderr().flush();
+}
+
+pub fn io_done(result: Result<(), error::Error>) {
+    match result {
+        Ok(_) => eprintln!("Done"),
+        Err(e) => eprintln!("Fail: {}", e),
+    }
+}
 
 pub fn summary(verboseness: options::Verboseness, summary: &summary::Mode) {
     if verboseness as u8 > 0 {

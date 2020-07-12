@@ -1,4 +1,4 @@
-use crate::hash::Hash;
+use crate::hash;
 use crate::options;
 use crate::print;
 use crate::summary;
@@ -20,7 +20,7 @@ impl<T> std::ops::Deref for Sender<T> {
 
 unsafe impl<T> Send for Sender<T> {}
 
-pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
+pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());

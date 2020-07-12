@@ -1,10 +1,16 @@
 #[macro_export]
 macro_rules! error {
+    ($path:tt had $error:tt; $($arg:tt)*) => {{
+        Err(($path, $crate::error::Error::WithError(format!($($arg)*), Box::new($error))))
+    }};
+    ($path:tt had $($arg:tt)*) => {{
+        Err(($path, $crate::error::Error::Simple(format!($($arg)*))))
+    }};
     ($error:tt; $($arg:tt)*) => {{
-        Err(crate::error::Error::WithError(format!($($arg)*), Box::new($error)))
+        Err($crate::error::Error::WithError(format!($($arg)*), Box::new($error)))
     }};
     ($($arg:tt)*) => {{
-        Err(crate::error::Error::Simple(format!($($arg)*)))
+        Err($crate::error::Error::Simple(format!($($arg)*)))
     }};
 }
 
