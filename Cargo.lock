@@ -255,7 +255,7 @@ dependencies = [
 
 [[package]]
 name = "hasher"
-version = "0.3.2"
+version = "0.4.3"
 dependencies = [
  "atty 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 3.0.0-beta.1 (registry+https://github.com/rust-lang/crates.io-index)",
