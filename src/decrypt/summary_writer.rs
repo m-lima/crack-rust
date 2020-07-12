@@ -1,18 +1,21 @@
-use crate::{error::Error, options, summary};
+use crate::error;
+use crate::hash;
+use crate::options;
+use crate::summary;
 
-pub(super) fn export(options: &options::Decrypt, summary: &summary::Decrypt) {
+pub(super) fn export<H: hash::Hash>(options: &options::Decrypt<H>, summary: &summary::Decrypt) {
     options
         .files()
         .iter()
         .map(create_file)
         .filter_map(filter_error)
-        .filter_map(|(i, o, p)| write_output_file(&options, &summary, &i, &o, p))
+        .filter_map(|(i, o, p)| write_output_file(H::regex(), &summary, &i, &o, p))
         .for_each(clean_unwritten_file);
 }
 
 fn create_file(
     input: &std::path::PathBuf,
-) -> Result<(std::fs::File, std::fs::File, std::path::PathBuf), Error> {
+) -> Result<(std::fs::File, std::fs::File, std::path::PathBuf), error::Error> {
     let input_file = match std::fs::File::open(input) {
         Ok(file) => file,
         Err(e) => {
@@ -53,20 +56,18 @@ fn create_file(
 }
 
 fn write_output_file(
-    options: &options::Decrypt,
+    regex: &regex::Regex,
     summary: &summary::Decrypt,
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,
 ) -> Option<std::path::PathBuf> {
-    use options::SharedAccessor;
     use std::io::{BufRead, Write};
 
     let mut buffer = String::new();
     let mut reader = std::io::BufReader::new(input);
     let mut writer = std::io::BufWriter::new(output);
     let mut replaced = false;
-    let regex = options.algorithm().regex();
 
     loop {
         buffer.clear();
@@ -97,7 +98,7 @@ fn clean_unwritten_file(file: std::path::PathBuf) {
     let _ = std::fs::remove_file(file);
 }
 
-fn filter_error<T>(result: Result<T, Error>) -> Option<T> {
+fn filter_error<T>(result: Result<T, error::Error>) -> Option<T> {
     match result {
         Ok(f) => Some(f),
         Err(e) => {

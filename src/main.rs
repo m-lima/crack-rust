@@ -12,30 +12,37 @@ mod print;
 mod secrets;
 mod summary;
 
-use crate::options::SharedAccessor;
-
 pub static SALT_ENV: &str = "HASHER_SALT";
+
+pub trait Input:
+    'static + std::hash::Hash + std::fmt::Display + ToString + PartialEq + Eq + PartialOrd + Ord
+{
+}
+impl Input for String {}
 
 fn run() -> i32 {
     let options = options::parse();
 
-    print::options(options.verboseness(), &options);
-    print::input(options.verboseness(), options.input().iter());
-    print::output(options.verboseness());
+    print::setup(&options);
 
     let summary = match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
+        options::Mode::EncryptMd5(options) => encrypt::execute(options),
         options::Mode::Decrypt(options) => decrypt::execute(options),
+        options::Mode::DecryptMd5(options) => decrypt::execute(options),
     };
 
     print::summary(options.verboseness(), &summary);
 
     if let summary::Mode::Decrypt(decrypt) = summary {
-        if decrypt.results.len() < options.input().len() {
-            return -1;
+        if decrypt.results.len() < options.input_len() {
+            -1
+        } else {
+            0
         }
+    } else {
+        0
     }
-    0
 }
 
 fn main() {

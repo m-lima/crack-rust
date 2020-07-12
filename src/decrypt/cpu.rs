@@ -1,4 +1,4 @@
-use crate::hash;
+use crate::hash::Hash;
 use crate::options;
 use crate::print;
 use crate::summary;
@@ -20,13 +20,11 @@ impl<T> std::ops::Deref for Sender<T> {
 
 unsafe impl<T> Send for Sender<T> {}
 
-split_by_algorithm!(execute_typed);
-
-fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Decrypt {
+pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
-    let input = options.input_as_eytzinger::<C>();
+    let input = options.input_as_eytzinger();
 
     let thread_count = options.threads();
     let thread_space = options.number_space() / u64::from(thread_count);
@@ -66,7 +64,7 @@ fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Dec
                 }
 
                 let number = format!("{:01$}", n, length);
-                let hash = C::digest(&salted_prefix, &number);
+                let hash = H::digest(&salted_prefix, &number);
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
@@ -154,7 +152,6 @@ mod test {
         let options = options::Decrypt::new(
             expected.iter().map(|v| v.hash.to_string()).collect(),
             std::collections::HashSet::new(),
-            options::Algorithm::SHA256,
             salt,
             options::Verboseness::None,
             2_u8,

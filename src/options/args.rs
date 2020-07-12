@@ -1,8 +1,10 @@
 use clap::Clap;
 
-use crate::{error::Error, hash};
+use crate::error;
+use crate::hash;
+use crate::Input;
 
-use super::{Algorithm, Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
+use super::{Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
 
 /// MD5 and SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -64,8 +66,8 @@ pub struct RawCrack {
     /// If a single hash is given, only the cracked value will be printed to stdout.
     /// If more than one hash is given, the pairs <hash>:<cracked value> will be printed to stdout,
     /// one per line
-    #[clap(parse(try_from_str = <hash::Sha256 as hash::Converter>::from_str))]
-    input: Vec<<hash::Sha256 as hash::Converter>::Output>,
+    #[clap(parse(try_from_str = <hash::sha256::Hash as hash::Hash>::from_str))]
+    input: Vec<hash::sha256::Hash>,
 }
 
 #[derive(Clap, Debug)]
@@ -78,8 +80,8 @@ pub struct RawCrackMd5 {
     /// If a single hash is given, only the cracked value will be printed to stdout.
     /// If more than one hash is given, the pairs <hash>:<cracked value> will be printed to stdout,
     /// one per line
-    #[clap(parse(try_from_str = <hash::Md5 as hash::Converter>::from_str))]
-    input: Vec<<hash::Md5 as hash::Converter>::Output>,
+    #[clap(parse(try_from_str = <hash::md5::Hash as hash::Hash>::from_str))]
+    input: Vec<hash::md5::Hash>,
 }
 
 #[derive(Clap, Debug)]
@@ -114,25 +116,21 @@ pub struct RawCrackShared {
 impl std::convert::Into<Mode> for RawMode {
     fn into(self) -> Mode {
         match self {
-            Self::Hash(encrypt) => compose_hash(encrypt.input, encrypt.shared, Algorithm::SHA256),
-            Self::HashMd5(encrypt) => compose_hash(encrypt.input, encrypt.shared, Algorithm::MD5),
-            Self::Crack(decrypt) => compose_crack(decrypt.shared, Algorithm::SHA256, decrypt.input),
-            Self::CrackMd5(decrypt) => compose_crack(decrypt.shared, Algorithm::MD5, decrypt.input),
+            Self::Hash(encrypt) => Mode::Encrypt(Encrypt::<hash::sha256::Hash>::new(
+                encrypt.shared.into(encrypt.input),
+            )),
+            Self::HashMd5(encrypt) => Mode::EncryptMd5(Encrypt::<hash::md5::Hash>::new(
+                encrypt.shared.into(encrypt.input),
+            )),
+            Self::Crack(decrypt) => Mode::Decrypt(compose_crack(decrypt.shared, decrypt.input)),
+            Self::CrackMd5(decrypt) => {
+                Mode::DecryptMd5(compose_crack(decrypt.shared, decrypt.input))
+            }
         }
     }
 }
 
-fn compose_hash(input: Vec<String>, shared: RawShared, algorithm: Algorithm) -> Mode {
-    Mode::Encrypt(Encrypt {
-        shared: shared.into(input, algorithm),
-    })
-}
-
-fn compose_crack<T: std::fmt::Display>(
-    shared: RawCrackShared,
-    algorithm: Algorithm,
-    input: Vec<T>,
-) -> Mode {
+fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decrypt<H> {
     let prefix = if let Some(prefix) = shared.prefix {
         prefix
     } else {
@@ -160,27 +158,26 @@ fn compose_crack<T: std::fmt::Display>(
         Device::CPU
     };
 
-    Mode::Decrypt(Decrypt {
-        shared: shared.shared.into(input, algorithm),
+    Decrypt {
+        shared: shared.shared.into(input),
         files: shared.files.into_iter().collect(),
         length,
         threads,
         number_space,
         prefix,
         device,
-    })
+    }
 }
 
 impl RawShared {
-    fn into<T: std::fmt::Display>(self, input: Vec<T>, algorithm: Algorithm) -> Shared {
+    fn into<T: Input>(self, input: Vec<T>) -> Shared<T> {
         Shared {
-            input: input.into_iter().map(|i| i.to_string()).collect(),
+            input: input.into_iter().collect(),
             verboseness: match self.verbose {
                 0 => Verboseness::None,
                 1 => Verboseness::Low,
                 _ => Verboseness::High,
             },
-            algorithm,
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {
@@ -211,21 +208,19 @@ fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     threads as u8
 }
 
-fn to_path(value: &str) -> Result<std::path::PathBuf, Error> {
+fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     let path = std::path::PathBuf::from(value);
     if path.exists() && path.is_file() {
         Ok(path)
     } else {
-        Err(Error::Simple(format!("'{}' is not a file", value)))
+        error!("'{}' is not a file", value)
     }
 }
 
-fn to_device(value: &str) -> Result<Device, Error> {
+fn to_device(value: &str) -> Result<Device, error::Error> {
     match value.to_uppercase().as_str() {
         "CPU" => Ok(Device::CPU),
         "GPU" => Ok(Device::GPU),
-        _ => Err(Error::Simple(String::from(
-            "possible values are [CPU, GPU]",
-        ))),
+        _ => error!("possible values are [CPU, GPU]",),
     }
 }

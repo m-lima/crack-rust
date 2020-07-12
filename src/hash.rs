@@ -1,45 +1,3 @@
-macro_rules! convert {
-    ($($algorithm:ty => $hash:ty as $name:ident),+) => {
-        $(pub struct $name;
-
-        impl Converter for $name {
-            type Output = $hash;
-            fn digest(salted_prefix: &str, number: &str) -> Self::Output {
-                use digest::Digest;
-                let mut digest = <$algorithm>::new();
-                digest.update(salted_prefix.as_bytes());
-                digest.update(number.as_bytes());
-                let result = digest.finalize();
-                <$hash>::from_array(result)
-            }
-
-            fn from_str(string: &str) -> Result<Self::Output, $crate::error::Error> {
-                <$hash>::from_str(string)
-            }
-        })*
-
-        #[cfg(test)]
-        mod test {
-            $(#[test]
-            #[allow(non_snake_case)]
-            fn $name() {
-                use crate::hash::Converter;
-                let hash = crate::hash::$name::digest(&String::from("123"), &String::from("abc"));
-
-                use digest::Digest;
-                let mut expected_hash = <$algorithm>::new();
-                expected_hash.update("123".as_bytes());
-                expected_hash.update("abc".as_bytes());
-
-                assert_eq!(
-                    format!("{:x}", hash),
-                    format!("{:x}", expected_hash.finalize())
-                );
-            })*
-        }
-    };
-}
-
 macro_rules! byte_size_of {
     ($size:literal) => {
         $size / 8
@@ -47,16 +5,26 @@ macro_rules! byte_size_of {
 }
 
 macro_rules! hash {
-    ($($name:ident: $size:literal),+) => {
-        $(mod $name {
+    ($($name:ident: $size:literal from $algorithm:ty),+) => {
+        $(pub mod $name {
             #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone)]
             pub struct Hash([u8; byte_size_of!($size)]);
 
             unsafe impl ocl::OclPrm for Hash {}
+            impl $crate::Input for Hash {}
 
             // Allowed because clippy cannot interpret this macro
             #[allow(clippy::derive_hash_xor_eq)]
             impl $crate::hash::Hash for Hash {
+                fn digest(salted_prefix: &str, number: &str) -> Self {
+                    use digest::Digest;
+                    let mut digest = <$algorithm>::new();
+                    digest.update(salted_prefix.as_bytes());
+                    digest.update(number.as_bytes());
+                    let result = digest.finalize();
+                    Self::from_array(result)
+                }
+
                 fn from_array<N: digest::generic_array::ArrayLength<u8>>(
                     bytes: digest::generic_array::GenericArray<u8, N>,
                 ) -> Self {
@@ -91,6 +59,19 @@ macro_rules! hash {
                         }
                     }
                     Ok(hash)
+                }
+
+                fn regex() -> &'static regex::Regex {
+                    use lazy_static::lazy_static;
+                    lazy_static! {
+                        static ref RE: regex::Regex = regex::Regex::new(&format!("\\b[0-9a-fA-F]{{{}}}\\b", $size / 4))
+                            .expect(stringify!(Could not build regex for $name));
+                    }
+                    &RE
+                }
+
+                fn name() -> &'static str {
+                    stringify!($name)
                 }
             }
 
@@ -225,25 +206,49 @@ macro_rules! hash {
                     let hash = super::Hash::from(string.as_str());
                     assert_eq!(format!("{:x}", hash), string);
                 }
+
+                #[test]
+                fn digestion() {
+                    use $crate::hash::Hash;
+                    let hash = super::Hash::digest("123", "abc");
+
+                    use digest::Digest;
+                    let mut expected_hash = <$algorithm>::new();
+                    expected_hash.update("123".as_bytes());
+                    expected_hash.update("abc".as_bytes());
+
+                    assert_eq!(
+                        format!("{:x}", hash),
+                        format!("{:x}", expected_hash.finalize())
+                    );
+                }
+
+                #[test]
+                fn regex() {
+                    use $crate::hash::Hash;
+                    let hash = super::Hash::digest("123", "abc");
+                    let regex = super::Hash::regex();
+
+                    assert!(regex.is_match(&hash.to_string()));
+                    assert!(regex.is_match(&format!(" {} ", hash)));
+                    assert!(regex.is_match(&format!("{{{},", hash)));
+                    assert!(!regex.is_match(&format!("{}a", hash)));
+                    assert!(!regex.is_match(&format!("a{}", hash)));
+                    assert!(!regex.is_match("a"));
+                }
             }
         })*
     };
 }
 
-pub trait Hash:
-    ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + ToString + PartialEq + Eq + PartialOrd + Ord
-{
+pub trait Hash: ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + crate::Input {
+    fn digest(salted_prefix: &str, number: &str) -> Self;
     fn from_array<N: digest::generic_array::ArrayLength<u8>>(
         bytes: digest::generic_array::GenericArray<u8, N>,
     ) -> Self;
     fn from_str(string: &str) -> Result<Self, crate::error::Error>;
+    fn regex() -> &'static regex::Regex;
+    fn name() -> &'static str;
 }
 
-pub trait Converter {
-    type Output: Hash + 'static;
-    fn digest(salted_prefix: &str, number: &str) -> Self::Output;
-    fn from_str(string: &str) -> Result<Self::Output, crate::error::Error>;
-}
-
-hash!(h128: 128, h256: 256);
-convert!(md5::Md5 => h128::Hash as Md5, sha2::Sha256 => h256::Hash as Sha256);
+hash!(md5: 128 from md5::Md5, sha256: 256 from sha2::Sha256);

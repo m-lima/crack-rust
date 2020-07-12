@@ -1,10 +1,11 @@
 use crate::options;
 
+use crate::hash::Hash;
 use crate::options::SharedAccessor;
 
 static MAX_GPU_LENGTH: u8 = 7;
 
-pub(super) fn setup_for(options: &options::Decrypt) -> Environment<'_> {
+pub(super) fn setup_for<H: Hash>(options: &options::Decrypt<H>) -> Environment<'_, H> {
     Environment {
         options,
         configuration: Configuration::new(),
@@ -12,19 +13,19 @@ pub(super) fn setup_for(options: &options::Decrypt) -> Environment<'_> {
     }
 }
 
-pub(super) struct Environment<'a> {
-    options: &'a options::Decrypt, // The environment is locked to the options. It must not change
+pub(super) struct Environment<'a, H: Hash> {
+    options: &'a options::Decrypt<H>, // The environment is locked to the options. It must not change
     configuration: Configuration,
     kernel_parameters: KernelParameters,
 }
 
-impl<'a> Environment<'a> {
+impl<'a, H: Hash> Environment<'a, H> {
     // Allowed because of previous check for options.shared.input.len() <= i32.max_value()
     // Allowed because salted prefix is limited in size
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub(super) fn make_program(&self) -> ocl::Program {
         let salted_prefix = format!("{}{}", &self.options.salt(), &self.options.prefix());
-        let source = source::from(self.options.algorithm()).with_prefix(&salted_prefix);
+        let source = source::template::<H>().with_prefix(&salted_prefix);
 
         ocl::Program::builder()
             .source(source.to_string())
@@ -123,7 +124,7 @@ struct KernelParameters {
 }
 
 impl KernelParameters {
-    fn from(options: &options::Decrypt) -> Self {
+    fn from<H: Hash>(options: &options::Decrypt<H>) -> Self {
         let length_on_cpu_iterations = if MAX_GPU_LENGTH > options.length() {
             0
         } else {
@@ -175,7 +176,7 @@ impl Output {
         self.data[0] > 0
     }
 
-    pub(super) fn printable(self, environment: &Environment<'_>) -> String {
+    pub(super) fn printable<H: Hash>(self, environment: &Environment<'_, H>) -> String {
         if environment.cpu_iterations() > 1 {
             format!(
                 "{:02$}{:03$}",
@@ -195,20 +196,26 @@ impl Output {
 }
 
 mod source {
+    use crate::hash;
+
     static MD5: &str = include_str!("../../cl/md5.cl");
     static SHA256: &str = include_str!("../../cl/sha256.cl");
 
-    pub(super) struct SourceTemplate<'a>(&'a str);
+    pub(super) struct SourceTemplate(&'static str);
     pub(super) struct Source(String);
 
-    pub(super) fn from<'a>(algorithm: super::options::Algorithm) -> SourceTemplate<'a> {
-        SourceTemplate(match algorithm {
-            super::options::Algorithm::MD5 => MD5,
-            super::options::Algorithm::SHA256 => SHA256,
-        })
+    pub(super) fn template<H: hash::Hash>() -> SourceTemplate {
+        // TODO: Update with type specialization when available
+        if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::md5::Hash>() {
+            SourceTemplate(MD5)
+        } else if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::sha256::Hash>() {
+            SourceTemplate(SHA256)
+        } else {
+            panic!("Algorithm not supported for GPU execution");
+        }
     }
 
-    impl<'a> SourceTemplate<'a> {
+    impl SourceTemplate {
         pub(super) fn with_prefix(&self, salted_prefix: &str) -> Source {
             let mut injected_code = String::new();
             for (i, c) in salted_prefix.chars().enumerate() {

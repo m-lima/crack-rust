@@ -1,16 +1,16 @@
 use super::opencl;
-use crate::hash;
+use crate::hash::Hash;
 use crate::options;
 use crate::print;
 use crate::summary;
 
 use crate::options::SharedAccessor;
 
-fn compute_results<'a, C: hash::Converter>(
-    environment: &opencl::Environment<'a>,
-    input: &[C::Output],
+fn compute_results<'a, H: Hash>(
+    environment: &opencl::Environment<'a, H>,
+    input: &[H],
     out_buffer: &ocl::Buffer<opencl::Output>,
-    options: &options::Decrypt,
+    options: &options::Decrypt<H>,
 ) -> Vec<summary::Decrypted> {
     let mut output = vec![opencl::Output::default(); out_buffer.len()];
     out_buffer.read(&mut output).enq().unwrap_or_else(|err| {
@@ -37,7 +37,7 @@ fn compute_results<'a, C: hash::Converter>(
             use eytzinger::SliceExt;
 
             let zeros = opencl::Output::new(0, i).printable(&environment);
-            let hash = C::digest(&salted_prefix, &zeros);
+            let hash = H::digest(&salted_prefix, &zeros);
 
             if input.eytzinger_search(&hash).is_some() {
                 let result = format!("{}{}", &options.prefix(), &zeros);
@@ -53,16 +53,14 @@ fn compute_results<'a, C: hash::Converter>(
     results
 }
 
-split_by_algorithm!(execute_typed);
-
-fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Decrypt {
+pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
         panic!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
     }
 
-    let input = options.input_as_eytzinger::<C>();
+    let input = options.input_as_eytzinger();
 
     let environment = opencl::setup_for(options);
     let program = environment.make_program();
@@ -125,7 +123,7 @@ fn execute_typed<C: hash::Converter>(options: &options::Decrypt) -> summary::Dec
     });
     print::clear_progress();
 
-    let results = compute_results::<C>(&environment, &input, &out_buffer, &options);
+    let results = compute_results(&environment, &input, &out_buffer, &options);
 
     if !results.is_empty() {
         if input.len() == 1 {
