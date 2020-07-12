@@ -122,6 +122,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
 #[cfg(test)]
 mod test {
     use super::{execute, options, summary};
+    use crate::hash;
 
     #[test]
     fn test_decryption() {
@@ -149,8 +150,11 @@ mod test {
             },
         ];
 
-        let options = options::Decrypt::new(
-            expected.iter().map(|v| v.hash.to_string()).collect(),
+        let options = options::Decrypt::<hash::sha256::Hash>::new(
+            expected
+                .iter()
+                .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
+                .collect(),
             std::collections::HashSet::new(),
             salt,
             options::Verboseness::None,
