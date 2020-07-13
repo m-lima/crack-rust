@@ -54,6 +54,9 @@ ARGS:
             pairs <input>:<hash> will be printed to stdout, one per line
 
 FLAGS:
+    -n, --no-colors
+            Disable colors
+
     -h, --help
             Prints help information
 
@@ -83,6 +86,9 @@ ARGS:
             the pairs <hash>:<cracked value> will be printed to stdout, one per line
 
 FLAGS:
+    -n, --no-colors
+            Disable colors
+
     -h, --help
             Prints help information
 

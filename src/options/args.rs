@@ -230,10 +230,16 @@ fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
 
 fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     let path = std::path::PathBuf::from(value);
-    if path.exists() && path.is_file() {
-        Ok(path)
+    if !path.exists() {
+        error!("{} does not exist", value)
+    } else if !path.is_file() {
+        error!("{} is not a file", value)
     } else {
-        error!("'{}' is not a file", value)
+        if let Err(e) = std::fs::File::open(&path) {
+            error!(e; "could not open {}", value)
+        } else {
+            Ok(path)
+        }
     }
 }
 
