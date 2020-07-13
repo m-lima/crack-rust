@@ -1,7 +1,6 @@
 use super::opencl;
 use crate::hash::Hash;
 use crate::options;
-use crate::print;
 use crate::summary;
 
 use crate::options::SharedAccessor;
@@ -84,7 +83,7 @@ pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
             panic!("OpenCL: Failed to create output buffer: {}", err);
         });
 
-    print::progress(0);
+    options.printer().progress(0);
     for i in 0..environment.cpu_iterations() {
         let kernel = ocl::Kernel::builder()
             .program(&program)
@@ -108,7 +107,9 @@ pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
         // If we enqueue too many, OpenCL will abort
         // Send every 7th iteration
         if i & 0b111 == 0b111 {
-            print::progress(i * 100 / environment.cpu_iterations());
+            options
+                .printer()
+                .progress(i * 100 / environment.cpu_iterations());
             environment.queue().finish().unwrap_or_else(|err| {
                 panic!(
                     "OpenCL: Failed to wait for queue segment to finish: {}",
@@ -121,7 +122,7 @@ pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
     environment.queue().finish().unwrap_or_else(|err| {
         panic!("OpenCL: Failed to wait for queue to finish: {}", err);
     });
-    print::clear_progress();
+    options.printer().clear_progress();
 
     let results = compute_results(&environment, &input, &out_buffer, &options);
 

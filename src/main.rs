@@ -24,7 +24,7 @@ impl Input for String {}
 fn run() -> i32 {
     let options = options::parse();
 
-    print::setup(&options);
+    options.printer().options(&options);
 
     let summary = match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
@@ -33,7 +33,7 @@ fn run() -> i32 {
         options::Mode::DecryptMd5(options) => decrypt::execute(options),
     };
 
-    print::summary(options.verboseness(), &summary);
+    options.printer().summary(&summary);
 
     if let summary::Mode::Decrypt(decrypt) = summary {
         if decrypt.results.len() < options.input_len() {
@@ -48,16 +48,17 @@ fn run() -> i32 {
 
 fn main() {
     std::panic::set_hook(Box::new(|info| {
+        use colored::Colorize;
         let payload = info.payload();
         if let Some(message) = payload.downcast_ref::<&str>() {
-            eprintln!("\x1b[91mError:\x1b[m {}", message);
+            eprintln!("{} {}", "Error:".bright_red(), message);
             return;
         }
         if let Some(message) = payload.downcast_ref::<String>() {
-            eprintln!("\x1b[91mError:\x1b[m {}", message);
+            eprintln!("{} {}", "Error:".bright_red(), message);
             return;
         }
-        eprintln!("\x1b[91mError:\x1b[m unhandled exception");
+        eprintln!("{} unhandled exception", "Error:".bright_red());
     }));
 
     std::process::exit(run());

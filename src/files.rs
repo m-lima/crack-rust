@@ -1,7 +1,7 @@
 use crate::error;
 use crate::hash;
 use crate::options;
-use crate::print;
+// use crate::print;
 use crate::summary;
 
 pub fn read<H: hash::Hash>(
@@ -10,12 +10,12 @@ pub fn read<H: hash::Hash>(
 ) -> std::collections::HashSet<H> {
     paths
         .iter()
-        .inspect(|path| print::io_start(true, &path.display().to_string()))
+        // .inspect(|path| print::io_start(true, &path.display().to_string()))
         .filter_map(|file| {
             std::fs::File::open(file)
-                .map_err(|e| {
-                    print::io_done(error!(e; "Could not open file"));
-                })
+                // .map_err(|e| {
+                //     print::io_done(error!(e; "Could not open file"));
+                // })
                 .ok()
                 .map(std::io::BufReader::new)
         })
@@ -28,7 +28,7 @@ pub fn read_string_from_stdin(
     if !atty::is(atty::Stream::Stdin) {
         use std::io::Read;
 
-        print::io_start(true, "stdin");
+        // print::io_start(true, "stdin");
         let mut buffer = String::new();
         if let Ok(bytes) = std::io::stdin().read_to_string(&mut buffer) {
             if bytes > 0 {
@@ -45,7 +45,7 @@ pub fn read_hash_from_stdin<H: hash::Hash>(
     if atty::is(atty::Stream::Stdin) {
         input
     } else {
-        print::io_start(true, "stdin");
+        // print::io_start(true, "stdin");
         insert_from_stream(input, std::io::stdin().lock())
     }
 }
@@ -116,7 +116,7 @@ fn write_output_file(
 ) -> Result<(), (std::path::PathBuf, error::Error)> {
     use std::io::{BufRead, Write};
 
-    print::io_start(false, &output_path.display().to_string());
+    // print::io_start(false, &output_path.display().to_string());
 
     let mut buffer = String::new();
     let mut reader = std::io::BufReader::new(input);
@@ -166,10 +166,14 @@ fn filter_error<T>(result: Result<T, error::Error>) -> Option<T> {
 }
 
 fn finalize(result: Result<(), (std::path::PathBuf, error::Error)>) {
-    print::io_done(result.map_err(|e| {
+    // print::io_done(result.map_err(|e| {
+    //     let _ = std::fs::remove_file(e.0);
+    //     e.1
+    // }));
+    result.map_err(|e| {
         let _ = std::fs::remove_file(e.0);
         e.1
-    }));
+    });
 }
 
 fn insert_from_stream<H: hash::Hash>(
@@ -184,7 +188,7 @@ fn insert_from_stream<H: hash::Hash>(
         match reader.read_line(&mut buffer) {
             Ok(bytes) => {
                 if bytes == 0 {
-                    print::io_done(Ok(()));
+                    // print::io_done(Ok(()));
                     break;
                 }
 
@@ -194,8 +198,8 @@ fn insert_from_stream<H: hash::Hash>(
                     }),
                 );
             }
-            Err(e) => {
-                print::io_done(error!(e; "Error reading"));
+            Err(_e) => {
+                // print::io_done(error!(e; "Error reading"));
                 break;
             }
         }

@@ -1,6 +1,7 @@
 use clap::Clap;
 
 use crate::hash;
+use crate::print;
 use crate::Input;
 
 mod args;
@@ -17,14 +18,7 @@ pub fn parse() -> Mode {
     mode
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum Verboseness {
-    None = 0,
-    Low = 1,
-    High = 2,
-}
-
-#[derive(Clap, PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Device {
     CPU,
     GPU,
@@ -48,7 +42,7 @@ impl std::fmt::Display for Device {
 pub struct Shared<T: Input> {
     input: std::collections::HashSet<T>,
     salt: String,
-    verboseness: Verboseness,
+    printer: print::Printer,
 }
 
 pub trait SharedAccessor<T: Input> {
@@ -62,8 +56,8 @@ pub trait SharedAccessor<T: Input> {
         &self.shared().salt
     }
 
-    fn verboseness(&self) -> Verboseness {
-        self.shared().verboseness
+    fn printer(&self) -> &print::Printer {
+        &self.shared().printer
     }
 }
 
@@ -102,7 +96,6 @@ impl<H: hash::Hash> Decrypt<H> {
         input: std::collections::HashSet<H>,
         files: std::collections::HashSet<std::path::PathBuf>,
         salt: String,
-        verboseness: Verboseness,
         length: u8,
         threads: u8,
         number_space: u64,
@@ -113,7 +106,7 @@ impl<H: hash::Hash> Decrypt<H> {
             shared: Shared {
                 input,
                 salt,
-                verboseness,
+                printer: print::new(print::Verboseness::None),
             },
             files,
             length,
@@ -176,21 +169,21 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn verboseness(&self) -> Verboseness {
-        match &self {
-            Self::Encrypt(mode) => mode.shared.verboseness,
-            Self::EncryptMd5(mode) => mode.shared.verboseness,
-            Self::Decrypt(mode) => mode.shared.verboseness,
-            Self::DecryptMd5(mode) => mode.shared.verboseness,
-        }
-    }
-
     pub fn input_len(&self) -> usize {
         match &self {
             Self::Encrypt(mode) => mode.shared.input.len(),
             Self::EncryptMd5(mode) => mode.shared.input.len(),
             Self::Decrypt(mode) => mode.shared.input.len(),
             Self::DecryptMd5(mode) => mode.shared.input.len(),
+        }
+    }
+
+    pub fn printer(&self) -> &print::Printer {
+        match &self {
+            Self::Encrypt(mode) => mode.printer(),
+            Self::EncryptMd5(mode) => mode.printer(),
+            Self::Decrypt(mode) => mode.printer(),
+            Self::DecryptMd5(mode) => mode.printer(),
         }
     }
 }

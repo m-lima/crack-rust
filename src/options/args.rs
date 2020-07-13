@@ -3,9 +3,10 @@ use clap::Clap;
 use crate::error;
 use crate::files;
 use crate::hash;
+use crate::print;
 use crate::Input;
 
-use super::{Decrypt, Device, Encrypt, Mode, Shared, Verboseness};
+use super::{Decrypt, Device, Encrypt, Mode, Shared};
 
 /// MD5 and SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -42,7 +43,11 @@ pub struct RawShared {
     ///
     /// All verboseness will be printed to stderr
     #[clap(short, parse(from_occurrences = to_verboseness))]
-    verbose: Verboseness,
+    verbose: print::Verboseness,
+
+    /// Disable colors
+    #[clap(short("n"), long("no-colors"), parse(from_flag = std::ops::Not::not))]
+    colored: bool,
 }
 
 #[derive(Clap, Debug)]
@@ -182,7 +187,7 @@ impl RawShared {
     fn into<T: Input>(self, input: std::collections::HashSet<T>) -> Shared<T> {
         Shared {
             input,
-            verboseness: self.verbose,
+            printer: print::new(self.verbose, self.colored),
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {
@@ -230,10 +235,10 @@ fn to_device(value: &str) -> Result<Device, error::Error> {
     }
 }
 
-fn to_verboseness(value: u64) -> Verboseness {
+fn to_verboseness(value: u64) -> print::Verboseness {
     match value {
-        0 => Verboseness::None,
-        1 => Verboseness::Low,
-        _ => Verboseness::High,
+        0 => print::Verboseness::None,
+        1 => print::Verboseness::Low,
+        _ => print::Verboseness::High,
     }
 }

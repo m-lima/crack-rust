@@ -5,121 +5,172 @@ use crate::summary;
 use crate::Input;
 
 macro_rules! section {
-    ($title:literal) => {
+    ($title:literal, $colored:expr) => {
         eprintln!();
-        eprintln!($title);
+        if $colored {
+            use colored::Colorize;
+            eprintln!("{}", $title.yellow());
+        } else {
+            eprintln!($title);
+        }
         eprintln!("----------");
     };
 }
 
-pub fn setup(options: &options::Mode) {
-    let verboseness = options.verboseness() as u8;
-    if verboseness > 1 {
-        mode_options(&options);
-        input(&options);
-    }
-    if verboseness > 0 {
-        output();
-    }
+macro_rules! colorize {
+    ($title:literal, $colored:expr) => {
+        if $colored {
+            use colored::Colorize;
+            $title.blue()
+        } else {
+            $title.into()
+        }
+    };
 }
 
-pub fn progress(progress: u32) {
-    use std::io::Write;
-    eprint!("\rProgress: {:02}%", progress);
-    let _ = std::io::stderr().flush();
+#[derive(Copy, Clone, Debug)]
+pub enum Verboseness {
+    None = 0,
+    Low = 1,
+    High = 2,
 }
 
-pub fn clear_progress() {
-    use std::io::Write;
-    eprint!("\r                  \r");
-    let _ = std::io::stderr().flush();
-}
-
-pub fn io_start(read: bool, file: &str) {
-    use std::io::Write;
-
-    if read {
-        eprint!("Loading \x1b[34m{}\x1b[m .... ", file);
-    } else {
-        eprint!("Writing \x1b[34m{}\x1b[m .... ", file);
-    }
-    let _ = std::io::stderr().flush();
-}
-
-pub fn io_done(result: Result<(), error::Error>) {
-    match result {
-        Ok(_) => eprintln!("\x1b[32mDone\x1b[m"),
-        Err(e) => eprintln!("\x1b[91mFail:\x1b[m {}", e),
+pub fn new(verboseness: Verboseness, colored: bool) -> Printer {
+    Printer {
+        colored,
+        verboseness,
     }
 }
 
-pub fn summary(verboseness: options::Verboseness, summary: &summary::Mode) {
-    if verboseness as u8 > 0 {
-        if let summary::Mode::Decrypt(summary) = summary {
-            section!("Summary");
-            eprintln!(
-                "{:21}{}",
-                "Threads launched:",
-                number(u64::from(summary.threads))
-            );
-            duration("Time elapsed:", 21, &summary.duration);
-            eprintln!("{:21}{}", "Hashes:", number(summary.hash_count));
-            if summary.duration.as_micros() == 0 {
-                eprintln!("Hashes per millisec: NaN");
-            } else {
-                // Allowed because division by micros will not go over u64::max_value()
-                #[allow(clippy::cast_possible_truncation)]
-                {
-                    eprintln!(
-                        "Hashes per millisec: {}",
-                        number(
-                            ((u128::from(summary.hash_count) * 1_000)
-                                / summary.duration.as_micros()) as u64
-                        )
-                    );
-                }
-            };
-            eprintln!(
-                "{:21}{}/{} ({}%)",
-                "Values found:",
-                summary.results.len(),
-                summary.total_count,
-                summary.results.len() * 100 / summary.total_count
-            );
+#[derive(Debug, Copy, Clone)]
+pub struct Printer {
+    colored: bool,
+    verboseness: Verboseness,
+}
+
+impl Printer {
+    pub fn options(&self, options: &options::Mode) {
+        if self.verboseness as u8 > 1 {
+            mode_options(self.colored, &options);
+            input(self.colored, &options);
+        }
+        if self.verboseness as u8 > 0 {
+            output(self.colored);
         }
     }
+
+    pub fn summary(&self, summary: &summary::Mode) {
+        if self.verboseness as u8 > 0 {
+            print_summary(self.colored, summary)
+        }
+    }
+
+    pub fn read_start(&self, file: impl std::convert::AsRef<str>) {
+        use std::io::Write;
+        if self.colored {
+            use colored::Colorize;
+            eprint!("{} {}", "Loading".blue(), file.as_ref());
+        } else {
+            eprint!("Loading {}", file.as_ref());
+        }
+        let _ = std::io::stderr().flush();
+    }
+
+    pub fn read_done(&self, result: Result<(), error::Error>) {
+        if let Err(e) = result {
+            if self.colored {
+                use colored::Colorize;
+                eprintln!(": {} {}", "Error:".bright_red(), e);
+            } else {
+                eprintln!(": Error: {}", e);
+            }
+        } else {
+            use std::io::Write;
+            eprint!("\r");
+            let _ = std::io::stderr().flush();
+        }
+    }
+
+    pub fn write_start(&self, file: impl std::convert::AsRef<str>) {
+        use std::io::Write;
+        if self.colored {
+            use colored::Colorize;
+            eprint!("{} {}", "Writing".blue(), file.as_ref());
+        } else {
+            eprint!("Writing {}", file.as_ref());
+        }
+        let _ = std::io::stderr().flush();
+    }
+
+    pub fn write_done(&self, result: Result<(), error::Error>) {
+        use colored::Colorize;
+        if let Err(e) = result {
+            if self.colored {
+                eprintln!(": {} {}", "Error:".bright_red(), e);
+            } else {
+                eprintln!(": Error: {}", e);
+            }
+        } else {
+            if self.colored {
+                eprintln!(": {}", "Done".green());
+            } else {
+                eprintln!(": Done");
+            }
+        }
+    }
+
+    pub fn progress(&self, progress: u32) {
+        use std::io::Write;
+        if self.colored {
+            use colored::Colorize;
+            eprint!("\r{} {:02}%", "Progress:".blue(), progress);
+        } else {
+            eprint!("\rProgress: {:02}%", progress);
+        }
+        let _ = std::io::stderr().flush();
+    }
+
+    pub fn clear_progress(&self) {
+        use std::io::Write;
+        eprint!("\r                          \r");
+        let _ = std::io::stderr().flush();
+    }
 }
 
-fn mode_options(options: &options::Mode) {
-    section!("Options");
+fn mode_options(colored: bool, options: &options::Mode) {
+    section!("Options", colored);
     match options {
-        options::Mode::Encrypt(options) => encrypt_options(options),
-        options::Mode::EncryptMd5(options) => encrypt_options(options),
-        options::Mode::Decrypt(options) => decrypt_options(options),
-        options::Mode::DecryptMd5(options) => decrypt_options(options),
+        options::Mode::Encrypt(options) => encrypt_options(colored, options),
+        options::Mode::EncryptMd5(options) => encrypt_options(colored, options),
+        options::Mode::Decrypt(options) => decrypt_options(colored, options),
+        options::Mode::DecryptMd5(options) => decrypt_options(colored, options),
     }
 
     eprintln!();
 }
 
-fn shared_options<T: Input, O: options::SharedAccessor<T>>(options: &O, algorithm: &str) {
-    eprintln!("{:15}{}", "Algorithm:", algorithm);
+fn shared_options<T: Input, O: options::SharedAccessor<T>>(
+    colored: bool,
+    options: &O,
+    algorithm: &str,
+) {
+    eprintln!("{:15}{}", colorize!("Algorithm:", colored), algorithm);
     if !options.salt().is_empty() {
-        eprintln!("{:15}{}", "Salt:", options.salt());
+        eprintln!("{:15}{}", colorize!("Salt:", colored), options.salt());
     }
 }
 
-fn encrypt_options<H: hash::Hash>(options: &options::Encrypt<H>) {
-    shared_options(options, H::name());
+fn encrypt_options<H: hash::Hash>(colored: bool, options: &options::Encrypt<H>) {
+    shared_options(colored, options, H::name());
 }
 
-fn decrypt_options<H: hash::Hash>(options: &options::Decrypt<H>) {
-    shared_options(options, H::name());
-    eprintln!("{:15}{}", "Device:", options.device());
+fn decrypt_options<H: hash::Hash>(colored: bool, options: &options::Decrypt<H>) {
+    shared_options(colored, options, H::name());
+    eprintln!("{:15}{}", colorize!("Device:", colored), options.device());
     if options::Device::CPU == options.device() {
         eprintln!(
             "{:15}{}",
-            "Threads:",
+            colorize!("Threads:", colored),
             if options.threads() == 0 {
                 String::from("Auto")
             } else {
@@ -127,13 +178,76 @@ fn decrypt_options<H: hash::Hash>(options: &options::Decrypt<H>) {
             }
         );
     }
-    eprintln!("{:15}{}", "Prefix:", options.prefix());
+    eprintln!("{:15}{}", colorize!("Prefix:", colored), options.prefix());
     eprintln!(
         "{:15}{}",
-        "Length:",
+        colorize!("Length:", colored),
         options.length() + options.prefix_length()
     );
-    eprintln!("{:15}{}", "Possibilities:", number(options.number_space()));
+    eprintln!(
+        "{:15}{}",
+        colorize!("Possibilities:", colored),
+        number(options.number_space())
+    );
+}
+
+fn input(colored: bool, options: &options::Mode) {
+    use options::SharedAccessor;
+    section!("Input", colored);
+    match options {
+        options::Mode::Encrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
+        options::Mode::EncryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
+        options::Mode::Decrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
+        options::Mode::DecryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
+    }
+}
+
+fn output(colored: bool) {
+    section!("Output", colored);
+}
+
+fn print_summary(colored: bool, summary: &summary::Mode) {
+    if let summary::Mode::Decrypt(summary) = summary {
+        section!("Summary", colored);
+        eprintln!(
+            "{:21}{}",
+            colorize!("Threadsalaunched:", colored),
+            number(u64::from(summary.threads))
+        );
+        eprintln!(
+            "{:21}{}",
+            colorize!("Time elapsed:", colored),
+            duration(&summary.duration)
+        );
+        eprintln!(
+            "{:21}{}",
+            colorize!("Hashes:", colored),
+            number(summary.hash_count)
+        );
+        if summary.duration.as_micros() == 0 {
+            eprintln!("{:21}{}", colorize!("Hashes per millisec:", colored), "NaN");
+        } else {
+            // Allowed because division by micros will not go over u64::max_value()
+            #[allow(clippy::cast_possible_truncation)]
+            {
+                eprintln!(
+                    "{:21}{}",
+                    colorize!("Hashes per millisec:", colored),
+                    number(
+                        ((u128::from(summary.hash_count) * 1_000) / summary.duration.as_micros())
+                            as u64
+                    )
+                );
+            }
+        };
+        eprintln!(
+            "{:21}{}/{} ({}%)",
+            colorize!("Values found:", colored),
+            summary.results.len(),
+            summary.total_count,
+            summary.results.len() * 100 / summary.total_count
+        );
+    }
 }
 
 // Allowed because all casts are prepended with check
@@ -158,16 +272,8 @@ fn number(number: u64) -> String {
     }
 }
 
-fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
+fn duration(duration: &std::time::Duration) -> String {
     let millis = duration.as_millis();
-    eprint!("{:1$}", prefix, width);
-
-    {
-        let minutes = millis / 60_000;
-        if minutes > 0 {
-            eprint!("{}m ", minutes);
-        }
-    }
 
     // Allowed because modulo 60000 is never grater than u16::MAX (65,536)
     #[allow(clippy::cast_possible_truncation)]
@@ -175,20 +281,11 @@ fn duration(prefix: &str, width: usize, duration: &std::time::Duration) {
         let seconds = f32::from((millis % 60_000) as u16);
         seconds / 1000_f32
     };
-    eprintln!("{:.2}s ({}ms)", seconds, millis);
-}
 
-fn input(options: &options::Mode) {
-    use options::SharedAccessor;
-    section!("Input");
-    match options {
-        options::Mode::Encrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
-        options::Mode::EncryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
-        options::Mode::Decrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
-        options::Mode::DecryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
+    let minutes = millis / 60_000;
+    if minutes > 0 {
+        format!("{}{:.2}s ({}ms)", minutes, seconds, millis)
+    } else {
+        format!("{:.2}s ({}ms)", seconds, millis)
     }
-}
-
-fn output() {
-    section!("Output");
 }
