@@ -55,7 +55,7 @@ impl Printer {
             input(self.colored, &options);
         }
         if self.verboseness as u8 > 0 {
-            output(self.colored);
+            section!("Output", self.colored);
         }
     }
 
@@ -63,6 +63,10 @@ impl Printer {
         if self.verboseness as u8 > 0 {
             print_summary(self.colored, summary)
         }
+    }
+
+    pub fn files(&self) {
+        section!("Files", self.colored);
     }
 
     pub fn read_start(&self, file: impl std::convert::AsRef<str>) {
@@ -86,7 +90,7 @@ impl Printer {
             }
         } else {
             use std::io::Write;
-            eprint!("\r");
+            eprint!("\x1b[1K\r");
             let _ = std::io::stderr().flush();
         }
     }
@@ -132,7 +136,7 @@ impl Printer {
 
     pub fn clear_progress(&self) {
         use std::io::Write;
-        eprint!("\r                          \r");
+        eprint!("\x1b[1K\r");
         let _ = std::io::stderr().flush();
     }
 }
@@ -200,10 +204,6 @@ fn input(colored: bool, options: &options::Mode) {
         options::Mode::Decrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
         options::Mode::DecryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
     }
-}
-
-fn output(colored: bool) {
-    section!("Output", colored);
 }
 
 fn print_summary(colored: bool, summary: &summary::Mode) {

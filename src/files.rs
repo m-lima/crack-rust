@@ -1,34 +1,36 @@
 use crate::error;
 use crate::hash;
 use crate::options;
-// use crate::print;
+use crate::print;
 use crate::summary;
 
 pub fn read<H: hash::Hash>(
     input: std::collections::HashSet<H>,
     paths: &std::collections::HashSet<std::path::PathBuf>,
+    printer: print::Printer,
 ) -> std::collections::HashSet<H> {
     paths
         .iter()
-        // .inspect(|path| print::io_start(true, &path.display().to_string()))
+        .inspect(|path| printer.read_start(path.display().to_string()))
         .filter_map(|file| {
             std::fs::File::open(file)
-                // .map_err(|e| {
-                //     print::io_done(error!(e; "Could not open file"));
-                // })
+                .map_err(|e| {
+                    printer.read_done(error!(e; "Could not open file"));
+                })
                 .ok()
                 .map(std::io::BufReader::new)
         })
-        .fold(input, insert_from_stream)
+        .fold(input, |acc, curr| insert_from_stream(acc, curr, printer))
 }
 
 pub fn read_string_from_stdin(
     mut input: std::collections::HashSet<String>,
+    printer: print::Printer,
 ) -> std::collections::HashSet<String> {
     if !atty::is(atty::Stream::Stdin) {
         use std::io::Read;
 
-        // print::io_start(true, "stdin");
+        printer.read_start("stdin");
         let mut buffer = String::new();
         if let Ok(bytes) = std::io::stdin().read_to_string(&mut buffer) {
             if bytes > 0 {
@@ -36,29 +38,35 @@ pub fn read_string_from_stdin(
             }
         }
     }
+    printer.read_done(Ok(()));
     input
 }
 
 pub fn read_hash_from_stdin<H: hash::Hash>(
     input: std::collections::HashSet<H>,
+    printer: print::Printer,
 ) -> std::collections::HashSet<H> {
     if atty::is(atty::Stream::Stdin) {
         input
     } else {
-        // print::io_start(true, "stdin");
-        insert_from_stream(input, std::io::stdin().lock())
+        printer.read_start("stdin");
+        insert_from_stream(input, std::io::stdin().lock(), printer)
     }
 }
 
 // Allowed because it look better, dang it!
 #[allow(clippy::filter_map)]
-pub fn write<H: hash::Hash>(options: &options::Decrypt<H>, summary: &summary::Decrypt) {
+pub fn write<H: hash::Hash>(
+    options: &options::Decrypt<H>,
+    summary: &summary::Decrypt,
+    printer: print::Printer,
+) {
     options
         .files()
         .iter()
         .map(create_file)
         .filter_map(filter_error)
-        .map(|(i, o, p)| write_output_file(H::regex(), &summary, &i, &o, p))
+        .map(|(i, o, p)| write_output_file(H::regex(), &summary, &i, &o, p, printer))
         .for_each(finalize);
 }
 
@@ -113,10 +121,14 @@ fn write_output_file(
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,
-) -> Result<(), (std::path::PathBuf, error::Error)> {
+    printer: print::Printer,
+) -> (
+    print::Printer,
+    Result<(), (std::path::PathBuf, error::Error)>,
+) {
     use std::io::{BufRead, Write};
 
-    // print::io_start(false, &output_path.display().to_string());
+    printer.write_start(output_path.display().to_string());
 
     let mut buffer = String::new();
     let mut reader = std::io::BufReader::new(input);
@@ -129,9 +141,9 @@ fn write_output_file(
             Ok(bytes) => {
                 if bytes == 0 {
                     return if replaced {
-                        Ok(())
+                        (printer, Ok(()))
                     } else {
-                        error!(output_path had "No replacements found")
+                        (printer, error!(output_path had "No replacements found"))
                     };
                 }
 
@@ -145,11 +157,17 @@ fn write_output_file(
                 }
 
                 if let Err(e) = writer.write_all(buffer.as_bytes()) {
-                    return error!(output_path had e; "Failed to write to file");
+                    return (
+                        printer,
+                        error!(output_path had e; "Failed to write to file"),
+                    );
                 }
             }
             Err(e) => {
-                return error!(output_path had e; "Failed to read input file");
+                return (
+                    printer,
+                    error!(output_path had e; "Failed to read input file"),
+                );
             }
         }
     }
@@ -165,20 +183,22 @@ fn filter_error<T>(result: Result<T, error::Error>) -> Option<T> {
     }
 }
 
-fn finalize(result: Result<(), (std::path::PathBuf, error::Error)>) {
-    // print::io_done(result.map_err(|e| {
-    //     let _ = std::fs::remove_file(e.0);
-    //     e.1
-    // }));
-    result.map_err(|e| {
+fn finalize(
+    result: (
+        print::Printer,
+        Result<(), (std::path::PathBuf, error::Error)>,
+    ),
+) {
+    result.0.write_done(result.1.map_err(|e| {
         let _ = std::fs::remove_file(e.0);
         e.1
-    });
+    }));
 }
 
 fn insert_from_stream<H: hash::Hash>(
     mut input: std::collections::HashSet<H>,
     mut reader: impl std::io::BufRead,
+    printer: print::Printer,
 ) -> std::collections::HashSet<H> {
     let mut buffer = String::new();
     let regex = H::regex();
@@ -188,7 +208,7 @@ fn insert_from_stream<H: hash::Hash>(
         match reader.read_line(&mut buffer) {
             Ok(bytes) => {
                 if bytes == 0 {
-                    // print::io_done(Ok(()));
+                    printer.read_done(Ok(()));
                     break;
                 }
 
@@ -198,8 +218,8 @@ fn insert_from_stream<H: hash::Hash>(
                     }),
                 );
             }
-            Err(_e) => {
-                // print::io_done(error!(e; "Error reading"));
+            Err(e) => {
+                printer.read_done(error!(e; "Error reading"));
                 break;
             }
         }

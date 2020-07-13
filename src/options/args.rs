@@ -133,15 +133,19 @@ impl std::convert::Into<Mode> for RawMode {
 }
 
 fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> Encrypt<H> {
+    let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
     Encrypt::<H> {
-        shared: encrypt.shared.into(files::read_string_from_stdin(
-            encrypt.input.into_iter().collect(),
-        )),
+        shared: encrypt.shared.into(
+            files::read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
+            printer,
+        ),
         _phantom: std::marker::PhantomData::<H>::default(),
     }
 }
 
 fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decrypt<H> {
+    let printer = print::new(shared.shared.verbose, shared.shared.colored);
+
     let prefix = if let Some(prefix) = shared.prefix {
         prefix
     } else {
@@ -170,10 +174,12 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decryp
     };
 
     let files = shared.files.into_iter().collect();
-    let input = files::read(input.into_iter().collect(), &files);
+    let input = files::read(input.into_iter().collect(), &files, printer);
 
     Decrypt {
-        shared: shared.shared.into(files::read_hash_from_stdin(input)),
+        shared: shared
+            .shared
+            .into(files::read_hash_from_stdin(input, printer), printer),
         files,
         length,
         threads,
@@ -184,10 +190,14 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decryp
 }
 
 impl RawShared {
-    fn into<T: Input>(self, input: std::collections::HashSet<T>) -> Shared<T> {
+    fn into<T: Input>(
+        self,
+        input: std::collections::HashSet<T>,
+        printer: print::Printer,
+    ) -> Shared<T> {
         Shared {
             input,
-            printer: print::new(self.verbose, self.colored),
+            printer,
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {

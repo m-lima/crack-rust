@@ -29,12 +29,10 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
     let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
-    let printer = *options.printer();
+    let printer = options.printer();
 
     printer.progress(0);
     for t in 0..u64::from(thread_count) {
-        let printer = printer;
-
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
 

@@ -56,8 +56,8 @@ pub trait SharedAccessor<T: Input> {
         &self.shared().salt
     }
 
-    fn printer(&self) -> &print::Printer {
-        &self.shared().printer
+    fn printer(&self) -> print::Printer {
+        self.shared().printer
     }
 }
 
@@ -106,7 +106,7 @@ impl<H: hash::Hash> Decrypt<H> {
             shared: Shared {
                 input,
                 salt,
-                printer: print::new(print::Verboseness::None),
+                printer: print::new(print::Verboseness::None, false),
             },
             files,
             length,
@@ -178,7 +178,7 @@ impl Mode {
         }
     }
 
-    pub fn printer(&self) -> &print::Printer {
+    pub fn printer(&self) -> print::Printer {
         match &self {
             Self::Encrypt(mode) => mode.printer(),
             Self::EncryptMd5(mode) => mode.printer(),
