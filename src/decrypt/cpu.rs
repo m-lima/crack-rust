@@ -158,7 +158,6 @@ mod test {
                 .collect(),
             std::collections::HashSet::new(),
             salt,
-            options::Verboseness::None,
             2_u8,
             4,
             100,

@@ -49,7 +49,7 @@ pub struct Printer {
 }
 
 impl Printer {
-    pub fn options(&self, options: &options::Mode) {
+    pub fn options(self, options: &options::Mode) {
         if self.verboseness as u8 > 1 {
             mode_options(self.colored, &options);
             input(self.colored, &options);
@@ -59,17 +59,17 @@ impl Printer {
         }
     }
 
-    pub fn summary(&self, summary: &summary::Mode) {
+    pub fn summary(self, summary: &summary::Mode) {
         if self.verboseness as u8 > 0 {
             print_summary(self.colored, summary)
         }
     }
 
-    pub fn files(&self) {
+    pub fn files(self) {
         section!("Files", self.colored);
     }
 
-    pub fn read_start(&self, file: impl std::convert::AsRef<str>) {
+    pub fn read_start(self, file: impl std::convert::AsRef<str>) {
         use std::io::Write;
         if self.colored {
             use colored::Colorize;
@@ -80,7 +80,7 @@ impl Printer {
         let _ = std::io::stderr().flush();
     }
 
-    pub fn read_done(&self, result: Result<(), error::Error>) {
+    pub fn read_done(self, result: Result<(), error::Error>) {
         if let Err(e) = result {
             if self.colored {
                 use colored::Colorize;
@@ -95,7 +95,7 @@ impl Printer {
         }
     }
 
-    pub fn write_start(&self, file: impl std::convert::AsRef<str>) {
+    pub fn write_start(self, file: impl std::convert::AsRef<str>) {
         use std::io::Write;
         if self.colored {
             use colored::Colorize;
@@ -106,7 +106,9 @@ impl Printer {
         let _ = std::io::stderr().flush();
     }
 
-    pub fn write_done(&self, result: Result<(), error::Error>) {
+    // Allowed because it is more readable this way
+    #[allow(clippy::collapsible_if)]
+    pub fn write_done(self, result: Result<(), error::Error>) {
         use colored::Colorize;
         if let Err(e) = result {
             if self.colored {
@@ -123,7 +125,7 @@ impl Printer {
         }
     }
 
-    pub fn progress(&self, progress: u32) {
+    pub fn progress(self, progress: u32) {
         use std::io::Write;
         if self.colored {
             use colored::Colorize;
@@ -134,7 +136,9 @@ impl Printer {
         let _ = std::io::stderr().flush();
     }
 
-    pub fn clear_progress(&self) {
+    // Allowed so it keeps the same pattern as progress()
+    #[allow(clippy::unused_self)]
+    pub fn clear_progress(self) {
         use std::io::Write;
         eprint!("\x1b[1K\r");
         let _ = std::io::stderr().flush();

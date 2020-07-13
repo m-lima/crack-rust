@@ -234,12 +234,10 @@ fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
         error!("{} does not exist", value)
     } else if !path.is_file() {
         error!("{} is not a file", value)
+    } else if let Err(e) = std::fs::File::open(&path) {
+        error!(e; "could not open {}", value)
     } else {
-        if let Err(e) = std::fs::File::open(&path) {
-            error!(e; "could not open {}", value)
-        } else {
-            Ok(path)
-        }
+        Ok(path)
     }
 }
 
