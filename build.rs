@@ -1,4 +1,4 @@
-fn generate_secrets() {
+fn generate_dummys() {
     let hidden_path = std::path::Path::new("hidden");
 
     if !hidden_path.exists() {
@@ -10,8 +10,14 @@ fn generate_secrets() {
         println!("Creating dummy salt file");
         std::fs::File::create(salt_path).expect("Failed to create dummy salt");
     }
+
+    let template_path = hidden_path.join("template.in");
+    if !template_path.exists() {
+        println!("Creating dummy template file");
+        std::fs::write(template_path, b"&[]").expect("Failed to create dummy templates");
+    }
 }
 
 fn main() {
-    generate_secrets();
+    generate_dummys();
 }
