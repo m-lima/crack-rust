@@ -7,6 +7,7 @@ mod error;
 mod decrypt;
 mod encrypt;
 mod files;
+mod gui;
 mod hash;
 mod options;
 mod print;
@@ -21,7 +22,21 @@ pub trait Input:
 }
 impl Input for String {}
 
-fn run() -> i32 {
+fn cli() -> i32 {
+    std::panic::set_hook(Box::new(|info| {
+        use colored::Colorize;
+        let payload = info.payload();
+        if let Some(message) = payload.downcast_ref::<&str>() {
+            eprintln!("{} {}", "Error:".bright_red(), message);
+            return;
+        }
+        if let Some(message) = payload.downcast_ref::<String>() {
+            eprintln!("{} {}", "Error:".bright_red(), message);
+            return;
+        }
+        eprintln!("{} unhandled exception", "Error:".bright_red());
+    }));
+
     let options = options::parse();
 
     options.printer().options(&options);
@@ -47,19 +62,10 @@ fn run() -> i32 {
 }
 
 fn main() {
-    std::panic::set_hook(Box::new(|info| {
-        use colored::Colorize;
-        let payload = info.payload();
-        if let Some(message) = payload.downcast_ref::<&str>() {
-            eprintln!("{} {}", "Error:".bright_red(), message);
-            return;
-        }
-        if let Some(message) = payload.downcast_ref::<String>() {
-            eprintln!("{} {}", "Error:".bright_red(), message);
-            return;
-        }
-        eprintln!("{} unhandled exception", "Error:".bright_red());
-    }));
-
-    std::process::exit(run());
+    if std::env::args().len() > 2 {
+        let exit_code = cli();
+        std::process::exit(exit_code);
+    } else {
+        gui::run();
+    }
 }
