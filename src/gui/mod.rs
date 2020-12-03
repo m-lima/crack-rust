@@ -1,17 +1,14 @@
 use qt_widgets::cpp_core::{CastInto, Ptr};
-use qt_widgets::qt_core::{qs, QBox};
+use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotOfInt, SlotOfQString};
 use qt_widgets::qt_gui::QIntValidator;
 use qt_widgets::{
     QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox, QLineEdit,
     QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
 
-pub fn run() {
-    // unsafe {
-    //     let style = qt_widgets::QStyleFactory::create(&qs("Fusion"));
-    //     QApplication::set_style_q_style(style);
-    // }
+mod template;
 
+pub fn run() {
     QApplication::init(|_| unsafe {
         let root = QWidget::new_0a();
         let layout = QGridLayout::new_1a(&root);
@@ -84,6 +81,7 @@ unsafe fn details_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> 
     let length = QSpinBox::new_1a(&root);
 
     template.add_item_q_string(&qs("Custom"));
+    template.add_items(&template::to_q_list());
 
     let validator = QIntValidator::new_1a(&prefix);
     prefix.set_validator(&validator);
@@ -94,6 +92,34 @@ unsafe fn details_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> 
     layout.add_row_q_string_q_widget(&qs("Template"), &template);
     layout.add_row_q_string_q_widget(&qs("Prefix"), &prefix);
     layout.add_row_q_string_q_widget(&qs("Length"), &length);
+
+    let template_ptr = template.as_ptr();
+    let prefix_ptr = prefix.as_ptr();
+    let length_ptr = length.as_ptr();
+
+    let template_changed = SlotOfInt::new(&template, move |index| {
+        if index > 0 {
+            if let Some(template) = template::TEMPLATES.get((index - 1) as usize) {
+                let _block = QSignalBlocker::from_q_object(length_ptr);
+                prefix_ptr.set_text(&qs(template.prefix()));
+                length_ptr.set_value(template.length());
+            }
+        }
+    });
+
+    let prefix_edited = SlotOfQString::new(&prefix, move |string| {
+        let _block = QSignalBlocker::from_q_object(length_ptr);
+        template_ptr.set_current_index(0);
+        length_ptr.set_range(string.length() + 1, 25);
+    });
+
+    let length_changed = SlotOfInt::new(&prefix, move |_| {
+        template_ptr.set_current_index(0);
+    });
+
+    template.current_index_changed().connect(&template_changed);
+    prefix.text_edited().connect(&prefix_edited);
+    length.value_changed().connect(&length_changed);
 
     root
 }
@@ -170,7 +196,7 @@ unsafe fn input_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
     let layout = QGridLayout::new_1a(&root);
 
-    let input = qt_widgets::QPlainTextEdit::new();
+    let input = qt_widgets::QPlainTextEdit::from_q_widget(&root);
     layout.add_widget(&input);
 
     root
