@@ -131,6 +131,35 @@ pub struct RawCrackShared {
     length: u8,
 }
 
+fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
+    let path = std::path::PathBuf::from(value);
+    if !path.exists() {
+        error!("{} does not exist", value)
+    } else if !path.is_file() {
+        error!("{} is not a file", value)
+    } else if let Err(e) = std::fs::File::open(&path) {
+        error!(e; "could not open {}", value)
+    } else {
+        Ok(path)
+    }
+}
+
+fn to_device(value: &str) -> Result<options::Device, error::Error> {
+    match value.to_uppercase().as_str() {
+        "CPU" => Ok(options::Device::CPU),
+        "GPU" => Ok(options::Device::GPU),
+        _ => error!("possible values are [CPU, GPU]",),
+    }
+}
+
+fn to_verboseness(value: u64) -> print::Verboseness {
+    match value {
+        0 => print::Verboseness::None,
+        1 => print::Verboseness::Low,
+        _ => print::Verboseness::High,
+    }
+}
+
 impl std::convert::Into<options::Mode> for RawMode {
     fn into(self) -> options::Mode {
         match self {
@@ -153,7 +182,7 @@ impl std::convert::Into<options::Mode> for RawMode {
 fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> options::Encrypt<H> {
     let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
     options::Encrypt::<H>::new(
-        files::read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
+        read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
         salt(encrypt.shared),
         printer,
     )
@@ -189,7 +218,7 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> option
     let input = files::read(input.into_iter().collect(), &files, printer);
 
     options::Decrypt::new(
-        files::read_hash_from_stdin(input, printer),
+        read_hash_from_stdin(input, printer),
         salt(shared.shared),
         printer,
         files,
@@ -228,31 +257,33 @@ fn salt(shared: RawShared) -> String {
     }
 }
 
-fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
-    let path = std::path::PathBuf::from(value);
-    if !path.exists() {
-        error!("{} does not exist", value)
-    } else if !path.is_file() {
-        error!("{} is not a file", value)
-    } else if let Err(e) = std::fs::File::open(&path) {
-        error!(e; "could not open {}", value)
+fn read_string_from_stdin(
+    mut input: std::collections::HashSet<String>,
+    printer: print::Printer,
+) -> std::collections::HashSet<String> {
+    if !atty::is(atty::Stream::Stdin) {
+        use std::io::Read;
+
+        printer.read_start("stdin");
+        let mut buffer = String::new();
+        if let Ok(bytes) = std::io::stdin().read_to_string(&mut buffer) {
+            if bytes > 0 {
+                input.insert(buffer);
+            }
+        }
+    }
+    printer.read_done(Ok(()));
+    input
+}
+
+fn read_hash_from_stdin<H: hash::Hash>(
+    input: std::collections::HashSet<H>,
+    printer: print::Printer,
+) -> std::collections::HashSet<H> {
+    if atty::is(atty::Stream::Stdin) {
+        input
     } else {
-        Ok(path)
-    }
-}
-
-fn to_device(value: &str) -> Result<options::Device, error::Error> {
-    match value.to_uppercase().as_str() {
-        "CPU" => Ok(options::Device::CPU),
-        "GPU" => Ok(options::Device::GPU),
-        _ => error!("possible values are [CPU, GPU]",),
-    }
-}
-
-fn to_verboseness(value: u64) -> print::Verboseness {
-    match value {
-        0 => print::Verboseness::None,
-        1 => print::Verboseness::Low,
-        _ => print::Verboseness::High,
+        printer.read_start("stdin");
+        files::insert_from_stream(input, std::io::stdin().lock(), printer)
     }
 }
