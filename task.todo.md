@@ -28,6 +28,9 @@
 - [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
 - [ ] Remove result from summary
   - [ ] Detect if not all hashes were cracked
+- [ ] Group modes by only encrypt/decrypt and nest the algorithm
+  - [ ] Have only two subcommands (hash and crack)
+  - [ ] Infer algorithm from input? (tricky if loading from files)
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
