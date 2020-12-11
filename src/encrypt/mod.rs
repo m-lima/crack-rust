@@ -1,10 +1,9 @@
 use crate::hash::Hash;
 use crate::options;
-use crate::summary;
 
 use crate::options::SharedAccessor;
 
-pub fn execute<H: Hash>(options: &options::Encrypt<H>) -> summary::Mode {
+pub fn execute<H: Hash>(options: &options::Encrypt<H>) {
     for input in options.input() {
         if options.input().len() == 1 {
             println!("{:x}", H::digest(&options.salt(), &input));
@@ -12,6 +11,4 @@ pub fn execute<H: Hash>(options: &options::Encrypt<H>) -> summary::Mode {
             println!("{}:{:x}", &input, H::digest(&options.salt(), &input));
         }
     }
-
-    summary::Mode::Encrypt()
 }

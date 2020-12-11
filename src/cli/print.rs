@@ -59,7 +59,7 @@ impl Printer {
         }
     }
 
-    pub fn summary(self, summary: &summary::Mode) {
+    pub fn summary(self, summary: &summary::Summary) {
         if self.verboseness as u8 > 0 {
             print_summary(self.colored, summary)
         }
@@ -210,48 +210,46 @@ fn input(colored: bool, options: &options::Mode) {
     }
 }
 
-fn print_summary(colored: bool, summary: &summary::Mode) {
-    if let summary::Mode::Decrypt(summary) = summary {
-        section!("Summary", colored);
-        eprintln!(
-            "{:21}{}",
-            colorize!("Threadsalaunched:", colored),
-            number(u64::from(summary.threads))
-        );
-        eprintln!(
-            "{:21}{}",
-            colorize!("Time elapsed:", colored),
-            duration(&summary.duration)
-        );
-        eprintln!(
-            "{:21}{}",
-            colorize!("Hashes:", colored),
-            number(summary.hash_count)
-        );
-        if summary.duration.as_micros() == 0 {
-            eprintln!("{:21}{}", colorize!("Hashes per millisec:", colored), "NaN");
-        } else {
-            // Allowed because division by micros will not go over u64::max_value()
-            #[allow(clippy::cast_possible_truncation)]
-            {
-                eprintln!(
-                    "{:21}{}",
-                    colorize!("Hashes per millisec:", colored),
-                    number(
-                        ((u128::from(summary.hash_count) * 1_000) / summary.duration.as_micros())
-                            as u64
-                    )
-                );
-            }
-        };
-        eprintln!(
-            "{:21}{}/{} ({}%)",
-            colorize!("Values found:", colored),
-            summary.results.len(),
-            summary.total_count,
-            summary.results.len() * 100 / summary.total_count
-        );
-    }
+fn print_summary(colored: bool, summary: &summary::Summary) {
+    section!("Summary", colored);
+    eprintln!(
+        "{:21}{}",
+        colorize!("Threadsalaunched:", colored),
+        number(u64::from(summary.threads))
+    );
+    eprintln!(
+        "{:21}{}",
+        colorize!("Time elapsed:", colored),
+        duration(&summary.duration)
+    );
+    eprintln!(
+        "{:21}{}",
+        colorize!("Hashes:", colored),
+        number(summary.hash_count)
+    );
+    if summary.duration.as_micros() == 0 {
+        eprintln!("{:21}{}", colorize!("Hashes per millisec:", colored), "NaN");
+    } else {
+        // Allowed because division by micros will not go over u64::max_value()
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            eprintln!(
+                "{:21}{}",
+                colorize!("Hashes per millisec:", colored),
+                number(
+                    ((u128::from(summary.hash_count) * 1_000) / summary.duration.as_micros())
+                        as u64
+                )
+            );
+        }
+    };
+    eprintln!(
+        "{:21}{}/{} ({}%)",
+        colorize!("Values found:", colored),
+        summary.results.len(),
+        summary.total_count,
+        summary.results.len() * 100 / summary.total_count
+    );
 }
 
 // Allowed because all casts are prepended with check

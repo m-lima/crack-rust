@@ -6,7 +6,23 @@ use crate::summary;
 mod args;
 pub mod print;
 
-pub fn run() -> ! {
+pub fn run() {
+    setup_panic();
+
+    let options = args::parse();
+    let printer = options.printer();
+
+    printer.options(&options);
+
+    match &options {
+        options::Mode::Encrypt(options) => encrypt::execute(options),
+        options::Mode::EncryptMd5(options) => encrypt::execute(options),
+        options::Mode::Decrypt(options) => finalize(printer, &decrypt::execute(options)),
+        options::Mode::DecryptMd5(options) => finalize(printer, &decrypt::execute(options)),
+    }
+}
+
+fn setup_panic() {
     std::panic::set_hook(Box::new(|info| {
         use colored::Colorize;
         let payload = info.payload();
@@ -20,32 +36,12 @@ pub fn run() -> ! {
         }
         eprintln!("{} unhandled exception", "Error:".bright_red());
     }));
-
-    let exit_code = run_with_exit_code();
-    std::process::exit(exit_code);
 }
 
-fn run_with_exit_code() -> i32 {
-    let options = args::parse();
+fn finalize(printer: print::Printer, summary: &summary::Summary) {
+    printer.summary(&summary);
 
-    options.printer().options(&options);
-
-    let summary = match &options {
-        options::Mode::Encrypt(options) => encrypt::execute(options),
-        options::Mode::EncryptMd5(options) => encrypt::execute(options),
-        options::Mode::Decrypt(options) => decrypt::execute(options),
-        options::Mode::DecryptMd5(options) => decrypt::execute(options),
-    };
-
-    options.printer().summary(&summary);
-
-    if let summary::Mode::Decrypt(decrypt) = summary {
-        if decrypt.results.len() < options.input_len() {
-            -1
-        } else {
-            0
-        }
-    } else {
-        0
+    if summary.results.len() < summary.total_count {
+        std::process::exit(-1);
     }
 }
