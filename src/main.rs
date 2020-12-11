@@ -21,7 +21,7 @@ pub trait Input:
 impl Input for String {}
 
 fn main() {
-    if std::env::args().len() > 2 {
+    if std::env::args().len() > 1 {
         cli::run();
     } else {
         gui::run();

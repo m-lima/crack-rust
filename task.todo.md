@@ -26,7 +26,6 @@
 - [ ] Move file saving out of decrypt module
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
-- [ ] Validate that clap is reading SALT_ENV
 - [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
@@ -34,3 +33,4 @@
 - [X] Move options::parse to cli::args::parse
 - [X] Move args to cli module
 - [X] Move OPTIMAL_CPU to cpu module
+- [X] Validate that clap is reading SALT_ENV
