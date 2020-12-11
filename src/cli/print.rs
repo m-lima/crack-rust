@@ -106,21 +106,22 @@ impl Printer {
         let _ = std::io::stderr().flush();
     }
 
-    // Allowed because it is more readable this way
-    #[allow(clippy::collapsible_if)]
     pub fn write_done(self, result: Result<(), error::Error>) {
         use colored::Colorize;
-        if let Err(e) = result {
-            if self.colored {
-                eprintln!(": {} {}", "Error:".bright_red(), e);
-            } else {
-                eprintln!(": Error: {}", e);
+        match result {
+            Ok(_) => {
+                if self.colored {
+                    eprintln!(": {}", "Done".green());
+                } else {
+                    eprintln!(": Done");
+                }
             }
-        } else {
-            if self.colored {
-                eprintln!(": {}", "Done".green());
-            } else {
-                eprintln!(": Done");
+            Err(e) => {
+                if self.colored {
+                    eprintln!(": {} {}", "Error:".bright_red(), e);
+                } else {
+                    eprintln!(": Error: {}", e);
+                }
             }
         }
     }

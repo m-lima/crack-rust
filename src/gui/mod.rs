@@ -171,7 +171,7 @@ unsafe fn salt_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     root
 }
 
-// Allowed because it is very clear that we are not going to confuse with the bingins
+// Allowed because CPU and GPU are well-known names and expected here
 #[allow(clippy::similar_names)]
 unsafe fn device_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     let root = QGroupBox::from_q_string_q_widget(&qs("Device"), parent);
