@@ -90,7 +90,6 @@ impl<H: hash::Hash> SharedAccessor<H> for Decrypt<H> {
 }
 
 impl<H: hash::Hash> Decrypt<H> {
-    // Allowed because it is only for tests
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         input: std::collections::HashSet<H>,

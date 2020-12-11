@@ -13,8 +13,6 @@ macro_rules! hash {
             unsafe impl ocl::OclPrm for Hash {}
             impl $crate::Input for Hash {}
 
-            // Allowed because clippy cannot interpret this macro
-            #[allow(clippy::derive_hash_xor_eq)]
             impl $crate::hash::Hash for Hash {
                 fn digest(salted_prefix: &str, number: &str) -> Self {
                     use digest::Digest;
