@@ -154,7 +154,7 @@ fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> options::Encrypt<H> {
     let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
     options::Encrypt::<H>::new(
         files::read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-        extract_hash(encrypt.shared),
+        salt(encrypt.shared),
         printer,
     )
 }
@@ -190,7 +190,7 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> option
 
     options::Decrypt::new(
         files::read_hash_from_stdin(input, printer),
-        extract_hash(shared.shared),
+        salt(shared.shared),
         printer,
         files,
         length,
@@ -221,7 +221,7 @@ fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     threads as u8
 }
 
-fn extract_hash(shared: RawShared) -> String {
+fn salt(shared: RawShared) -> String {
     match shared.salt {
         Some(salt) => salt.unwrap_or_default(),
         None => std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(crate::secrets::SALT)),

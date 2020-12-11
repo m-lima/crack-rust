@@ -24,7 +24,6 @@
   - [ ] Bring the hash::Pair into the reporting module
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
-- [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
 - [ ] Remove result from summary
   - [ ] Detect if not all hashes were cracked
 - [ ] Group modes by only encrypt/decrypt and nest the algorithm
@@ -40,3 +39,4 @@
 - [X] Move HashPair to hash module
 - [X] Remove hash/encrypt summary
 - [X] Move file saving out of decrypt module
+- [X] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
