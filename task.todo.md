@@ -30,4 +30,5 @@
 - [ ] Move options::parse to cli::args::parse
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
+- [ ] Move SALT_ENV from options::mod to cli::args
 - [X] Move encrypt to a directory

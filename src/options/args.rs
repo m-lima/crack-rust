@@ -3,7 +3,7 @@ use clap::Clap;
 use crate::error;
 use crate::files;
 use crate::hash;
-use crate::print;
+use crate::cli::print;
 use crate::Input;
 
 use super::{Decrypt, Device, Encrypt, Mode, Shared};
@@ -201,7 +201,7 @@ impl RawShared {
             salt: if let Some(salt) = self.salt {
                 salt.unwrap_or_default()
             } else {
-                std::env::var(crate::SALT_ENV)
+                std::env::var(super::SALT_ENV)
                     .unwrap_or_else(|_| String::from(crate::secrets::SALT))
             },
         }
