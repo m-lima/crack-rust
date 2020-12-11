@@ -17,9 +17,7 @@ pub fn run() {
 
     match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
-        options::Mode::EncryptMd5(options) => encrypt::execute(options),
         options::Mode::Decrypt(options) => decrypt(printer, options),
-        options::Mode::DecryptMd5(options) => decrypt(printer, options),
     }
 }
 

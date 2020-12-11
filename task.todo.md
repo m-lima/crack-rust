@@ -23,12 +23,13 @@
   - [ ] Merge with the summary module (make it a single reporting module)
   - [ ] Bring the hash::Pair into the reporting module
 - [ ] Remove the extra error creation macro
-- [ ] Consider not returning a Result from the error macro
-- [ ] Remove result from summary
-  - [ ] Detect if not all hashes were cracked
 - [ ] Group modes by only encrypt/decrypt and nest the algorithm
   - [ ] Have only two subcommands (hash and crack)
   - [ ] Infer algorithm from input? (tricky if loading from files)
+  - [X] options::Mode should have only two variants
+- [ ] Remove result from summary
+  - [ ] Detect if not all hashes were cracked
+- [ ] Consider not returning a Result from the error macro
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
