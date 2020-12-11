@@ -1,16 +1,17 @@
 use super::opencl;
-use crate::hash::Hash;
+
+use crate::hash;
 use crate::options;
 use crate::summary;
 
 use crate::options::SharedAccessor;
 
-fn compute_results<'a, H: Hash>(
+fn compute_results<'a, H: hash::Hash>(
     environment: &opencl::Environment<'a, H>,
     input: &[H],
     out_buffer: &ocl::Buffer<opencl::Output>,
     options: &options::Decrypt<H>,
-) -> Vec<summary::Decrypted> {
+) -> Vec<hash::Pair> {
     let mut output = vec![opencl::Output::default(); out_buffer.len()];
     out_buffer.read(&mut output).enq().unwrap_or_else(|err| {
         panic!("OpenCL: Failed to read output buffer: {}", err);
@@ -20,7 +21,7 @@ fn compute_results<'a, H: Hash>(
 
     for (i, plain) in output.iter().enumerate() {
         if plain.is_valid() {
-            results.push(summary::Decrypted::new(
+            results.push(hash::Pair::new(
                 input[i].to_string(),
                 format!("{}{}", &options.prefix(), plain.printable(&environment)),
             ));
@@ -40,7 +41,7 @@ fn compute_results<'a, H: Hash>(
 
             if input.eytzinger_search(&hash).is_some() {
                 let result = format!("{}{}", &options.prefix(), &zeros);
-                results.push(summary::Decrypted::new(hash.to_string(), result));
+                results.push(hash::Pair::new(hash.to_string(), result));
             }
 
             if results.len() == input.len() {
@@ -52,7 +53,7 @@ fn compute_results<'a, H: Hash>(
     results
 }
 
-pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
+pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
@@ -136,7 +137,7 @@ pub fn execute<H: Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
         }
     }
 
-    summary::Decrypt {
+    summary::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count: options.number_space(),

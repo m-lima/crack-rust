@@ -19,14 +19,15 @@
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
-- [ ] Remove result from summary
-- [ ] Remove hash/encrypt summary
-- [ ] Move HashPair to hash module
 - [ ] Create trait for reporting back results
+  - [ ] Merge with the summary module (make it a single reporting module)
+  - [ ] Bring the hash::Pair into the reporting module
 - [ ] Move file saving out of decrypt module
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
 - [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
+- [ ] Remove result from summary
+  - [ ] Detect if not all hashes were cracked
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
@@ -34,3 +35,5 @@
 - [X] Move args to cli module
 - [X] Move OPTIMAL_CPU to cpu module
 - [X] Validate that clap is reading SALT_ENV
+- [X] Move HashPair to hash module
+- [X] Remove hash/encrypt summary

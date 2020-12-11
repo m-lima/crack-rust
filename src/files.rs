@@ -58,7 +58,7 @@ pub fn read_hash_from_stdin<H: hash::Hash>(
 #[allow(clippy::filter_map)]
 pub fn write<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    summary: &summary::Decrypt,
+    summary: &summary::Summary,
     printer: print::Printer,
 ) {
     options
@@ -117,7 +117,7 @@ fn create_file(
 
 fn write_output_file(
     regex: &regex::Regex,
-    summary: &summary::Decrypt,
+    summary: &summary::Summary,
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,

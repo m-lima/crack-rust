@@ -19,7 +19,7 @@ impl<T> std::ops::Deref for Sender<T> {
 
 unsafe impl<T> Send for Sender<T> {}
 
-pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt {
+pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
@@ -69,7 +69,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
-                    decrypted.push(summary::Decrypted::new(hash.to_string(), result.clone()));
+                    decrypted.push(hash::Pair::new(hash.to_string(), result.clone()));
 
                     if input.len() == 1 {
                         #[cfg(not(test))]
@@ -111,7 +111,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
         });
     printer.clear_progress();
 
-    summary::Decrypt {
+    summary::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count,
@@ -122,8 +122,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
 
 #[cfg(test)]
 mod test {
-    use super::{execute, options, summary};
-    use crate::hash;
+    use super::{execute, hash, options};
 
     #[test]
     fn test_decryption() {
@@ -131,19 +130,19 @@ mod test {
         let prefix = String::from("1");
 
         let expected = vec![
-            summary::Decrypted {
+            hash::Pair {
                 hash: String::from(
                     "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
                 ),
                 plain: prefix.clone() + "23",
             },
-            summary::Decrypted {
+            hash::Pair {
                 hash: String::from(
                     "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
                 ),
                 plain: prefix.clone() + "55",
             },
-            summary::Decrypted {
+            hash::Pair {
                 hash: String::from(
                     "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
                 ),
