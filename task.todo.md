@@ -22,7 +22,6 @@
 - [ ] Create trait for reporting back results
   - [ ] Merge with the summary module (make it a single reporting module)
   - [ ] Bring the hash::Pair into the reporting module
-- [ ] Move file saving out of decrypt module
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
 - [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
@@ -40,3 +39,4 @@
 - [X] Validate that clap is reading SALT_ENV
 - [X] Move HashPair to hash module
 - [X] Remove hash/encrypt summary
+- [X] Move file saving out of decrypt module
