@@ -23,37 +23,6 @@ pub fn read<H: hash::Hash>(
         .fold(input, |acc, curr| insert_from_stream(acc, curr, printer))
 }
 
-pub fn read_string_from_stdin(
-    mut input: std::collections::HashSet<String>,
-    printer: print::Printer,
-) -> std::collections::HashSet<String> {
-    if !atty::is(atty::Stream::Stdin) {
-        use std::io::Read;
-
-        printer.read_start("stdin");
-        let mut buffer = String::new();
-        if let Ok(bytes) = std::io::stdin().read_to_string(&mut buffer) {
-            if bytes > 0 {
-                input.insert(buffer);
-            }
-        }
-    }
-    printer.read_done(Ok(()));
-    input
-}
-
-pub fn read_hash_from_stdin<H: hash::Hash>(
-    input: std::collections::HashSet<H>,
-    printer: print::Printer,
-) -> std::collections::HashSet<H> {
-    if atty::is(atty::Stream::Stdin) {
-        input
-    } else {
-        printer.read_start("stdin");
-        insert_from_stream(input, std::io::stdin().lock(), printer)
-    }
-}
-
 // Allowed because it look better, dang it!
 #[allow(clippy::filter_map)]
 pub fn write<H: hash::Hash>(
@@ -195,7 +164,7 @@ fn finalize(
     }));
 }
 
-fn insert_from_stream<H: hash::Hash>(
+pub fn insert_from_stream<H: hash::Hash>(
     mut input: std::collections::HashSet<H>,
     mut reader: impl std::io::BufRead,
     printer: print::Printer,
