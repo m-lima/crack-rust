@@ -1,12 +1,24 @@
 use clap::Clap;
 
+use crate::cli::print;
+use crate::decrypt;
 use crate::error;
 use crate::files;
 use crate::hash;
-use crate::cli::print;
-use crate::Input;
 
-use super::{Decrypt, Device, Encrypt, Mode, Shared};
+use crate::options;
+
+static SALT_ENV: &str = "HASHER_SALT";
+
+pub fn parse() -> options::Mode {
+    let mode: options::Mode = RawMode::parse().into();
+
+    if mode.input_len() == 0 {
+        panic!("No valid input provided");
+    }
+
+    mode
+}
 
 /// MD5 and SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -111,46 +123,46 @@ pub struct RawCrackShared {
     threads: u8,
 
     /// Device to run in (auto-detection if omitted)
-    #[clap(short, long, possible_values = Device::variants(), parse(try_from_str = to_device))]
-    device: Option<Device>,
+    #[clap(short, long, possible_values = options::Device::variants(), parse(try_from_str = to_device))]
+    device: Option<options::Device>,
 
     /// Length of hashed values
     #[clap(short, long, default_value = "12")]
     length: u8,
 }
 
-impl std::convert::Into<Mode> for RawMode {
-    fn into(self) -> Mode {
+impl std::convert::Into<options::Mode> for RawMode {
+    fn into(self) -> options::Mode {
         match self {
-            Self::Hash(encrypt) => Mode::Encrypt(compose_hash::<hash::sha256::Hash>(encrypt)),
-            Self::HashMd5(encrypt) => Mode::EncryptMd5(compose_hash::<hash::md5::Hash>(encrypt)),
-            Self::Crack(decrypt) => Mode::Decrypt(compose_crack(decrypt.shared, decrypt.input)),
+            Self::Hash(encrypt) => {
+                options::Mode::Encrypt(compose_hash::<hash::sha256::Hash>(encrypt))
+            }
+            Self::HashMd5(encrypt) => {
+                options::Mode::EncryptMd5(compose_hash::<hash::md5::Hash>(encrypt))
+            }
+            Self::Crack(decrypt) => {
+                options::Mode::Decrypt(compose_crack(decrypt.shared, decrypt.input))
+            }
             Self::CrackMd5(decrypt) => {
-                Mode::DecryptMd5(compose_crack(decrypt.shared, decrypt.input))
+                options::Mode::DecryptMd5(compose_crack(decrypt.shared, decrypt.input))
             }
         }
     }
 }
 
-fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> Encrypt<H> {
+fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> options::Encrypt<H> {
     let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
-    Encrypt::<H> {
-        shared: encrypt.shared.into(
-            files::read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-            printer,
-        ),
-        _phantom: std::marker::PhantomData::<H>::default(),
-    }
+    options::Encrypt::<H>::new(
+        files::read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
+        extract_hash(encrypt.shared),
+        printer,
+    )
 }
 
-fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decrypt<H> {
+fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> options::Decrypt<H> {
     let printer = print::new(shared.shared.verbose, shared.shared.colored);
 
-    let prefix = if let Some(prefix) = shared.prefix {
-        prefix
-    } else {
-        String::new()
-    };
+    let prefix = shared.prefix.unwrap_or_default();
 
     let total_length = shared.length;
     if prefix.len() > usize::from(total_length) {
@@ -167,52 +179,33 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> Decryp
 
     let device = if let Some(device) = shared.device {
         device
-    } else if number_space > u64::from(threads) * super::OPTIMAL_HASHES_PER_THREAD {
-        Device::GPU
+    } else if number_space > u64::from(threads) * decrypt::OPTIMAL_HASHES_PER_THREAD {
+        options::Device::GPU
     } else {
-        Device::CPU
+        options::Device::CPU
     };
 
     let files = shared.files.into_iter().collect();
     let input = files::read(input.into_iter().collect(), &files, printer);
 
-    Decrypt {
-        shared: shared
-            .shared
-            .into(files::read_hash_from_stdin(input, printer), printer),
+    options::Decrypt::new(
+        files::read_hash_from_stdin(input, printer),
+        extract_hash(shared.shared),
+        printer,
         files,
         length,
         threads,
         number_space,
         prefix,
         device,
-    }
-}
-
-impl RawShared {
-    fn into<T: Input>(
-        self,
-        input: std::collections::HashSet<T>,
-        printer: print::Printer,
-    ) -> Shared<T> {
-        Shared {
-            input,
-            printer,
-            salt: if let Some(salt) = self.salt {
-                salt.unwrap_or_default()
-            } else {
-                std::env::var(super::SALT_ENV)
-                    .unwrap_or_else(|_| String::from(crate::secrets::SALT))
-            },
-        }
-    }
+    )
 }
 
 // Allowed because the count was checked for overflow
 #[allow(clippy::cast_possible_truncation)]
 fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     let threads = std::cmp::min(
-        number_space / super::OPTIMAL_HASHES_PER_THREAD + 1,
+        number_space / decrypt::OPTIMAL_HASHES_PER_THREAD + 1,
         if requested_count == 0 {
             let cores = num_cpus::get();
             if cores > usize::from(u8::max_value()) {
@@ -228,6 +221,13 @@ fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
     threads as u8
 }
 
+fn extract_hash(shared: RawShared) -> String {
+    match shared.salt {
+        Some(salt) => salt.unwrap_or_default(),
+        None => std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(crate::secrets::SALT)),
+    }
+}
+
 fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     let path = std::path::PathBuf::from(value);
     if !path.exists() {
@@ -241,10 +241,10 @@ fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     }
 }
 
-fn to_device(value: &str) -> Result<Device, error::Error> {
+fn to_device(value: &str) -> Result<options::Device, error::Error> {
     match value.to_uppercase().as_str() {
-        "CPU" => Ok(Device::CPU),
-        "GPU" => Ok(Device::GPU),
+        "CPU" => Ok(options::Device::CPU),
+        "GPU" => Ok(options::Device::GPU),
         _ => error!("possible values are [CPU, GPU]",),
     }
 }

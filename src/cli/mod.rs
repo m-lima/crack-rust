@@ -3,6 +3,7 @@ use crate::encrypt;
 use crate::options;
 use crate::summary;
 
+mod args;
 pub mod print;
 
 pub fn run() -> ! {
@@ -25,7 +26,7 @@ pub fn run() -> ! {
 }
 
 fn run_with_exit_code() -> i32 {
-    let options = options::parse();
+    let options = args::parse();
 
     options.printer().options(&options);
 

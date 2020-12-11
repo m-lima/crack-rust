@@ -1,23 +1,6 @@
-use clap::Clap;
-
-use crate::hash;
 use crate::cli::print;
+use crate::hash;
 use crate::Input;
-
-pub mod args;
-
-pub static SALT_ENV: &str = "HASHER_SALT";
-pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
-
-pub fn parse() -> Mode {
-    let mode: Mode = args::RawMode::parse().into();
-
-    if mode.input_len() == 0 {
-        panic!("No valid input provided");
-    }
-
-    mode
-}
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Device {
@@ -26,7 +9,7 @@ pub enum Device {
 }
 
 impl Device {
-    fn variants() -> &'static [&'static str] {
+    pub fn variants() -> &'static [&'static str] {
         &["cpu", "gpu"]
     }
 }
@@ -67,6 +50,23 @@ pub struct Encrypt<H: hash::Hash> {
     _phantom: std::marker::PhantomData<H>,
 }
 
+impl<H: hash::Hash> Encrypt<H> {
+    pub fn new(
+        input: std::collections::HashSet<String>,
+        salt: String,
+        printer: print::Printer,
+    ) -> Self {
+        Self {
+            shared: Shared {
+                input,
+                salt,
+                printer,
+            },
+            _phantom: std::marker::PhantomData::<H>::default(),
+        }
+    }
+}
+
 impl<H: hash::Hash> SharedAccessor<String> for Encrypt<H> {
     fn shared(&self) -> &Shared<String> {
         &self.shared
@@ -91,12 +91,12 @@ impl<H: hash::Hash> SharedAccessor<H> for Decrypt<H> {
 
 impl<H: hash::Hash> Decrypt<H> {
     // Allowed because it is only for tests
-    #[cfg(test)]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         input: std::collections::HashSet<H>,
-        files: std::collections::HashSet<std::path::PathBuf>,
         salt: String,
+        printer: print::Printer,
+        files: std::collections::HashSet<std::path::PathBuf>,
         length: u8,
         threads: u8,
         number_space: u64,
@@ -107,7 +107,7 @@ impl<H: hash::Hash> Decrypt<H> {
             shared: Shared {
                 input,
                 salt,
-                printer: print::new(print::Verboseness::None, false),
+                printer,
             },
             files,
             length,
