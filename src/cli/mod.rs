@@ -1,7 +1,8 @@
 use crate::decrypt;
 use crate::encrypt;
+use crate::files;
+use crate::hash;
 use crate::options;
-use crate::summary;
 
 mod args;
 pub mod print;
@@ -17,8 +18,8 @@ pub fn run() {
     match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
         options::Mode::EncryptMd5(options) => encrypt::execute(options),
-        options::Mode::Decrypt(options) => finalize(printer, &decrypt::execute(options)),
-        options::Mode::DecryptMd5(options) => finalize(printer, &decrypt::execute(options)),
+        options::Mode::Decrypt(options) => decrypt(printer, options),
+        options::Mode::DecryptMd5(options) => decrypt(printer, options),
     }
 }
 
@@ -38,8 +39,15 @@ fn setup_panic() {
     }));
 }
 
-fn finalize(printer: print::Printer, summary: &summary::Summary) {
+fn decrypt<H: hash::Hash>(printer: print::Printer, options: &options::Decrypt<H>) {
+    let summary = decrypt::execute(options);
+
     printer.summary(&summary);
+
+    if !options.files().is_empty() {
+        printer.files();
+        files::write(options, &summary, printer);
+    }
 
     if summary.results.len() < summary.total_count {
         std::process::exit(-1);
