@@ -50,8 +50,8 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Decrypt
             for n in first..last {
                 use eytzinger::SliceExt;
 
-                if n & (options::OPTIMAL_HASHES_PER_THREAD - 1)
-                    == options::OPTIMAL_HASHES_PER_THREAD - 1
+                if n & (super::OPTIMAL_HASHES_PER_THREAD - 1)
+                    == super::OPTIMAL_HASHES_PER_THREAD - 1
                 {
                     if t == 0 {
                         // Allowed because of division; value will stay in bound
@@ -156,8 +156,9 @@ mod test {
                 .iter()
                 .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
                 .collect(),
-            std::collections::HashSet::new(),
             salt,
+            crate::cli::print::new(crate::cli::print::Verboseness::None, false),
+            std::collections::HashSet::new(),
             2_u8,
             4,
             100,

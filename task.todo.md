@@ -22,13 +22,15 @@
 - [ ] Remove result from summary
 - [ ] Remove hash/encrypt summary
 - [ ] Move HashPair to hash module
-- [ ] Move OPTIMAL_CPU to cpu module
-- [ ] Move printer to cli module
 - [ ] Create trait for reporting back results
 - [ ] Move file saving out of decrypt module
-- [ ] Move args to cli module
-- [ ] Move options::parse to cli::args::parse
 - [ ] Remove the extra error creation macro
 - [ ] Consider not returning a Result from the error macro
-- [ ] Move SALT_ENV from options::mod to cli::args
+- [ ] Validate that clap is reading SALT_ENV
+- [ ] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
 - [X] Move encrypt to a directory
+- [X] Move printer to cli module
+- [X] Move SALT_ENV from options::mod to cli::args
+- [X] Move options::parse to cli::args::parse
+- [X] Move args to cli module
+- [X] Move OPTIMAL_CPU to cpu module

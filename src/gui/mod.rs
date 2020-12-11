@@ -98,6 +98,8 @@ unsafe fn details_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> 
     let length_ptr = length.as_ptr();
 
     let template_changed = SlotOfInt::new(&template, move |index| {
+        // Allowed because we check the range before casting to usize
+        #[allow(clippy::cast_sign_loss)]
         if index > 0 {
             if let Some(template) = template::TEMPLATES.get((index - 1) as usize) {
                 let _block = QSignalBlocker::from_q_object(length_ptr);
@@ -169,6 +171,8 @@ unsafe fn salt_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     root
 }
 
+// Allowed because it is very clear that we are not going to confuse with the bingins
+#[allow(clippy::similar_names)]
 unsafe fn device_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     let root = QGroupBox::from_q_string_q_widget(&qs("Device"), parent);
     let layout = QVBoxLayout::new_1a(&root);

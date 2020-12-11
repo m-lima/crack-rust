@@ -9,6 +9,8 @@ mod opencl;
 
 use options::SharedAccessor;
 
+pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
+
 pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Mode {
     let summary = match options.device() {
         options::Device::GPU => gpu::execute(options),
