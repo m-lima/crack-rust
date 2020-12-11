@@ -1,7 +1,7 @@
 use crate::error;
 use crate::hash;
 use crate::options;
-use crate::print;
+use crate::cli::print;
 use crate::summary;
 
 pub fn read<H: hash::Hash>(

@@ -1,11 +1,12 @@
 use clap::Clap;
 
 use crate::hash;
-use crate::print;
+use crate::cli::print;
 use crate::Input;
 
-mod args;
+pub mod args;
 
+pub static SALT_ENV: &str = "HASHER_SALT";
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
 pub fn parse() -> Mode {
