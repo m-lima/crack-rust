@@ -214,7 +214,7 @@ fn print_summary(colored: bool, summary: &summary::Summary) {
     section!("Summary", colored);
     eprintln!(
         "{:21}{}",
-        colorize!("Threadsalaunched:", colored),
+        colorize!("Threads launched:", colored),
         number(u64::from(summary.threads))
     );
     eprintln!(
