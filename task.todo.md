@@ -25,4 +25,9 @@
 - [ ] Move OPTIMAL_CPU to cpu module
 - [ ] Move printer to cli module
 - [ ] Create trait for reporting back results
+- [ ] Move file saving out of decrypt module
+- [ ] Move args to cli module
+- [ ] Move options::parse to cli::args::parse
+- [ ] Remove the extra error creation macro
+- [ ] Consider not returning a Result from the error macro
 - [X] Move encrypt to a directory
