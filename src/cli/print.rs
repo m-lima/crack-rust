@@ -49,7 +49,7 @@ pub struct Printer {
 }
 
 impl Printer {
-    pub fn options(self, options: &options::Mode) {
+    pub fn options<H: hash::Hash>(self, options: &options::Mode<H>) {
         if self.verboseness as u8 > 1 {
             mode_options(self.colored, &options);
             input(self.colored, &options);
@@ -146,13 +146,11 @@ impl Printer {
     }
 }
 
-fn mode_options(colored: bool, options: &options::Mode) {
+fn mode_options<H: hash::Hash>(colored: bool, options: &options::Mode<H>) {
     section!("Options", colored);
     match options {
         options::Mode::Encrypt(options) => encrypt_options(colored, options),
-        options::Mode::EncryptMd5(options) => encrypt_options(colored, options),
         options::Mode::Decrypt(options) => decrypt_options(colored, options),
-        options::Mode::DecryptMd5(options) => decrypt_options(colored, options),
     }
 
     eprintln!();
@@ -200,14 +198,12 @@ fn decrypt_options<H: hash::Hash>(colored: bool, options: &options::Decrypt<H>) 
     );
 }
 
-fn input(colored: bool, options: &options::Mode) {
+fn input<H: hash::Hash>(colored: bool, options: &options::Mode<H>) {
     use options::SharedAccessor;
     section!("Input", colored);
     match options {
         options::Mode::Encrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
-        options::Mode::EncryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
         options::Mode::Decrypt(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
-        options::Mode::DecryptMd5(mode) => mode.input().iter().for_each(|i| eprintln!("{}", i)),
     }
 }
 

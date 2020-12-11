@@ -161,29 +161,23 @@ impl<H: hash::Hash> Decrypt<H> {
     }
 }
 
-pub enum Mode {
-    Encrypt(Encrypt<hash::sha256::Hash>),
-    EncryptMd5(Encrypt<hash::md5::Hash>),
-    Decrypt(Decrypt<hash::sha256::Hash>),
-    DecryptMd5(Decrypt<hash::md5::Hash>),
+pub enum Mode<H: hash::Hash> {
+    Encrypt(Encrypt<H>),
+    Decrypt(Decrypt<H>),
 }
 
-impl Mode {
+impl<H: hash::Hash> Mode<H> {
     pub fn input_len(&self) -> usize {
         match &self {
             Self::Encrypt(mode) => mode.shared.input.len(),
-            Self::EncryptMd5(mode) => mode.shared.input.len(),
             Self::Decrypt(mode) => mode.shared.input.len(),
-            Self::DecryptMd5(mode) => mode.shared.input.len(),
         }
     }
 
     pub fn printer(&self) -> print::Printer {
         match &self {
             Self::Encrypt(mode) => mode.printer(),
-            Self::EncryptMd5(mode) => mode.printer(),
             Self::Decrypt(mode) => mode.printer(),
-            Self::DecryptMd5(mode) => mode.printer(),
         }
     }
 }
