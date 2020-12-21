@@ -23,10 +23,6 @@
   - [ ] Merge with the summary module (make it a single reporting module)
   - [ ] Bring the hash::Pair into the reporting module
 - [ ] Remove the extra error creation macro
-- [ ] Group modes by only encrypt/decrypt and nest the algorithm
-  - [ ] Have only two subcommands (hash and crack)
-  - [ ] Infer algorithm from input? (tricky if loading from files)
-  - [X] options::Mode should have only two variants
 - [ ] Remove result from summary
   - [ ] Detect if not all hashes were cracked
 - [ ] Consider not returning a Result from the error macro
@@ -42,3 +38,7 @@
 - [X] Move file saving out of decrypt module
 - [X] Avoid repeated code in cli::args::{compose_crack, compose_hash} for the `new` function calls
 - [X] Move cli methods from crate::files
+- [X] Group modes by only encrypt/decrypt and nest the algorithm
+  - [X] options::Mode should have only two variants
+  - [X] Have only two subcommands (hash and crack)
+  - [X] Infer algorithm from input? (tricky if loading from files)
