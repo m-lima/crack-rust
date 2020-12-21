@@ -25,7 +25,6 @@
 - [ ] Remove the extra error creation macro
 - [ ] Remove result from summary
   - [ ] Detect if not all hashes were cracked
-- [ ] Consider not returning a Result from the error macro
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
@@ -42,3 +41,4 @@
   - [X] options::Mode should have only two variants
   - [X] Have only two subcommands (hash and crack)
   - [X] Infer algorithm from input? (tricky if loading from files)
+- [X] Consider not returning a Result from the error macro

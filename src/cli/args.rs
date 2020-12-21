@@ -184,18 +184,18 @@ fn to_algorithm(value: &str) -> Result<hash::Algorithm, error::Error> {
     match value.to_uppercase().as_str() {
         "SHA256" => Ok(hash::Algorithm::sha256),
         "MD5" => Ok(hash::Algorithm::md5),
-        _ => error!("possible values are [sha256, md5]",),
+        _ => bail!("possible values are [sha256, md5]",),
     }
 }
 
 fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     let path = std::path::PathBuf::from(value);
     if !path.exists() {
-        error!("{} does not exist", value)
+        bail!("{} does not exist", value)
     } else if !path.is_file() {
-        error!("{} is not a file", value)
+        bail!("{} is not a file", value)
     } else if let Err(e) = std::fs::File::open(&path) {
-        error!(e; "could not open {}", value)
+        bail!(e; "could not open {}", value)
     } else {
         Ok(path)
     }
@@ -205,7 +205,7 @@ fn to_device(value: &str) -> Result<options::Device, error::Error> {
     match value.to_uppercase().as_str() {
         "CPU" => Ok(options::Device::CPU),
         "GPU" => Ok(options::Device::GPU),
-        _ => error!("possible values are [CPU, GPU]",),
+        _ => bail!("possible values are [CPU, GPU]",),
     }
 }
 

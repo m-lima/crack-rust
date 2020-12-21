@@ -49,7 +49,7 @@ macro_rules! hash {
 
                 fn from_str(string: &str) -> Result<Self, $crate::error::Error> {
                     if string.len() != $size >> 2 {
-                        return error!("String does not fit into hash: '{}'", &string);
+                        bail!("String does not fit into hash: '{}'", &string);
                     }
 
                     let mut hash = Self::default();
@@ -59,7 +59,7 @@ macro_rules! hash {
                             c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
                             c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
                             c => {
-                                return error!("Failed to build hash: invalid character {}", c as char);
+                                bail!("Failed to build hash: invalid character {}", c as char);
                             }
                         };
                         if i & 1 == 0 {
