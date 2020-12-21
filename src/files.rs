@@ -15,7 +15,7 @@ pub fn read<H: hash::Hash>(
         .filter_map(|file| {
             std::fs::File::open(file)
                 .map_err(|e| {
-                    printer.read_done(error!(e; "Could not open file"));
+                    printer.read_done(Err(error!(e; "Could not open file")));
                 })
                 .ok()
                 .map(std::io::BufReader::new)
@@ -45,7 +45,7 @@ fn create_file(
     let input_file = match std::fs::File::open(input) {
         Ok(file) => file,
         Err(e) => {
-            return error!(e; "Could not open '{}' for translating", input.display());
+            bail!(e; "Could not open '{}' for translating", input.display());
         }
     };
 
@@ -56,7 +56,7 @@ fn create_file(
     {
         file_name
     } else {
-        return error!("Could not generate output file name");
+        bail!("Could not generate output file name");
     };
 
     let mut output = input.with_file_name(format!("{}.cracked", file_name));
@@ -68,14 +68,14 @@ fn create_file(
     }
 
     if output.exists() {
-        error!(
+        bail!(
             "Could not create output file name for '{}': too many name collisions",
             file_name
         )
     } else {
         match std::fs::File::create(&output) {
             Ok(file) => Ok((input_file, file, output)),
-            Err(e) => error!(
+            Err(e) => bail!(
                 e;
                 "Could not open output file for '{}'",
                 file_name,
@@ -112,7 +112,10 @@ fn write_output_file(
                     return if replaced {
                         (printer, Ok(()))
                     } else {
-                        (printer, error!(output_path had "No replacements found"))
+                        (
+                            printer,
+                            Err(error!(output_path had "No replacements found")),
+                        )
                     };
                 }
 
@@ -128,14 +131,14 @@ fn write_output_file(
                 if let Err(e) = writer.write_all(buffer.as_bytes()) {
                     return (
                         printer,
-                        error!(output_path had e; "Failed to write to file"),
+                        Err(error!(output_path had e; "Failed to write to file")),
                     );
                 }
             }
             Err(e) => {
                 return (
                     printer,
-                    error!(output_path had e; "Failed to read input file"),
+                    Err(error!(output_path had e; "Failed to read input file")),
                 );
             }
         }
@@ -188,7 +191,7 @@ pub fn insert_from_stream<H: hash::Hash>(
                 );
             }
             Err(e) => {
-                printer.read_done(error!(e; "Error reading"));
+                printer.read_done(Err(error!(e; "Error reading")));
                 break;
             }
         }
