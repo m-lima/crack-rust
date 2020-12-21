@@ -6,6 +6,18 @@ macro_rules! byte_size_of {
 
 macro_rules! hash {
     ($($name:ident: $size:literal from $algorithm:ty),+) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+        pub enum Algorithm {
+            $($name),*
+        }
+
+        impl Algorithm {
+            pub fn variants() -> &'static [&'static str] {
+                &[$(stringify!($name)),*]
+            }
+        }
+
         $(pub mod $name {
             #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone)]
             pub struct Hash([u8; byte_size_of!($size)]);
