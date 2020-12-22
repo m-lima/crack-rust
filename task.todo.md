@@ -19,11 +19,6 @@
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
-- [ ] Create trait for reporting back results
-  - [ ] Merge with the summary module (make it a single reporting module)
-  - [ ] Bring the hash::Pair into the reporting module
-- [ ] Remove result from summary
-  - [ ] Detect if not all hashes were cracked
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
@@ -42,3 +37,8 @@
   - [X] Infer algorithm from input? (tricky if loading from files)
 - [X] Consider not returning a Result from the error macro
 - [X] Remove the extra error creation macro
+- [X] Create trait for reporting back results
+- [X] Bring the hash::Pair into the reporting module
+- [X] Remove result from summary
+  - [X] Detect if not all hashes were cracked
+- [X] Merge with the summary module (make it a single reporting module)

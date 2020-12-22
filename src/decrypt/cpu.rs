@@ -1,7 +1,6 @@
-use crate::cli::print;
 use crate::hash;
 use crate::options;
-use crate::summary;
+use crate::results;
 
 use crate::options::SharedAccessor;
 
@@ -22,8 +21,8 @@ unsafe impl<T> Send for Sender<T> {}
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    printer: print::Printer,
-) -> summary::Summary {
+    reporter: impl results::Reporter,
+) -> results::Summary {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
@@ -33,7 +32,7 @@ pub fn execute<H: hash::Hash>(
     let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
-    printer.progress(0);
+    reporter.progress(0);
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
@@ -59,7 +58,7 @@ pub fn execute<H: hash::Hash>(
                         // Allowed because of division; value will stay in bound
                         // `n` is less than `last`
                         #[allow(clippy::cast_possible_truncation)]
-                        printer.progress((n * 100 / last) as u32);
+                        reporter.progress((n * 100 / last) as u8);
                     }
                     if count.load(std::sync::atomic::Ordering::Acquire) == 0 {
                         return (n - first, decrypted);
@@ -71,20 +70,11 @@ pub fn execute<H: hash::Hash>(
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
                     let result = format!("{}{:02$}", &prefix, n, length);
-                    decrypted.push(hash::Pair::new(hash.to_string(), result.clone()));
+                    decrypted.push(results::Pair::new(hash.to_string(), result.clone()));
 
+                    reporter.report(&format!("{:x}", hash), &result);
                     if input.len() == 1 {
-                        #[cfg(not(test))]
-                        {
-                            printer.clear_progress();
-                            println!("\r{}{:02$}", &prefix, n, length);
-                        }
                         return (n - first, decrypted);
-                    }
-                    #[cfg(not(test))]
-                    {
-                        printer.clear_progress();
-                        println!("{:x}:{}", &hash, &result);
                     }
                 }
             }
@@ -111,9 +101,8 @@ pub fn execute<H: hash::Hash>(
                 v
             })
         });
-    printer.clear_progress();
 
-    summary::Summary {
+    results::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count,
@@ -124,7 +113,7 @@ pub fn execute<H: hash::Hash>(
 
 #[cfg(test)]
 mod test {
-    use super::{execute, hash, options};
+    use super::{execute, hash, options, results};
 
     #[test]
     fn test_decryption() {
@@ -132,19 +121,19 @@ mod test {
         let prefix = String::from("1");
 
         let expected = vec![
-            hash::Pair {
+            results::Pair {
                 hash: String::from(
                     "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
                 ),
                 plain: prefix.clone() + "23",
             },
-            hash::Pair {
+            results::Pair {
                 hash: String::from(
                     "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
                 ),
                 plain: prefix.clone() + "55",
             },
-            hash::Pair {
+            results::Pair {
                 hash: String::from(
                     "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
                 ),

@@ -262,15 +262,3 @@ pub trait Hash: ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + crate::Inp
 }
 
 hash!(md5: 128 from md5::Md5, sha256: 256 from sha2::Sha256);
-
-#[derive(Debug, PartialEq)]
-pub struct Pair {
-    pub hash: String,
-    pub plain: String,
-}
-
-impl Pair {
-    pub fn new(hash: String, plain: String) -> Self {
-        Self { hash, plain }
-    }
-}
