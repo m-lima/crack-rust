@@ -36,7 +36,7 @@ fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Pr
     printer.options(&options);
 
     match &options {
-        options::Mode::Encrypt(options) => encrypt::execute(options),
+        options::Mode::Encrypt(options) => encrypt::execute(options, printer),
         options::Mode::Decrypt(options) => decrypt(options, printer),
     }
 }
@@ -44,6 +44,7 @@ fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Pr
 fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, printer: print::Printer) {
     let summary = decrypt::execute(options, printer);
 
+    printer.clear_progress();
     printer.summary(&summary);
 
     for file in options.files() {

@@ -1,6 +1,6 @@
 use crate::error;
 use crate::hash;
-use crate::summary;
+use crate::results;
 
 pub fn read<H: hash::Hash>(
     input: &mut std::collections::HashSet<H>,
@@ -44,7 +44,7 @@ pub fn read_from_stream<H: hash::Hash>(
 pub fn write(
     regex: &regex::Regex,
     path: &std::path::PathBuf,
-    summary: &summary::Summary,
+    summary: &results::Summary,
 ) -> Result<(), error::Error> {
     create_file(path).and_then(|(i, o, p)| write_output_file(regex, &summary, &i, &o, p))
 }
@@ -89,14 +89,14 @@ fn create_file(
 
 fn write_output_file(
     regex: &regex::Regex,
-    summary: &summary::Summary,
+    summary: &results::Summary,
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,
 ) -> Result<(), error::Error> {
     fn inner(
         regex: &regex::Regex,
-        summary: &summary::Summary,
+        summary: &results::Summary,
         input: &std::fs::File,
         output: &std::fs::File,
     ) -> Result<(), error::Error> {

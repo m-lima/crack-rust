@@ -11,8 +11,8 @@ mod files;
 mod gui;
 mod hash;
 mod options;
+mod results;
 mod secrets;
-mod summary;
 
 pub trait Input:
     'static + std::hash::Hash + std::fmt::Display + ToString + PartialEq + Eq + PartialOrd + Ord

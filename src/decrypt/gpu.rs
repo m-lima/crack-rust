@@ -2,9 +2,7 @@ use super::opencl;
 
 use crate::hash;
 use crate::options;
-use crate::summary;
-
-use crate::cli::print;
+use crate::results;
 
 use crate::options::SharedAccessor;
 
@@ -13,7 +11,7 @@ fn compute_results<'a, H: hash::Hash>(
     input: &[H],
     out_buffer: &ocl::Buffer<opencl::Output>,
     options: &options::Decrypt<H>,
-) -> Vec<hash::Pair> {
+) -> Vec<results::Pair> {
     let mut output = vec![opencl::Output::default(); out_buffer.len()];
     out_buffer.read(&mut output).enq().unwrap_or_else(|err| {
         panic!("OpenCL: Failed to read output buffer: {}", err);
@@ -23,7 +21,7 @@ fn compute_results<'a, H: hash::Hash>(
 
     for (i, plain) in output.iter().enumerate() {
         if plain.is_valid() {
-            results.push(hash::Pair::new(
+            results.push(results::Pair::new(
                 input[i].to_string(),
                 format!("{}{}", &options.prefix(), plain.printable(&environment)),
             ));
@@ -43,7 +41,7 @@ fn compute_results<'a, H: hash::Hash>(
 
             if input.eytzinger_search(&hash).is_some() {
                 let result = format!("{}{}", &options.prefix(), &zeros);
-                results.push(hash::Pair::new(hash.to_string(), result));
+                results.push(results::Pair::new(hash.to_string(), result));
             }
 
             if results.len() == input.len() {
@@ -57,8 +55,8 @@ fn compute_results<'a, H: hash::Hash>(
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    printer: print::Printer,
-) -> summary::Summary {
+    reporter: impl results::Reporter,
+) -> results::Summary {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
@@ -89,7 +87,7 @@ pub fn execute<H: hash::Hash>(
             panic!("OpenCL: Failed to create output buffer: {}", err);
         });
 
-    printer.progress(0);
+    reporter.progress(0);
     for i in 0..environment.cpu_iterations() {
         let kernel = ocl::Kernel::builder()
             .program(&program)
@@ -113,7 +111,9 @@ pub fn execute<H: hash::Hash>(
         // If we enqueue too many, OpenCL will abort
         // Send every 7th iteration
         if i & 0b111 == 0b111 {
-            printer.progress(i * 100 / environment.cpu_iterations());
+            // Allowed because it will always be <= 100
+            #[allow(clippy::cast_possible_truncation)]
+            reporter.progress((i * 100 / environment.cpu_iterations()) as u8);
             environment.queue().finish().unwrap_or_else(|err| {
                 panic!(
                     "OpenCL: Failed to wait for queue segment to finish: {}",
@@ -126,7 +126,6 @@ pub fn execute<H: hash::Hash>(
     environment.queue().finish().unwrap_or_else(|err| {
         panic!("OpenCL: Failed to wait for queue to finish: {}", err);
     });
-    printer.clear_progress();
 
     let results = compute_results(&environment, &input, &out_buffer, &options);
 
@@ -140,7 +139,7 @@ pub fn execute<H: hash::Hash>(
         }
     }
 
-    summary::Summary {
+    results::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count: options.number_space(),

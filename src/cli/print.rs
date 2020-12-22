@@ -1,7 +1,7 @@
 use crate::error;
 use crate::hash;
 use crate::options;
-use crate::summary;
+use crate::results;
 use crate::Input;
 
 macro_rules! section {
@@ -38,6 +38,7 @@ pub enum Verboseness {
 pub fn new(verboseness: Verboseness, colored: bool) -> Printer {
     Printer {
         colored,
+        single_input: false,
         verboseness,
     }
 }
@@ -45,10 +46,15 @@ pub fn new(verboseness: Verboseness, colored: bool) -> Printer {
 #[derive(Debug, Copy, Clone)]
 pub struct Printer {
     colored: bool,
+    single_input: bool,
     verboseness: Verboseness,
 }
 
 impl Printer {
+    pub fn set_single_input_mode(&mut self) {
+        self.single_input = true;
+    }
+
     pub fn options<H: hash::Hash>(self, options: &options::Mode<H>) {
         if self.verboseness as u8 > 1 {
             mode_options(self.colored, &options);
@@ -59,7 +65,7 @@ impl Printer {
         }
     }
 
-    pub fn summary(self, summary: &summary::Summary) {
+    pub fn summary(self, summary: &results::Summary) {
         if self.verboseness as u8 > 0 {
             print_summary(self.colored, summary)
         }
@@ -126,7 +132,17 @@ impl Printer {
         }
     }
 
-    pub fn progress(self, progress: u32) {
+    // Allowed because interface feels better
+    #[allow(clippy::unused_self)]
+    pub fn clear_progress(self) {
+        use std::io::Write;
+        eprint!("\x1b[1K\r");
+        let _ = std::io::stderr().flush();
+    }
+}
+
+impl results::Reporter for Printer {
+    fn progress(&self, progress: u8) {
         use std::io::Write;
         if self.colored {
             use colored::Colorize;
@@ -137,12 +153,13 @@ impl Printer {
         let _ = std::io::stderr().flush();
     }
 
-    // Allowed so it keeps the same pattern as progress()
-    #[allow(clippy::unused_self)]
-    pub fn clear_progress(self) {
-        use std::io::Write;
-        eprint!("\x1b[1K\r");
-        let _ = std::io::stderr().flush();
+    fn report(&self, input: &str, output: &str) {
+        if self.single_input {
+            self.clear_progress();
+            println!("{}", output);
+        } else {
+            println!("{}:{}", input, output);
+        }
     }
 }
 
@@ -207,7 +224,7 @@ fn input<H: hash::Hash>(colored: bool, options: &options::Mode<H>) {
     }
 }
 
-fn print_summary(colored: bool, summary: &summary::Summary) {
+fn print_summary(colored: bool, summary: &results::Summary) {
     section!("Summary", colored);
     eprintln!(
         "{:21}{}",

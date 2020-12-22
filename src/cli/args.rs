@@ -228,13 +228,15 @@ pub fn parse_sha256() -> (options::Mode<hash::sha256::Hash>, print::Printer) {
 pub fn parse_md5() -> (options::Mode<hash::md5::Hash>, print::Printer) {
     use hash::md5::Hash as H;
 
-    let (mode, printer) = match RawModeMd5::parse() {
+    let (mode, mut printer) = match RawModeMd5::parse() {
         RawModeMd5::Hash(encrypt) => compose_hash::<H>(encrypt),
         RawModeMd5::Crack(decrypt) => compose_crack::<H>(decrypt.shared, decrypt.input),
     };
 
     if mode.input_len() == 0 {
         panic!("No valid input provided");
+    } else if mode.input_len() == 1 {
+        printer.set_single_input_mode();
     }
 
     (mode, printer)
