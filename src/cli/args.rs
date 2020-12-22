@@ -252,11 +252,24 @@ fn compose_crack<H: hash::Hash>(shared: RawCrackShared, input: Vec<H>) -> option
         options::Device::CPU
     };
 
-    let files = shared.files.into_iter().collect();
-    let input = files::read(input.into_iter().collect(), &files, printer);
+    let files = shared
+        .files
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+    let mut input: std::collections::HashSet<H> = input.into_iter().collect();
+
+    for file in &files {
+        printer.read_start(file.display().to_string());
+        printer.read_done(files::read(&mut input, file));
+    }
+
+    if !atty::is(atty::Stream::Stdin) {
+        printer.read_start("stdin");
+        printer.read_done(files::read_from_stream(&mut input, std::io::stdin().lock()));
+    }
 
     options::Decrypt::new(
-        read_hash_from_stdin(input, printer),
+        input,
         salt(shared.shared),
         printer,
         files,
@@ -312,16 +325,4 @@ fn read_string_from_stdin(
     }
     printer.read_done(Ok(()));
     input
-}
-
-fn read_hash_from_stdin<H: hash::Hash>(
-    input: std::collections::HashSet<H>,
-    printer: print::Printer,
-) -> std::collections::HashSet<H> {
-    if atty::is(atty::Stream::Stdin) {
-        input
-    } else {
-        printer.read_start("stdin");
-        files::insert_from_stream(input, std::io::stdin().lock(), printer)
-    }
 }

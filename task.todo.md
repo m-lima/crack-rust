@@ -22,7 +22,6 @@
 - [ ] Create trait for reporting back results
   - [ ] Merge with the summary module (make it a single reporting module)
   - [ ] Bring the hash::Pair into the reporting module
-- [ ] Remove the extra error creation macro
 - [ ] Remove result from summary
   - [ ] Detect if not all hashes were cracked
 - [X] Move encrypt to a directory
@@ -42,3 +41,4 @@
   - [X] Have only two subcommands (hash and crack)
   - [X] Infer algorithm from input? (tricky if loading from files)
 - [X] Consider not returning a Result from the error macro
+- [X] Remove the extra error creation macro

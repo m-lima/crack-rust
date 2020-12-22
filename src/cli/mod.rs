@@ -48,9 +48,10 @@ fn decrypt<H: hash::Hash>(printer: print::Printer, options: &options::Decrypt<H>
 
     printer.summary(&summary);
 
-    if !options.files().is_empty() {
+    for file in options.files() {
         printer.files();
-        files::write(options, &summary, printer);
+        printer.write_start(file.display().to_string());
+        printer.write_done(files::write(H::regex(), file, &summary));
     }
 
     if summary.results.len() < summary.total_count {
