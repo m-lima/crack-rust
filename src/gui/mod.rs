@@ -1,10 +1,14 @@
 use qt_widgets::cpp_core::{CastInto, Ptr};
-use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotOfInt, SlotOfQString};
+use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotNoArgs, SlotOfInt, SlotOfQString};
 use qt_widgets::qt_gui::QIntValidator;
 use qt_widgets::{
     QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox, QLineEdit,
     QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
+
+use crate::hash::Algorithm;
+use crate::options::Device;
+use crate::secrets::SALT;
 
 mod template;
 
@@ -34,19 +38,31 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
 
-    let details = details_group(&root);
-    let algorithm = algorithm_group(&root);
-    let salt = salt_group(&root);
-    let device = device_group(&root);
+    let (details, prefix_fn, length_fn) = details_group(&root);
+    let (algorithm, algorithm_fn) = algorithm_group(&root);
+    let (salt, salt_fn) = salt_group(&root);
+    let (device, device_fn) = device_group(&root);
     let input = input_group(&root);
-    let hash = QPushButton::from_q_string_q_widget(&qs("Crack"), &root);
+    let crack = QPushButton::from_q_string_q_widget(&qs("Crack"), &root);
+
+    let crack_clicked = SlotNoArgs::new(&root, move || {
+        println!(
+            "Prefix: {}\nLength: {}\nAlgorithm: {}\nSalt: {}\nDevice: {}",
+            prefix_fn(),
+            length_fn(),
+            algorithm_fn(),
+            salt_fn(),
+            device_fn().unwrap_or(Device::GPU),
+        );
+    });
+    crack.clicked().connect(&crack_clicked);
 
     layout.add_widget(&details);
     layout.add_widget(&algorithm);
     layout.add_widget(&salt);
     layout.add_widget(&device);
     layout.add_widget(&input);
-    layout.add_widget(&hash);
+    layout.add_widget(&crack);
 
     root
 }
@@ -56,10 +72,15 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
 
-    let algorithm = algorithm_group(&root);
-    let salt = salt_group(&root);
+    let (algorithm, algorithm_fn) = algorithm_group(&root);
+    let (salt, salt_fn) = salt_group(&root);
     let input = input_group(&root);
     let hash = QPushButton::from_q_string_q_widget(&qs("Hash"), &root);
+
+    let hash_clicked = SlotNoArgs::new(&root, move || {
+        println!("Algorithm: {}\nSalt: {}", algorithm_fn(), salt_fn());
+    });
+    hash.clicked().connect(&hash_clicked);
 
     layout.add_widget(&algorithm);
     layout.add_widget(&salt);
@@ -69,7 +90,9 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     root
 }
 
-unsafe fn details_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
+unsafe fn details_group(
+    parent: &QBox<QWidget>,
+) -> (QBox<QGroupBox>, impl Fn() -> String, impl Fn() -> u8) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Details"), parent);
     let layout = QFormLayout::new_1a(&root);
     layout.set_field_growth_policy(
@@ -123,10 +146,14 @@ unsafe fn details_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> 
     prefix.text_edited().connect(&prefix_edited);
     length.value_changed().connect(&length_changed);
 
-    root
+    (
+        root,
+        move || prefix.text().to_std_string(),
+        move || length.text().to_std_string().parse().unwrap(),
+    )
 }
 
-unsafe fn algorithm_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
+unsafe fn algorithm_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> Algorithm) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Algorithm"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -143,10 +170,16 @@ unsafe fn algorithm_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox
     layout.add_widget(&sha256);
     layout.add_widget(&md5);
 
-    root
+    (root, move || {
+        if sha256.is_checked() {
+            Algorithm::sha256
+        } else {
+            Algorithm::md5
+        }
+    })
 }
 
-unsafe fn salt_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
+unsafe fn salt_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> String) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Salt"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -168,12 +201,18 @@ unsafe fn salt_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
 
     custom.toggled().connect(input.slot_set_enabled());
 
-    root
+    (root, move || {
+        if default.is_checked() {
+            String::from(SALT)
+        } else {
+            input.text().to_std_string()
+        }
+    })
 }
 
 // Allowed because CPU and GPU are well-known names and expected here
 #[allow(clippy::similar_names)]
-unsafe fn device_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
+unsafe fn device_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> Option<Device>) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Device"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -193,7 +232,15 @@ unsafe fn device_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
     layout.add_widget(&gpu);
     layout.add_widget(&cpu);
 
-    root
+    (root, move || {
+        if auto.is_checked() {
+            None
+        } else if gpu.is_checked() {
+            Some(Device::GPU)
+        } else {
+            Some(Device::CPU)
+        }
+    })
 }
 
 unsafe fn input_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
