@@ -27,4 +27,5 @@ features = ["branchless"]
 rand = "0.7"
 
 [features]
+default = [ "qt" ]
 qt = [ "qt_widgets" ]

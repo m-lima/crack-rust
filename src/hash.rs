@@ -18,6 +18,14 @@ macro_rules! hash {
             }
         }
 
+        impl std::fmt::Display for Algorithm {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(Self::$name => stringify!($name).fmt(fmt),)*
+                }
+            }
+        }
+
         $(pub mod $name {
             #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone)]
             pub struct Hash([u8; byte_size_of!($size)]);
