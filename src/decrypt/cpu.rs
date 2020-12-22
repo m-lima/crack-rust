@@ -115,6 +115,14 @@ pub fn execute<H: hash::Hash>(
 mod test {
     use super::{execute, hash, options, results};
 
+    #[derive(Copy, Clone)]
+    struct Reporter;
+
+    impl results::Reporter for Reporter {
+        fn progress(&self, _: u8) {}
+        fn report(&self, _: &str, _: &str) {}
+    }
+
     #[test]
     fn test_decryption() {
         let salt = String::from("abc");
@@ -155,7 +163,6 @@ mod test {
             options::Device::CPU,
         );
 
-        let printer = crate::cli::print::new(crate::cli::print::Verboseness::None, false);
-        assert_eq!(execute(&options, printer).results, expected);
+        assert_eq!(execute(&options, Reporter).results, expected);
     }
 }
