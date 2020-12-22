@@ -1,3 +1,4 @@
+use crate::cli::print;
 use crate::hash;
 use crate::options;
 use crate::summary;
@@ -19,7 +20,10 @@ impl<T> std::ops::Deref for Sender<T> {
 
 unsafe impl<T> Send for Sender<T> {}
 
-pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary {
+pub fn execute<H: hash::Hash>(
+    options: &options::Decrypt<H>,
+    printer: print::Printer,
+) -> summary::Summary {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
@@ -28,8 +32,6 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary
     let thread_count = options.threads();
     let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
-
-    let printer = options.printer();
 
     printer.progress(0);
     for t in 0..u64::from(thread_count) {
@@ -156,7 +158,6 @@ mod test {
                 .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
                 .collect(),
             salt,
-            crate::cli::print::new(crate::cli::print::Verboseness::None, false),
             std::collections::HashSet::new(),
             2_u8,
             4,
@@ -165,6 +166,7 @@ mod test {
             options::Device::CPU,
         );
 
-        assert_eq!(execute(&options).results, expected);
+        let printer = crate::cli::print::new(crate::cli::print::Verboseness::None, false);
+        assert_eq!(execute(&options, printer).results, expected);
     }
 }

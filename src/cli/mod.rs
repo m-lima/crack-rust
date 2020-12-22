@@ -11,8 +11,8 @@ pub fn run() {
     setup_panic();
 
     match args::algorithm() {
-        hash::Algorithm::sha256 => run_algorithm(&args::parse_sha256()),
-        hash::Algorithm::md5 => run_algorithm(&args::parse_md5()),
+        hash::Algorithm::sha256 => run_algorithm(args::parse_sha256()),
+        hash::Algorithm::md5 => run_algorithm(args::parse_md5()),
     }
 }
 
@@ -32,19 +32,17 @@ fn setup_panic() {
     }));
 }
 
-fn run_algorithm<H: hash::Hash>(options: &options::Mode<H>) {
-    let printer = options.printer();
-
+fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Printer)) {
     printer.options(&options);
 
     match &options {
         options::Mode::Encrypt(options) => encrypt::execute(options),
-        options::Mode::Decrypt(options) => decrypt(printer, options),
+        options::Mode::Decrypt(options) => decrypt(options, printer),
     }
 }
 
-fn decrypt<H: hash::Hash>(printer: print::Printer, options: &options::Decrypt<H>) {
-    let summary = decrypt::execute(options);
+fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, printer: print::Printer) {
+    let summary = decrypt::execute(options, printer);
 
     printer.summary(&summary);
 
