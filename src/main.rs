@@ -8,11 +8,13 @@ mod cli;
 mod decrypt;
 mod encrypt;
 mod files;
-mod gui;
 mod hash;
 mod options;
 mod results;
 mod secrets;
+
+#[cfg(feature = "qt")]
+mod gui;
 
 pub trait Input:
     'static + std::hash::Hash + std::fmt::Display + ToString + PartialEq + Eq + PartialOrd + Ord
@@ -21,9 +23,10 @@ pub trait Input:
 impl Input for String {}
 
 fn main() {
-    if std::env::args().len() > 1 {
-        cli::run();
-    } else {
+    #[cfg(feature = "qt")]
+    if std::env::args().len() == 1 {
         gui::run();
     }
+
+    cli::run();
 }
