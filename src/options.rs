@@ -1,4 +1,3 @@
-use crate::cli::print;
 use crate::hash;
 use crate::Input;
 
@@ -26,7 +25,6 @@ impl std::fmt::Display for Device {
 pub struct Shared<T: Input> {
     input: std::collections::HashSet<T>,
     salt: String,
-    printer: print::Printer,
 }
 
 pub trait SharedAccessor<T: Input> {
@@ -39,10 +37,6 @@ pub trait SharedAccessor<T: Input> {
     fn salt(&self) -> &str {
         &self.shared().salt
     }
-
-    fn printer(&self) -> print::Printer {
-        self.shared().printer
-    }
 }
 
 pub struct Encrypt<H: hash::Hash> {
@@ -51,17 +45,9 @@ pub struct Encrypt<H: hash::Hash> {
 }
 
 impl<H: hash::Hash> Encrypt<H> {
-    pub fn new(
-        input: std::collections::HashSet<String>,
-        salt: String,
-        printer: print::Printer,
-    ) -> Self {
+    pub fn new(input: std::collections::HashSet<String>, salt: String) -> Self {
         Self {
-            shared: Shared {
-                input,
-                salt,
-                printer,
-            },
+            shared: Shared { input, salt },
             _phantom: std::marker::PhantomData::<H>::default(),
         }
     }
@@ -94,7 +80,6 @@ impl<H: hash::Hash> Decrypt<H> {
     pub fn new(
         input: std::collections::HashSet<H>,
         salt: String,
-        printer: print::Printer,
         files: std::collections::HashSet<std::path::PathBuf>,
         length: u8,
         threads: u8,
@@ -103,11 +88,7 @@ impl<H: hash::Hash> Decrypt<H> {
         device: Device,
     ) -> Self {
         Self {
-            shared: Shared {
-                input,
-                salt,
-                printer,
-            },
+            shared: Shared { input, salt },
             files,
             length,
             threads,
@@ -171,13 +152,6 @@ impl<H: hash::Hash> Mode<H> {
         match &self {
             Self::Encrypt(mode) => mode.shared.input.len(),
             Self::Decrypt(mode) => mode.shared.input.len(),
-        }
-    }
-
-    pub fn printer(&self) -> print::Printer {
-        match &self {
-            Self::Encrypt(mode) => mode.printer(),
-            Self::Decrypt(mode) => mode.printer(),
         }
     }
 }

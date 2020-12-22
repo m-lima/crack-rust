@@ -4,6 +4,8 @@ use crate::hash;
 use crate::options;
 use crate::summary;
 
+use crate::cli::print;
+
 use crate::options::SharedAccessor;
 
 fn compute_results<'a, H: hash::Hash>(
@@ -53,7 +55,10 @@ fn compute_results<'a, H: hash::Hash>(
     results
 }
 
-pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary {
+pub fn execute<H: hash::Hash>(
+    options: &options::Decrypt<H>,
+    printer: print::Printer,
+) -> summary::Summary {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
@@ -84,7 +89,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary
             panic!("OpenCL: Failed to create output buffer: {}", err);
         });
 
-    options.printer().progress(0);
+    printer.progress(0);
     for i in 0..environment.cpu_iterations() {
         let kernel = ocl::Kernel::builder()
             .program(&program)
@@ -108,9 +113,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary
         // If we enqueue too many, OpenCL will abort
         // Send every 7th iteration
         if i & 0b111 == 0b111 {
-            options
-                .printer()
-                .progress(i * 100 / environment.cpu_iterations());
+            printer.progress(i * 100 / environment.cpu_iterations());
             environment.queue().finish().unwrap_or_else(|err| {
                 panic!(
                     "OpenCL: Failed to wait for queue segment to finish: {}",
@@ -123,7 +126,7 @@ pub fn execute<H: hash::Hash>(options: &options::Decrypt<H>) -> summary::Summary
     environment.queue().finish().unwrap_or_else(|err| {
         panic!("OpenCL: Failed to wait for queue to finish: {}", err);
     });
-    options.printer().clear_progress();
+    printer.clear_progress();
 
     let results = compute_results(&environment, &input, &out_buffer, &options);
 
