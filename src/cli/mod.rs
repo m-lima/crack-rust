@@ -5,7 +5,7 @@ use crate::hash;
 use crate::options;
 
 mod args;
-pub mod print;
+mod print;
 
 pub fn run() {
     setup_panic();

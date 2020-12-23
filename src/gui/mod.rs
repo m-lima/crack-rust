@@ -1,3 +1,11 @@
+use crate::encrypt;
+use crate::hash;
+use crate::options;
+use crate::options::Device;
+use crate::results;
+
+use std::collections::HashSet;
+
 use qt_widgets::cpp_core::{CastInto, Ptr};
 use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotNoArgs, SlotOfInt, SlotOfQString};
 use qt_widgets::qt_gui::QIntValidator;
@@ -6,11 +14,35 @@ use qt_widgets::{
     QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
 
-use crate::hash::Algorithm;
-use crate::options::Device;
-use crate::secrets::SALT;
-
 mod template;
+
+#[derive(Copy, Clone)]
+struct Printer;
+
+impl results::Reporter for Printer {
+    fn progress(&self, progress: u8) {
+        eprintln!("\rProgress: {:02}%", progress);
+    }
+
+    fn report(&self, input: &str, output: &str) {
+        println!("{}:{}", input, output);
+    }
+}
+
+// fn encrypt<H: hash::Hash>(input: HashSet<String>, salt: String) {
+//     #[derive(Copy, Clone)]
+//     struct Printer;
+
+//     impl results::Reporter for Printer {
+//         fn progress(&self, progress: u8) {
+//             eprintln!("\rProgress: {:02}%", progress);
+//         }
+
+//         fn report(&self, input: &str, output: &str) {
+//             println!("{}:{}", input, output);
+//         }
+//     }
+// }
 
 pub fn run() {
     QApplication::init(|_| unsafe {
@@ -42,18 +74,40 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     let (algorithm, algorithm_fn) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
     let (device, device_fn) = device_group(&root);
-    let input = input_group(&root);
+    let (input, _input_fn) = input_group(&root);
     let crack = QPushButton::from_q_string_q_widget(&qs("Crack"), &root);
 
     let crack_clicked = SlotNoArgs::new(&root, move || {
-        println!(
-            "Prefix: {}\nLength: {}\nAlgorithm: {}\nSalt: {}\nDevice: {}",
-            prefix_fn(),
-            length_fn(),
-            algorithm_fn(),
-            salt_fn(),
-            device_fn().unwrap_or(Device::GPU),
-        );
+        println!("Prefix: {}", prefix_fn());
+        println!("Length: {}", length_fn());
+        println!("Algorithm: {}", algorithm_fn());
+        println!("Salt: {}", salt_fn().unwrap_or_default());
+        println!("Device: {}", device_fn().unwrap_or(Device::GPU));
+        // match algorithm_fn() {
+        //     hash::Algorithm::sha256 => decrypt::execute(
+        //         &options::Decrypt::new(
+        //             input_fn(),
+        //             HashSet::new(),
+        //             salt_fn(),
+        //             length_fn(),
+        //             prefix_fn(),
+        //             None,
+        //             device_fn(),
+        //         ),
+        //         Printer,
+        //     ),
+        //     hash::Algorithm::md5 => decrypt::execute(
+        //         &options::Decrypt::new(
+        //             input_fn(),
+        //             HashSet::new(),
+        //             salt_fn(),
+        //             length_fn(),
+        //             prefix_fn(),
+        //             None,
+        //             device_fn(),
+        //         ),
+        //         Printer,
+        //     ),
     });
     crack.clicked().connect(&crack_clicked);
 
@@ -74,11 +128,18 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
 
     let (algorithm, algorithm_fn) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
-    let input = input_group(&root);
+    let (input, input_fn) = input_group(&root);
     let hash = QPushButton::from_q_string_q_widget(&qs("Hash"), &root);
 
-    let hash_clicked = SlotNoArgs::new(&root, move || {
-        println!("Algorithm: {}\nSalt: {}", algorithm_fn(), salt_fn());
+    let hash_clicked = SlotNoArgs::new(&root, move || match algorithm_fn() {
+        hash::Algorithm::sha256 => encrypt::execute(
+            &options::Encrypt::<hash::sha256::Hash>::new(input_fn(), salt_fn()),
+            Printer,
+        ),
+        hash::Algorithm::md5 => encrypt::execute(
+            &options::Encrypt::<hash::md5::Hash>::new(input_fn(), salt_fn()),
+            Printer,
+        ),
     });
     hash.clicked().connect(&hash_clicked);
 
@@ -153,7 +214,9 @@ unsafe fn details_group(
     )
 }
 
-unsafe fn algorithm_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> Algorithm) {
+unsafe fn algorithm_group(
+    parent: &QBox<QWidget>,
+) -> (QBox<QGroupBox>, impl Fn() -> hash::Algorithm) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Algorithm"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -172,14 +235,14 @@ unsafe fn algorithm_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn()
 
     (root, move || {
         if sha256.is_checked() {
-            Algorithm::sha256
+            hash::Algorithm::sha256
         } else {
-            Algorithm::md5
+            hash::Algorithm::md5
         }
     })
 }
 
-unsafe fn salt_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> String) {
+unsafe fn salt_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> Option<String>) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Salt"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -203,9 +266,9 @@ unsafe fn salt_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> S
 
     (root, move || {
         if default.is_checked() {
-            String::from(SALT)
+            None
         } else {
-            input.text().to_std_string()
+            Some(input.text().to_std_string())
         }
     })
 }
@@ -243,12 +306,19 @@ unsafe fn device_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() ->
     })
 }
 
-unsafe fn input_group(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QGroupBox> {
+unsafe fn input_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> HashSet<String>) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
     let layout = QGridLayout::new_1a(&root);
 
     let input = qt_widgets::QPlainTextEdit::from_q_widget(&root);
     layout.add_widget(&input);
 
-    root
+    (root, move || {
+        input
+            .to_plain_text()
+            .to_std_string()
+            .split('\n')
+            .map(String::from)
+            .collect()
+    })
 }

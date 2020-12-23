@@ -6,7 +6,7 @@ mod cpu;
 mod gpu;
 mod opencl;
 
-pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
+pub use cpu::OPTIMAL_HASHES_PER_THREAD;
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,

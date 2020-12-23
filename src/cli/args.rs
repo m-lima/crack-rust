@@ -1,14 +1,11 @@
 use clap::Clap;
 
-use crate::decrypt;
 use crate::error;
 use crate::files;
 use crate::hash;
 use crate::options;
 
 use super::print;
-
-static SALT_ENV: &str = "HASHER_SALT";
 
 /// SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -94,9 +91,9 @@ pub struct RawCrackShared {
     #[clap(short, long)]
     prefix: Option<String>,
 
-    /// Number of threads to spawn (0 for auto)
-    #[clap(short, long, default_value = "0")]
-    threads: u8,
+    /// Number of threads to spawn, automatic deduction if omitted
+    #[clap(short, long)]
+    threads: Option<u8>,
 
     /// Device to run in (auto-detection if omitted)
     #[clap(short, long, possible_values = options::Device::variants(), parse(try_from_str = to_device))]
@@ -172,33 +169,6 @@ fn to_verboseness(value: u64) -> print::Verboseness {
     }
 }
 
-// Allowed because the count was checked for overflow
-#[allow(clippy::cast_possible_truncation)]
-fn optimal_thread_count(requested_count: u8, number_space: u64) -> u8 {
-    let threads = std::cmp::min(
-        number_space / decrypt::OPTIMAL_HASHES_PER_THREAD + 1,
-        if requested_count == 0 {
-            let cores = num_cpus::get();
-            if cores > usize::from(u8::max_value()) {
-                panic!("Too many cores.. You have one powerful computer!");
-            }
-            cores as u64
-        } else {
-            u64::from(requested_count)
-        },
-    );
-
-    // Due to `min`, it will always be less than u8::MAX (255)
-    threads as u8
-}
-
-fn salt(shared: RawShared) -> String {
-    match shared.salt {
-        Some(salt) => salt.unwrap_or_default(),
-        None => std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(crate::secrets::SALT)),
-    }
-}
-
 pub fn algorithm() -> hash::Algorithm {
     std::env::args()
         .position(|arg| arg == "-a" || arg == "--algorithm")
@@ -248,7 +218,7 @@ fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> (options::Mode<H>, print::Pr
     (
         options::Mode::Encrypt(options::Encrypt::<H>::new(
             read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-            salt(encrypt.shared),
+            encrypt.shared.salt.map(Option::unwrap_or_default),
         )),
         printer,
     )
@@ -262,26 +232,9 @@ fn compose_crack<H: hash::Hash>(
 
     let prefix = shared.prefix.unwrap_or_default();
 
-    let total_length = shared.length;
-    if prefix.len() > usize::from(total_length) {
+    if prefix.len() > usize::from(shared.length) {
         panic!("Prefix is too long");
     }
-
-    // Allowed because the length was checked for overflow
-    #[allow(clippy::cast_possible_truncation)]
-    let length = total_length - prefix.len() as u8;
-
-    let number_space = 10_u64.pow(u32::from(length));
-
-    let threads = optimal_thread_count(shared.threads, number_space);
-
-    let device = if let Some(device) = shared.device {
-        device
-    } else if number_space > u64::from(threads) * decrypt::OPTIMAL_HASHES_PER_THREAD {
-        options::Device::GPU
-    } else {
-        options::Device::CPU
-    };
 
     let files = shared
         .files
@@ -302,13 +255,12 @@ fn compose_crack<H: hash::Hash>(
     (
         options::Mode::Decrypt(options::Decrypt::new(
             input,
-            salt(shared.shared),
             files,
-            length,
-            threads,
-            number_space,
+            shared.shared.salt.map(Option::unwrap_or_default),
+            shared.length,
             prefix,
-            device,
+            shared.threads,
+            shared.device,
         )),
         printer,
     )
