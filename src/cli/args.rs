@@ -183,13 +183,13 @@ pub fn algorithm() -> hash::Algorithm {
 pub fn parse_sha256() -> (options::Mode<hash::sha256::Hash>, print::Printer) {
     use hash::sha256::Hash as H;
 
-    let (mode, printer) = match RawModeSha256::parse() {
+    let (mode, mut printer) = match RawModeSha256::parse() {
         RawModeSha256::Hash(encrypt) => compose_hash::<H>(encrypt),
         RawModeSha256::Crack(decrypt) => compose_crack::<H>(decrypt.shared, decrypt.input),
     };
 
-    if mode.input_len() == 0 {
-        panic!("No valid input provided");
+    if mode.input_len() == 1 {
+        printer.set_single_input_mode();
     }
 
     (mode, printer)

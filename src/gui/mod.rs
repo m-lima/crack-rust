@@ -1,3 +1,4 @@
+use crate::decrypt;
 use crate::encrypt;
 use crate::hash;
 use crate::options;
@@ -29,21 +30,6 @@ impl results::Reporter for Printer {
     }
 }
 
-// fn encrypt<H: hash::Hash>(input: HashSet<String>, salt: String) {
-//     #[derive(Copy, Clone)]
-//     struct Printer;
-
-//     impl results::Reporter for Printer {
-//         fn progress(&self, progress: u8) {
-//             eprintln!("\rProgress: {:02}%", progress);
-//         }
-
-//         fn report(&self, input: &str, output: &str) {
-//             println!("{}:{}", input, output);
-//         }
-//     }
-// }
-
 pub fn run() {
     QApplication::init(|_| unsafe {
         let root = QWidget::new_0a();
@@ -74,7 +60,7 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     let (algorithm, algorithm_fn) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
     let (device, device_fn) = device_group(&root);
-    let (input, _input_fn) = input_group(&root);
+    let (input, input_fn) = input_group(&root);
     let crack = QPushButton::from_q_string_q_widget(&qs("Crack"), &root);
 
     let crack_clicked = SlotNoArgs::new(&root, move || {
@@ -83,31 +69,40 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
         println!("Algorithm: {}", algorithm_fn());
         println!("Salt: {}", salt_fn().unwrap_or_default());
         println!("Device: {}", device_fn().unwrap_or(Device::GPU));
-        // match algorithm_fn() {
-        //     hash::Algorithm::sha256 => decrypt::execute(
-        //         &options::Decrypt::new(
-        //             input_fn(),
-        //             HashSet::new(),
-        //             salt_fn(),
-        //             length_fn(),
-        //             prefix_fn(),
-        //             None,
-        //             device_fn(),
-        //         ),
-        //         Printer,
-        //     ),
-        //     hash::Algorithm::md5 => decrypt::execute(
-        //         &options::Decrypt::new(
-        //             input_fn(),
-        //             HashSet::new(),
-        //             salt_fn(),
-        //             length_fn(),
-        //             prefix_fn(),
-        //             None,
-        //             device_fn(),
-        //         ),
-        //         Printer,
-        //     ),
+        match algorithm_fn() {
+            hash::Algorithm::sha256 => decrypt::execute(
+                &options::Decrypt::new(
+                    input_fn()
+                        .into_iter()
+                        .filter_map(|h| <hash::sha256::Hash as hash::Hash>::from_str(&h).ok())
+                        .collect(),
+                    HashSet::new(),
+                    salt_fn(),
+                    length_fn(),
+                    prefix_fn(),
+                    None,
+                    device_fn(),
+                )
+                .unwrap(),
+                Printer,
+            ),
+            hash::Algorithm::md5 => decrypt::execute(
+                &options::Decrypt::new(
+                    input_fn()
+                        .into_iter()
+                        .filter_map(|h| <hash::md5::Hash as hash::Hash>::from_str(&h).ok())
+                        .collect(),
+                    HashSet::new(),
+                    salt_fn(),
+                    length_fn(),
+                    prefix_fn(),
+                    None,
+                    device_fn(),
+                )
+                .unwrap(),
+                Printer,
+            ),
+        };
     });
     crack.clicked().connect(&crack_clicked);
 
