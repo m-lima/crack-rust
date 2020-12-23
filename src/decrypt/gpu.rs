@@ -129,14 +129,8 @@ pub fn execute<H: hash::Hash>(
 
     let results = compute_results(&environment, &input, &out_buffer, &options);
 
-    if !results.is_empty() {
-        if input.len() == 1 {
-            println!("{}", results[0].plain);
-        } else {
-            for result in &results {
-                println!("{}:{}", result.hash, result.plain);
-            }
-        }
+    for result in &results {
+        reporter.report(&result.hash, &result.plain);
     }
 
     results::Summary {
