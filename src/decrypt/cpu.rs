@@ -4,6 +4,8 @@ use crate::results;
 
 use crate::options::SharedAccessor;
 
+pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
+
 #[derive(Clone)]
 pub struct Sender<T> {
     data: *const T,
@@ -51,9 +53,7 @@ pub fn execute<H: hash::Hash>(
             for n in first..last {
                 use eytzinger::SliceExt;
 
-                if n & (super::OPTIMAL_HASHES_PER_THREAD - 1)
-                    == super::OPTIMAL_HASHES_PER_THREAD - 1
-                {
+                if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1 {
                     if t == 0 {
                         // Allowed because of division; value will stay in bound
                         // `n` is less than `last`
@@ -154,13 +154,12 @@ mod test {
                 .iter()
                 .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
                 .collect(),
-            salt,
             std::collections::HashSet::new(),
-            2_u8,
-            4,
-            100,
+            Some(salt),
+            3,
             prefix,
-            options::Device::CPU,
+            Some(4),
+            Some(options::Device::CPU),
         );
 
         assert_eq!(execute(&options, Reporter).results, expected);
