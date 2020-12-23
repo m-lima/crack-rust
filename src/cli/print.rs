@@ -154,8 +154,8 @@ impl results::Reporter for Printer {
     }
 
     fn report(&self, input: &str, output: &str) {
+        self.clear_progress();
         if self.single_input {
-            self.clear_progress();
             println!("{}", output);
         } else {
             println!("{}:{}", input, output);

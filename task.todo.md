@@ -22,8 +22,7 @@
 - [ ] Simplify option building
   - [ ] Move checks from args to options
   - [ ] Remove panic from args and options
-  - [ ] Require less pre-computation to build options
-- [ ] Progress showing when crack -d gpu (single input)
+  - [X] Require less pre-computation to build options
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
@@ -47,3 +46,4 @@
 - [X] Remove result from summary
   - [X] Detect if not all hashes were cracked
 - [X] Merge with the summary module (make it a single reporting module)
+- [X] Progress showing when crack -d gpu (single input)

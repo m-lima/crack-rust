@@ -47,10 +47,12 @@ fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, printer: print::Printer
     printer.clear_progress();
     printer.summary(&summary);
 
-    for file in options.files() {
+    if !options.files().is_empty() {
         printer.files();
-        printer.write_start(file.display().to_string());
-        printer.write_done(files::write(H::regex(), file, &summary));
+        for file in options.files() {
+            printer.write_start(file.display().to_string());
+            printer.write_done(files::write(H::regex(), file, &summary));
+        }
     }
 
     if summary.results.len() < summary.total_count {
