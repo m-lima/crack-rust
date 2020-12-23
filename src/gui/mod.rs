@@ -133,11 +133,11 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
 
     let hash_clicked = SlotNoArgs::new(&root, move || match algorithm_fn() {
         hash::Algorithm::sha256 => encrypt::execute(
-            &options::Encrypt::<hash::sha256::Hash>::new(input_fn(), salt_fn()),
+            &options::Encrypt::<hash::sha256::Hash>::new(input_fn(), salt_fn()).unwrap(),
             Printer,
         ),
         hash::Algorithm::md5 => encrypt::execute(
-            &options::Encrypt::<hash::md5::Hash>::new(input_fn(), salt_fn()),
+            &options::Encrypt::<hash::md5::Hash>::new(input_fn(), salt_fn()).unwrap(),
             Printer,
         ),
     });
@@ -318,7 +318,13 @@ unsafe fn input_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> 
             .to_plain_text()
             .to_std_string()
             .split('\n')
-            .map(String::from)
+            .filter_map(|line| {
+                if line.is_empty() {
+                    None
+                } else {
+                    Some(String::from(line))
+                }
+            })
             .collect()
     })
 }

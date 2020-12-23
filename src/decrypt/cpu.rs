@@ -160,7 +160,8 @@ mod test {
             prefix,
             Some(4),
             Some(options::Device::CPU),
-        );
+        )
+        .unwrap();
 
         assert_eq!(execute(&options, Reporter).results, expected);
     }
