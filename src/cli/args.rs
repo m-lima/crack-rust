@@ -203,9 +203,7 @@ pub fn parse_md5() -> (options::Mode<hash::md5::Hash>, print::Printer) {
         RawModeMd5::Crack(decrypt) => compose_crack::<H>(decrypt.shared, decrypt.input),
     };
 
-    if mode.input_len() == 0 {
-        panic!("No valid input provided");
-    } else if mode.input_len() == 1 {
+    if mode.input_len() == 1 {
         printer.set_single_input_mode();
     }
 
@@ -216,10 +214,14 @@ fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> (options::Mode<H>, print::Pr
     let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
 
     (
-        options::Mode::Encrypt(options::Encrypt::<H>::new(
-            read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-            encrypt.shared.salt.map(Option::unwrap_or_default),
-        )),
+        options::Mode::Encrypt(
+            options::Encrypt::<H>::new(
+                read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
+                encrypt.shared.salt.map(Option::unwrap_or_default),
+            )
+            .map_err(|e| panic!("{}", e))
+            .unwrap(),
+        ),
         printer,
     )
 }
@@ -231,10 +233,6 @@ fn compose_crack<H: hash::Hash>(
     let printer = print::new(shared.shared.verbose, shared.shared.colored);
 
     let prefix = shared.prefix.unwrap_or_default();
-
-    if prefix.len() > usize::from(shared.length) {
-        panic!("Prefix is too long");
-    }
 
     let files = shared
         .files
@@ -253,15 +251,19 @@ fn compose_crack<H: hash::Hash>(
     }
 
     (
-        options::Mode::Decrypt(options::Decrypt::new(
-            input,
-            files,
-            shared.shared.salt.map(Option::unwrap_or_default),
-            shared.length,
-            prefix,
-            shared.threads,
-            shared.device,
-        )),
+        options::Mode::Decrypt(
+            options::Decrypt::new(
+                input,
+                files,
+                shared.shared.salt.map(Option::unwrap_or_default),
+                shared.length,
+                prefix,
+                shared.threads,
+                shared.device,
+            )
+            .map_err(|e| panic!("{}", e))
+            .unwrap(),
+        ),
         printer,
     )
 }

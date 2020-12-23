@@ -1,4 +1,5 @@
 use crate::decrypt;
+use crate::error;
 use crate::hash;
 use crate::secrets;
 use crate::Input;
@@ -32,10 +33,17 @@ pub struct Shared<T: Input> {
 }
 
 impl<T: Input> Shared<T> {
-    fn new(input: std::collections::HashSet<T>, maybe_salt: Option<String>) -> Self {
-        Self {
-            input,
-            salt: salt(maybe_salt),
+    fn new(
+        input: std::collections::HashSet<T>,
+        maybe_salt: Option<String>,
+    ) -> Result<Self, error::Error> {
+        if input.is_empty() {
+            Err(error!("No valid input provided"))
+        } else {
+            Ok(Self {
+                input,
+                salt: salt(maybe_salt),
+            })
         }
     }
 }
@@ -58,11 +66,14 @@ pub struct Encrypt<H: hash::Hash> {
 }
 
 impl<H: hash::Hash> Encrypt<H> {
-    pub fn new(input: std::collections::HashSet<String>, maybe_salt: Option<String>) -> Self {
-        Self {
-            shared: Shared::new(input, maybe_salt),
+    pub fn new(
+        input: std::collections::HashSet<String>,
+        maybe_salt: Option<String>,
+    ) -> Result<Self, error::Error> {
+        Ok(Self {
+            shared: Shared::new(input, maybe_salt)?,
             _phantom: std::marker::PhantomData::<H>::default(),
-        }
+        })
     }
 }
 
@@ -89,7 +100,6 @@ impl<H: hash::Hash> SharedAccessor<H> for Decrypt<H> {
 }
 
 impl<H: hash::Hash> Decrypt<H> {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         input: std::collections::HashSet<H>,
         files: std::collections::HashSet<std::path::PathBuf>,
@@ -98,23 +108,27 @@ impl<H: hash::Hash> Decrypt<H> {
         prefix: String,
         maybe_threads: Option<u8>,
         maybe_device: Option<Device>,
-    ) -> Self {
+    ) -> Result<Self, error::Error> {
+        if prefix.len() > usize::from(length) {
+            bail!("Prefix is too long");
+        }
+
         // Allowed because the length was checked for overflow
         #[allow(clippy::cast_possible_truncation)]
         let variable_length = length - prefix.len() as u8;
         let number_space = 10_u64.pow(u32::from(variable_length));
-        let threads = threads(maybe_threads, number_space);
+        let threads = threads(maybe_threads, number_space)?;
         let device = device(maybe_device, number_space, threads);
 
-        Self {
-            shared: Shared::new(input, maybe_salt),
+        Ok(Self {
+            shared: Shared::new(input, maybe_salt)?,
             files,
             length: variable_length,
             threads,
             number_space,
             prefix,
             device,
-        }
+        })
     }
 
     pub fn files(&self) -> &std::collections::HashSet<std::path::PathBuf> {
@@ -177,23 +191,24 @@ impl<H: hash::Hash> Mode<H> {
 
 // Allowed because the count was checked for overflow
 #[allow(clippy::cast_possible_truncation)]
-fn threads(requested_count: Option<u8>, number_space: u64) -> u8 {
+fn threads(requested_count: Option<u8>, number_space: u64) -> Result<u8, error::Error> {
     let threads = std::cmp::min(
         number_space / decrypt::OPTIMAL_HASHES_PER_THREAD + 1,
         requested_count.map_or_else(
             || {
                 let cores = num_cpus::get();
                 if cores > usize::from(u8::max_value()) {
-                    panic!("Too many cores.. You have one powerful computer!");
+                    u64::from(u8::max_value())
+                } else {
+                    cores as u64
                 }
-                cores as u64
             },
             u64::from,
         ),
     );
 
     // Due to `min`, it will always be less than u8::MAX (255)
-    threads as u8
+    Ok(threads as u8)
 }
 
 fn salt(maybe_salt: Option<String>) -> String {

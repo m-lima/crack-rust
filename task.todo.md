@@ -19,10 +19,6 @@
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
-- [ ] Simplify option building
-  - [ ] Move checks from args to options
-  - [ ] Remove panic from args and options
-  - [X] Require less pre-computation to build options
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
@@ -47,3 +43,7 @@
   - [X] Detect if not all hashes were cracked
 - [X] Merge with the summary module (make it a single reporting module)
 - [X] Progress showing when crack -d gpu (single input)
+- [X] Simplify option building
+  - [X] Require less pre-computation to build options
+  - [X] Remove panic from args and options
+  - [X] Move checks from args to options
