@@ -1,5 +1,5 @@
 fn generate_dummys() {
-    let hidden_path = std::path::Path::new("hidden");
+    let hidden_path = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/hidden"));
 
     if !hidden_path.exists() {
         std::fs::create_dir(hidden_path).expect("Failed to create hidden directory");
@@ -18,6 +18,13 @@ fn generate_dummys() {
     }
 }
 
+#[cfg(feature = "qt")]
+fn add_resources() {
+    qt_ritual_build::add_resources(concat!(env!("CARGO_MANIFEST_DIR"), "/res/resources.qrc"));
+}
+
 fn main() {
     generate_dummys();
+    #[cfg(feature = "qt")]
+    add_resources();
 }

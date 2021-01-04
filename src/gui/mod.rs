@@ -7,12 +7,12 @@ use crate::results;
 
 use std::collections::HashSet;
 
-use qt_widgets::cpp_core::{CastInto, Ptr};
+use qt_widgets::cpp_core::{CastInto, CppBox, Ptr};
 use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotNoArgs, SlotOfInt, SlotOfQString};
-use qt_widgets::qt_gui::QIntValidator;
+use qt_widgets::qt_gui::{QFont, QIntValidator};
 use qt_widgets::{
-    QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox, QLineEdit,
-    QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
+    QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
+    QLabel, QLineEdit, QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
 
 mod template;
@@ -30,16 +30,64 @@ impl results::Reporter for Printer {
     }
 }
 
+unsafe fn load_font() -> CppBox<QFont> {
+    use qt_widgets::qt_gui::QFontDatabase;
+
+    //  f013
+    //  f0ad
+    //  f085
+    //  f477
+    //  f055
+    //  f146
+    //  f0fe
+
+    let font_index = QFontDatabase::add_application_font(&qs(":/FontAwesome.otf"));
+    let families = QFontDatabase::application_font_families(font_index);
+    QFont::from_q_string(families.front())
+}
+
+unsafe fn button_with_icon(
+    icon: &str,
+    text: &str,
+    parent: impl CastInto<Ptr<QWidget>>,
+    font: &CppBox<QFont>,
+) -> QBox<QPushButton> {
+    use qt_widgets::qt_core::AlignmentFlag;
+
+    let button = QPushButton::from_q_widget(parent);
+    let layout = QHBoxLayout::new_1a(&button);
+
+    let icon = QLabel::from_q_string_q_widget(&qs(icon), &button);
+    let text = QLabel::from_q_string_q_widget(&qs(text), &button);
+
+    icon.set_alignment(AlignmentFlag::AlignHCenter | AlignmentFlag::AlignVCenter);
+    text.set_alignment(AlignmentFlag::AlignHCenter | AlignmentFlag::AlignVCenter);
+
+    icon.set_font(font);
+
+    layout.set_spacing(3);
+    layout.set_contents_margins_4a(0, 0, 0, 3);
+
+    layout.add_stretch_0a();
+    layout.add_widget(&icon);
+    layout.add_widget(&text);
+    layout.add_stretch_0a();
+
+    button
+}
+
 pub fn run() {
     QApplication::init(|_| unsafe {
+        let font = load_font();
+
         let root = QWidget::new_0a();
         let layout = QGridLayout::new_1a(&root);
         layout.set_contents_margins_4a(10, 10, 10, 10);
 
         let tab = QTabWidget::new_1a(&root);
 
-        let crack = crack_tab(&root);
-        let hash = hash_tab(&root);
+        let crack = crack_tab(&root, &font);
+        let hash = hash_tab(&root, &font);
 
         tab.add_tab_2a(&crack, &qs("Crack"));
         tab.add_tab_2a(&hash, &qs("Hash"));
@@ -51,7 +99,7 @@ pub fn run() {
     });
 }
 
-unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
+unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -> QBox<QWidget> {
     let root = QWidget::new_1a(parent);
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
@@ -60,8 +108,14 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     let (algorithm, algorithm_fn) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
     let (device, device_fn) = device_group(&root);
-    let (input, input_fn) = input_group(&root);
-    let crack = QPushButton::from_q_string_q_widget(&qs("Crack"), &root);
+    let (input, input_fn) = crack_input_group(&root, font);
+    let advanced = {
+        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font); //QPushButton::from_q_widget(&root);
+        button.set_checkable(true);
+        button.set_checked(false);
+        button
+    };
+    let crack = button_with_icon("\u{f085}", "Crack", &root, font);
 
     let crack_clicked = SlotNoArgs::new(&root, move || {
         println!("Prefix: {}", prefix_fn());
@@ -106,25 +160,40 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     });
     crack.clicked().connect(&crack_clicked);
 
+    algorithm.set_visible(false);
+    salt.set_visible(false);
+    device.set_visible(false);
+
+    advanced.toggled().connect(algorithm.slot_set_visible());
+    advanced.toggled().connect(salt.slot_set_visible());
+    advanced.toggled().connect(device.slot_set_visible());
+
     layout.add_widget(&details);
     layout.add_widget(&algorithm);
     layout.add_widget(&salt);
     layout.add_widget(&device);
     layout.add_widget(&input);
+    layout.add_widget(&advanced);
     layout.add_widget(&crack);
 
     root
 }
 
-unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
+unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -> QBox<QWidget> {
     let root = QWidget::new_1a(parent);
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
 
     let (algorithm, algorithm_fn) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
-    let (input, input_fn) = input_group(&root);
-    let hash = QPushButton::from_q_string_q_widget(&qs("Hash"), &root);
+    let (input, input_fn) = hash_input_group(&root);
+    let advanced = {
+        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font); //QPushButton::from_q_widget(&root);
+        button.set_checkable(true);
+        button.set_checked(false);
+        button
+    };
+    let hash = button_with_icon("\u{f085}", "Hash", &root, font);
 
     let hash_clicked = SlotNoArgs::new(&root, move || match algorithm_fn() {
         hash::Algorithm::sha256 => encrypt::execute(
@@ -138,9 +207,16 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>) -> QBox<QWidget> {
     });
     hash.clicked().connect(&hash_clicked);
 
+    algorithm.set_visible(false);
+    salt.set_visible(false);
+
+    advanced.toggled().connect(algorithm.slot_set_visible());
+    advanced.toggled().connect(salt.slot_set_visible());
+
     layout.add_widget(&algorithm);
     layout.add_widget(&salt);
     layout.add_widget(&input);
+    layout.add_widget(&advanced);
     layout.add_widget(&hash);
 
     root
@@ -301,11 +377,101 @@ unsafe fn device_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() ->
     })
 }
 
-unsafe fn input_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> HashSet<String>) {
+unsafe fn crack_input_group(
+    parent: &QBox<QWidget>,
+    font: &CppBox<QFont>,
+) -> (QBox<QGroupBox>, impl Fn() -> HashSet<String>) {
+    let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
+    let layout = QGridLayout::new_1a(&root);
+
+    let input = qt_widgets::QListWidget::new_1a(&root);
+    // for _ in 0..5 {
+    // let item = qt_widgets::QListWidgetItem::from_q_string_q_list_widget(
+    //     &qs("a878b6be3c969da1f7abdbcf6720223efc47ab40e47dd506226046c9d728e72d"),
+    //     &input,
+    // );
+    // item.set_data(
+    //     0,
+    //     &qt_widgets::qt_core::QVariant::from_q_string(&qs("text")),
+    // );
+    // // input.insert_item_int_q_list_widget_item(i, &item);
+    input.insert_item_int_q_string(
+        0,
+        &qs("a878b6be3c969da1f7abdbcf6720223efc47ab40e47dd506226046c9d728e72d"),
+    );
+    input.insert_item_int_q_string(
+        1,
+        &qs("939ecdacf1a29ffe38c6d41fcba5a7329751a13271425583e963cf8f253083c0"),
+    );
+    input.insert_item_int_q_string(
+        2,
+        &qs("2b330a0ac7a53b97e1107438f37e567d84c9fb6b419cb067ab2d9d34eabae68d"),
+    );
+    // }
+
+    let buttons = QWidget::new_1a(&root);
+    {
+        let button_layout = QHBoxLayout::new_1a(&buttons);
+        button_layout.set_margin(0);
+        button_layout.set_contents_margins_4a(0, 0, 0, 0);
+        button_layout.set_spacing(0);
+
+        let add_hash = {
+            let button = QPushButton::from_q_string_q_widget(&qs("\u{f0fe}"), &root);
+            button.set_font(font);
+            button
+        };
+        let remove = {
+            let button = QPushButton::from_q_string_q_widget(&qs("\u{f146}"), &root);
+            button.set_font(font);
+            button
+        };
+        let add_file = {
+            let button = QPushButton::from_q_string_q_widget(&qs("\u{f477}"), &root);
+            button.set_font(font);
+            button
+        };
+
+        add_hash.set_tool_tip(&qs("Add hash"));
+        remove.set_tool_tip(&qs("Remove selected"));
+        add_file.set_tool_tip(&qs("Add file"));
+
+        remove.set_enabled(false);
+
+        button_layout.add_widget(&add_hash);
+        button_layout.add_widget(&remove);
+        button_layout.add_widget(&add_file);
+    }
+
+    layout.add_widget(&input);
+    layout.add_widget(&buttons);
+
+    (root, move || {
+        HashSet::new()
+        // input
+        //     .to_plain_text()
+        //     .to_std_string()
+        //     .split('\n')
+        //     .filter_map(|line| {
+        //         if line.is_empty() {
+        //             None
+        //         } else {
+        //             Some(String::from(line))
+        //         }
+        //     })
+        //     .collect()
+    })
+}
+
+unsafe fn hash_input_group(
+    parent: &QBox<QWidget>,
+) -> (QBox<QGroupBox>, impl Fn() -> HashSet<String>) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
     let layout = QGridLayout::new_1a(&root);
 
     let input = qt_widgets::QPlainTextEdit::from_q_widget(&root);
+    input.set_tool_tip(&qs("Each line will be hashed separately"));
+    input.set_placeholder_text(&qs("Lines to hash"));
     layout.add_widget(&input);
 
     (root, move || {

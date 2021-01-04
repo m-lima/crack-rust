@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "hasher"
-version = "0.4.5"
+version = "0.5.0"
 dependencies = [
  "atty",
  "clap",
@@ -357,6 +357,7 @@ dependencies = [
  "md-5",
  "num_cpus",
  "ocl",
+ "qt_ritual_build",
  "qt_widgets",
  "rand 0.7.3",
  "regex",
