@@ -17,8 +17,17 @@
 - [ ] **Now that the algorithm is typed, go over the code and reduce the runtime dispatching**
 - [ ] print::io_* is printing colored and out of place (no section and for writes, it comes before Summary on -vv)
 
+## GUI
+- [ ] Add drag and drop for files (and possibly text)
+- [ ] Handle panics from rust within QT
+- [ ] Add input dialog for "crack" view
+- [ ] Add progress dialog
+- [ ] Add results dialog
+- [ ] Add file parsing dialog
+
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
+- [ ] Remove the CTRL-C from the cpu::decrypt (add canceling to the API)
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args
