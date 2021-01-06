@@ -24,6 +24,7 @@
 - [ ] Add progress dialog
 - [ ] Add results dialog
 - [ ] Add file parsing dialog
+- [ ] Decouple UI form the lib calls
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
