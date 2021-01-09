@@ -147,6 +147,7 @@ macro_rules! hash {
                 }
             }
 
+            #[cfg(test)]
             impl std::convert::From<&str> for Hash {
                 fn from(string: &str) -> Self {
                     use $crate::hash::Hash;
@@ -228,9 +229,9 @@ macro_rules! hash {
                 #[test]
                 fn digestion() {
                     use $crate::hash::Hash;
+                    use digest::Digest;
                     let hash = super::Hash::digest("123", "abc");
 
-                    use digest::Digest;
                     let mut expected_hash = <$algorithm>::new();
                     expected_hash.update("123".as_bytes());
                     expected_hash.update("abc".as_bytes());

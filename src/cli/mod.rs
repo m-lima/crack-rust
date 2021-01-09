@@ -42,7 +42,7 @@ fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Pr
 }
 
 fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, printer: print::Printer) {
-    let summary = decrypt::execute(options, printer);
+    let summary = decrypt::execute(options, printer).unwrap();
 
     printer.clear_progress();
     printer.summary(&summary);

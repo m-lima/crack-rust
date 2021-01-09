@@ -26,6 +26,8 @@
 - [ ] Add file parsing dialog
 - [ ] Decouple UI form the lib calls
 - [ ] Remove the "Invalid Input" dialog and let the library report back errors
+- [ ] Allow "hash" to have line breaks
+- [ ] Hold the "raw" data in the input field, and allow the algorithm to change (capturing new inputs using the algorithm hash)
 
 ## Refactor
 - [ ] Bubble result all the way up, even if unrecoverable (allows for GUI error presenting)
