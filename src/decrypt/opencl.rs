@@ -1,3 +1,4 @@
+use crate::error;
 use crate::hash;
 use crate::options;
 
@@ -5,12 +6,14 @@ use crate::options::SharedAccessor;
 
 static MAX_GPU_LENGTH: u8 = 7;
 
-pub(super) fn setup_for<H: hash::Hash>(options: &options::Decrypt<H>) -> Environment<'_, H> {
-    Environment {
+pub(super) fn setup_for<H: hash::Hash>(
+    options: &options::Decrypt<H>,
+) -> Result<Environment<'_, H>, error::Error> {
+    Ok(Environment {
         options,
-        configuration: Configuration::new(),
+        configuration: Configuration::new()?,
         kernel_parameters: KernelParameters::from(options),
-    }
+    })
 }
 
 pub(super) struct Environment<'a, H: hash::Hash> {
@@ -23,9 +26,9 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
     // Allowed because of previous check for options.shared.input.len() <= i32.max_value()
     // Allowed because salted prefix is limited in size
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub(super) fn make_program(&self) -> ocl::Program {
+    pub(super) fn make_program(&self) -> Result<ocl::Program, error::Error> {
         let salted_prefix = format!("{}{}", &self.options.salt(), &self.options.prefix());
-        let source = source::template::<H>().with_prefix(&salted_prefix);
+        let source = source::template::<H>()?.with_prefix(&salted_prefix);
 
         ocl::Program::builder()
             .source(source.to_string())
@@ -41,9 +44,7 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
                 i32::from(self.kernel_parameters.length_on_cpu_iterations),
             )
             .build(&self.configuration.context)
-            .unwrap_or_else(|err| {
-                panic!("OpenCL: Failed to build program: {}", err);
-            })
+            .map_err(|err| error!(err; "OpenCL: Failed to build program"))
     }
 
     pub(super) fn queue(&self) -> &ocl::Queue {
@@ -66,25 +67,25 @@ struct Configuration {
 }
 
 impl Configuration {
-    fn new() -> Self {
-        let (platform, device) = Self::first_gpu();
+    fn new() -> Result<Self, error::Error> {
+        let (platform, device) = Self::first_gpu()?;
         let context = ocl::Context::builder()
             .platform(platform)
             .devices(device)
             .build()
-            .unwrap_or_else(|err| {
-                panic!("OpenCL: Failed to create context: {}", err);
-            });
-        let queue = ocl::Queue::new(&context, device, None).unwrap();
+            .map_err(|err| error!(err; "OpenCL: Failed to create context"))?;
 
-        Self {
+        let queue = ocl::Queue::new(&context, device, None)
+            .map_err(|err| error!(err; "OpenCL: Failed to create queue"))?;
+
+        Ok(Self {
             device,
             context,
             queue,
-        }
+        })
     }
 
-    fn first_gpu() -> (ocl::Platform, ocl::Device) {
+    fn first_gpu() -> Result<(ocl::Platform, ocl::Device), error::Error> {
         let mut out = Vec::new();
         for platform in ocl::Platform::list() {
             if let Ok(all_devices) = ocl::Device::list_all(&platform) {
@@ -109,10 +110,10 @@ impl Configuration {
             }
         });
 
-        if out.first().is_none() {
-            panic!("OpenCL: Failed to find any OpenCL devices");
+        match out.first() {
+            Some(pair) => Ok(*pair),
+            None => Err(error!("OpenCL: Failed to find any OpenCL devices")),
         }
-        *out.first().unwrap()
     }
 }
 
@@ -196,6 +197,7 @@ impl Output {
 }
 
 mod source {
+    use crate::error;
     use crate::hash;
 
     static MD5: &str = include_str!("../../cl/md5.cl");
@@ -204,14 +206,14 @@ mod source {
     pub(super) struct SourceTemplate(&'static str);
     pub(super) struct Source(String);
 
-    pub(super) fn template<H: hash::Hash>() -> SourceTemplate {
+    pub(super) fn template<H: hash::Hash>() -> Result<SourceTemplate, error::Error> {
         // TODO: Update with type specialization when available
         if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::md5::Hash>() {
-            SourceTemplate(MD5)
+            Ok(SourceTemplate(MD5))
         } else if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::sha256::Hash>() {
-            SourceTemplate(SHA256)
+            Ok(SourceTemplate(SHA256))
         } else {
-            panic!("Algorithm not supported for GPU execution");
+            Err(error!("Algorithm not supported for GPU execution"))
         }
     }
 

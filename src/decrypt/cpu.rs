@@ -1,3 +1,4 @@
+use crate::error;
 use crate::hash;
 use crate::options;
 use crate::results;
@@ -24,7 +25,7 @@ unsafe impl<T> Send for Sender<T> {}
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
     reporter: impl results::Reporter,
-) -> results::Summary {
+) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 
     let count = std::sync::atomic::AtomicUsize::new(options.input().len());
@@ -102,13 +103,13 @@ pub fn execute<H: hash::Hash>(
             })
         });
 
-    results::Summary {
+    Ok(results::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count,
         threads: u32::from(thread_count),
         results,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -163,6 +164,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(execute(&options, Reporter).results, expected);
+        assert_eq!(execute(&options, Reporter).unwrap().results, expected);
     }
 }

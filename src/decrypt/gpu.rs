@@ -1,5 +1,6 @@
 use super::opencl;
 
+use crate::error;
 use crate::hash;
 use crate::options;
 use crate::results;
@@ -11,11 +12,12 @@ fn compute_results<'a, H: hash::Hash>(
     input: &[H],
     out_buffer: &ocl::Buffer<opencl::Output>,
     options: &options::Decrypt<H>,
-) -> Vec<results::Pair> {
+) -> Result<Vec<results::Pair>, error::Error> {
     let mut output = vec![opencl::Output::default(); out_buffer.len()];
-    out_buffer.read(&mut output).enq().unwrap_or_else(|err| {
-        panic!("OpenCL: Failed to read output buffer: {}", err);
-    });
+    out_buffer
+        .read(&mut output)
+        .enq()
+        .map_err(|err| error!(err; "OpenCL: Failed to read output buffer"))?;
 
     let mut results = Vec::with_capacity(out_buffer.len());
 
@@ -50,23 +52,23 @@ fn compute_results<'a, H: hash::Hash>(
         }
     }
 
-    results
+    Ok(results)
 }
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
     reporter: impl results::Reporter,
-) -> results::Summary {
+) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 
     if (options.input().len() as u64) >= (i32::max_value() as u64) {
-        panic!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
+        bail!("Input count too large. GPU kernel defines are fixed at i32 (2,147,483,647)");
     }
 
     let input = options.input_as_eytzinger();
 
-    let environment = opencl::setup_for(options);
-    let program = environment.make_program();
+    let environment = opencl::setup_for(options)?;
+    let program = environment.make_program()?;
 
     let in_buffer = ocl::Buffer::builder()
         .flags(ocl::MemFlags::READ_ONLY)
@@ -74,18 +76,14 @@ pub fn execute<H: hash::Hash>(
         .queue(environment.queue().clone())
         .copy_host_slice(&input)
         .build()
-        .unwrap_or_else(|err| {
-            panic!("OpenCL: Failed to create input buffer: {}", err);
-        });
+        .map_err(|err| error!(err; "OpenCL: Failed to create input buffer"))?;
 
     let out_buffer = ocl::Buffer::builder()
         .flags(ocl::MemFlags::WRITE_ONLY)
         .len(options.input().len())
         .queue(environment.queue().clone())
         .build()
-        .unwrap_or_else(|err| {
-            panic!("OpenCL: Failed to create output buffer: {}", err);
-        });
+        .map_err(|err| error!(err; "OpenCL: Failed to create output buffer"))?;
 
     reporter.progress(0);
     for i in 0..environment.cpu_iterations() {
@@ -98,14 +96,12 @@ pub fn execute<H: hash::Hash>(
             .arg(&out_buffer)
             .arg(i)
             .build()
-            .unwrap_or_else(|err| {
-                panic!("OpenCL: Failed to build kernel: {}", err);
-            });
+            .map_err(|err| error!(err; "OpenCL: Failed to build kernel"))?;
 
         unsafe {
-            kernel.enq().unwrap_or_else(|err| {
-                panic!("OpenCL: Failed to enqueue kernel: {}", err);
-            });
+            kernel
+                .enq()
+                .map_err(|err| error!(err; "OpenCL: Failed to enqueue kernel"))?;
         }
 
         // If we enqueue too many, OpenCL will abort
@@ -114,30 +110,29 @@ pub fn execute<H: hash::Hash>(
             // Allowed because it will always be <= 100
             #[allow(clippy::cast_possible_truncation)]
             reporter.progress((i * 100 / environment.cpu_iterations()) as u8);
-            environment.queue().finish().unwrap_or_else(|err| {
-                panic!(
-                    "OpenCL: Failed to wait for queue segment to finish: {}",
-                    err
-                );
-            });
+            environment
+                .queue()
+                .finish()
+                .map_err(|err| error!(err; "OpenCL: Failed to wait for queue segment to finish"))?;
         }
     }
 
-    environment.queue().finish().unwrap_or_else(|err| {
-        panic!("OpenCL: Failed to wait for queue to finish: {}", err);
-    });
+    environment
+        .queue()
+        .finish()
+        .map_err(|err| error!(err; "OpenCL: Failed to wait for queue to finish"))?;
 
-    let results = compute_results(&environment, &input, &out_buffer, &options);
+    let results = compute_results(&environment, &input, &out_buffer, &options)?;
 
     for result in &results {
         reporter.report(&result.hash, &result.plain);
     }
 
-    results::Summary {
+    Ok(results::Summary {
         total_count: input.len(),
         duration: time.elapsed(),
         hash_count: options.number_space(),
         threads: environment.range(),
         results,
-    }
+    })
 }
