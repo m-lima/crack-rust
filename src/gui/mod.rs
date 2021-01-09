@@ -79,6 +79,20 @@ unsafe fn button_with_icon(
     button
 }
 
+unsafe fn send_to_main_screen(widget: &QBox<QWidget>) {
+    let width = widget.width();
+    let height = widget.height();
+
+    let screen = QApplication::desktop().screen_1a(0);
+    let screen_width = screen.width();
+    let screen_height = screen.height();
+
+    let x = (screen_width - width) / 2;
+    let y = (screen_height - height) / 2;
+
+    widget.move_2a(x, y);
+}
+
 pub fn run() {
     QApplication::init(|_| unsafe {
         let font = load_font();
@@ -96,6 +110,7 @@ pub fn run() {
         tab.add_tab_2a(&hash, &qs("Hash"));
 
         layout.add_widget(&tab);
+        send_to_main_screen(&root);
         root.show();
 
         QApplication::exec()
