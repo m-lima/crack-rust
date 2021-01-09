@@ -25,10 +25,12 @@
 - [ ] Add results dialog
 - [ ] Add file parsing dialog
 - [ ] Decouple UI form the lib calls
+- [ ] Remove the "Invalid Input" dialog and let the library report back errors
 
 ## Refactor
-- [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
+- [ ] Bubble result all the way up, even if unrecoverable (allows for GUI error presenting)
 - [ ] Remove the CTRL-C from the cpu::decrypt (add canceling to the API)
+- [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
 - [X] Move SALT_ENV from options::mod to cli::args

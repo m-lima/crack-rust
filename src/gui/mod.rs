@@ -8,12 +8,14 @@ use crate::results;
 use std::collections::HashSet;
 
 use qt_widgets::cpp_core::{CastInto, CppBox, Ptr};
-use qt_widgets::qt_core::{qs, QBox, QSignalBlocker, SlotNoArgs, SlotOfInt, SlotOfQString};
+use qt_widgets::qt_core::{
+    qs, QBox, QSignalBlocker, QStringList, SlotNoArgs, SlotOfInt, SlotOfQString,
+};
 use qt_widgets::qt_gui::{QFont, QIntValidator};
 use qt_widgets::{
     q_message_box, QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox,
-    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QPushButton, QRadioButton, QSpinBox,
-    QTabWidget, QVBoxLayout, QWidget,
+    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QMessageBox, QPlainTextEdit,
+    QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
 
 mod template;
@@ -118,60 +120,48 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -
     };
     let crack = button_with_icon("\u{f085}", "Crack", &root, font);
 
-    let root_ptr = root.as_ptr();
     let crack_clicked = SlotNoArgs::new(&root, move || {
-        let input = input_fn();
-        if input.is_empty() {
-            QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
-                q_message_box::Icon::Warning,
-                &qs("Cannot hash"),
-                &qs("No valid input provided"),
-                q_message_box::StandardButton::Ok.into(),
-                root_ptr,
-            )
-            .exec();
-        } else {
-            let algorithm = algorithm_fn();
-            let salt = salt_fn();
-            let length = length_fn();
-            let prefix = prefix_fn();
-            let device = device_fn();
+        let (hashes, files) = input_fn();
+        let algorithm = algorithm_fn();
+        let salt = salt_fn();
+        let length = length_fn();
+        let prefix = prefix_fn();
+        let device = device_fn();
 
-            std::thread::spawn(move || match algorithm {
-                hash::Algorithm::sha256 => decrypt::execute(
-                    &options::Decrypt::new(
-                        input
-                            .into_iter()
-                            .filter_map(|h| <hash::sha256::Hash as hash::Hash>::from_str(&h).ok())
-                            .collect(),
-                        HashSet::new(),
-                        salt,
-                        length,
-                        prefix,
-                        None,
-                        device,
-                    )
-                    .unwrap(),
-                    Printer,
-                ),
-                hash::Algorithm::md5 => decrypt::execute(
-                    &options::Decrypt::new(
-                        input
-                            .into_iter()
-                            .filter_map(|h| <hash::md5::Hash as hash::Hash>::from_str(&h).ok())
-                            .collect(),
-                        HashSet::new(),
-                        salt,
-                        length,
-                        prefix,
-                        None,
-                        device,
-                    )
-                    .unwrap(),
-                    Printer,
-                ),
-            });
-        }
+        std::thread::spawn(move || match algorithm {
+            hash::Algorithm::sha256 => decrypt::execute(
+                &options::Decrypt::new(
+                    hashes
+                        .into_iter()
+                        .filter_map(|h| <hash::sha256::Hash as hash::Hash>::from_str(&h).ok())
+                        .collect(),
+                    files,
+                    salt,
+                    length,
+                    prefix,
+                    None,
+                    device,
+                )
+                .unwrap(),
+                Printer,
+            ),
+            hash::Algorithm::md5 => decrypt::execute(
+                &options::Decrypt::new(
+                    hashes
+                        .into_iter()
+                        .filter_map(|h| <hash::md5::Hash as hash::Hash>::from_str(&h).ok())
+                        .collect(),
+                    files,
+                    salt,
+                    length,
+                    prefix,
+                    None,
+                    device,
+                )
+                .unwrap(),
+                Printer,
+            ),
+        });
     });
     crack.clicked().connect(&crack_clicked);
 
@@ -413,103 +403,22 @@ unsafe fn device_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() ->
 unsafe fn crack_input_group(
     parent: &QBox<QWidget>,
     font: &CppBox<QFont>,
-) -> (QBox<QGroupBox>, impl Fn() -> HashSet<String>) {
+) -> (
+    QBox<QGroupBox>,
+    impl Fn() -> (HashSet<String>, HashSet<std::path::PathBuf>),
+) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
     let layout = QGridLayout::new_1a(&root);
 
-    let input = qt_widgets::QListWidget::new_1a(&root);
+    let input = QListWidget::new_1a(&root);
     input.set_selection_mode(qt_widgets::q_abstract_item_view::SelectionMode::ExtendedSelection);
+    // input.set_drag_enabled(true);
+    input.set_drag_drop_mode(qt_widgets::q_abstract_item_view::DragDropMode::DropOnly);
+    input.set_drop_indicator_shown(true);
+    input.set_accept_drops(true);
 
     let buttons = QWidget::new_1a(&root);
-    {
-        let button_layout = QHBoxLayout::new_1a(&buttons);
-        button_layout.set_margin(0);
-        button_layout.set_contents_margins_4a(0, 0, 0, 0);
-        button_layout.set_spacing(0);
-
-        let add_hash = {
-            let button = QPushButton::from_q_string_q_widget(&qs("\u{f0fe}"), &root);
-            button.set_font(font);
-            button
-        };
-        let remove = {
-            let button = QPushButton::from_q_string_q_widget(&qs("\u{f146}"), &root);
-            button.set_font(font);
-            button
-        };
-        let add_file = {
-            let button = QPushButton::from_q_string_q_widget(&qs("\u{f477}"), &root);
-            button.set_font(font);
-            button
-        };
-
-        add_hash.set_tool_tip(&qs("Add hash"));
-        remove.set_tool_tip(&qs("Remove selected"));
-        add_file.set_tool_tip(&qs("Add file"));
-
-        remove.set_enabled(false);
-
-        button_layout.add_widget(&add_hash);
-        button_layout.add_widget(&remove);
-        button_layout.add_widget(&add_file);
-
-        let root_ptr = root.as_ptr();
-        let input_ptr = input.as_ptr();
-        let remove_ptr = remove.as_ptr();
-
-        let add_hash_clicked = SlotNoArgs::new(&root, move || {
-            let input = QInputDialog::get_multi_line_text_4a(
-                root_ptr,
-                &qs("Input"),
-                &qs("Hashes to crack:"),
-                &qs("Separated by space, tab, or a new line"),
-            );
-            let list = input
-                .to_std_string()
-                .split_whitespace()
-                .filter_map(|line| {
-                    if line.is_empty() {
-                        None
-                    } else {
-                        Some(String::from(line))
-                    }
-                })
-                .fold(qt_widgets::qt_core::QStringList::new(), |acc, curr| {
-                    acc.append_q_string(&qt_widgets::qt_core::QString::from_std_str(curr));
-                    acc
-                });
-            input_ptr.add_items(&list);
-        });
-        add_hash.clicked().connect(&add_hash_clicked);
-
-        let input_selection_changed = SlotNoArgs::new(&root, move || {
-            remove_ptr.set_enabled(!input_ptr.selected_items().is_empty());
-        });
-        input
-            .item_selection_changed()
-            .connect(&input_selection_changed);
-
-        let remove_clicked = SlotNoArgs::new(&root, move || {
-            input_ptr
-                .selection_model()
-                .selected_indexes()
-                .iter()
-                .for_each(|item| {
-                    input_ptr.model().remove_row_1a(item.row());
-                });
-        });
-        remove.clicked().connect(&remove_clicked);
-
-        let add_file_clicked = SlotNoArgs::new(&root, move || {
-            let icon = input_ptr
-                .style()
-                .standard_icon_1a(qt_widgets::q_style::StandardPixmap::SPFileIcon);
-            let text = qt_widgets::QFileDialog::get_open_file_name_1a(root_ptr);
-            let item = qt_widgets::QListWidgetItem::from_q_icon_q_string(&icon, &text);
-            input_ptr.add_item_q_list_widget_item(item.into_ptr());
-        });
-        add_file.clicked().connect(&add_file_clicked);
-    }
+    crack_input_buttons(&root, &input, &buttons, font);
 
     layout.add_widget(&input);
     layout.add_widget(&buttons);
@@ -518,30 +427,26 @@ unsafe fn crack_input_group(
         // Allowed because of FFI
         #[allow(clippy::cast_sign_loss)]
         let mut hashes = HashSet::with_capacity(input.count() as usize);
-        // let files = HashSet::new();
+        let mut files = HashSet::new();
         for i in 0..input.count() {
+            use qt_widgets::qt_core::ItemDataRole;
             let item = input.item(i);
             if item.icon().is_null() {
-                println!("{}", item.data(0).to_string().to_std_string());
-                hashes.insert(item.data(0).to_string().to_std_string());
+                hashes.insert(
+                    item.data(ItemDataRole::DisplayRole.to_int())
+                        .to_string()
+                        .to_std_string(),
+                );
+            } else {
+                files.insert(std::path::PathBuf::from(
+                    item.data(ItemDataRole::DisplayRole.to_int())
+                        .to_string()
+                        .to_std_string(),
+                ));
             }
-            // if item.icon().is_null() {
-            //     println!("{}", item.
-            // }
         }
-        hashes
-        // input
-        //     .to_plain_text()
-        //     .to_std_string()
-        //     .split('\n')
-        //     .filter_map(|line| {
-        //         if line.is_empty() {
-        //             None
-        //         } else {
-        //             Some(String::from(line))
-        //         }
-        //     })
-        //     .collect()
+        println!("{} {}", hashes.len(), files.len());
+        (hashes, files)
     })
 }
 
@@ -551,7 +456,7 @@ unsafe fn hash_input_group(
     let root = QGroupBox::from_q_string_q_widget(&qs("Input"), parent);
     let layout = QGridLayout::new_1a(&root);
 
-    let input = qt_widgets::QPlainTextEdit::from_q_widget(&root);
+    let input = QPlainTextEdit::from_q_widget(&root);
     input.set_tool_tip(&qs("Each line will be hashed separately"));
     input.set_placeholder_text(&qs("Lines to hash"));
     layout.add_widget(&input);
@@ -570,4 +475,104 @@ unsafe fn hash_input_group(
             })
             .collect()
     })
+}
+
+unsafe fn crack_input_buttons(
+    parent: &QBox<QGroupBox>,
+    input: &QBox<QListWidget>,
+    buttons: &QBox<QWidget>,
+    font: &CppBox<QFont>,
+) {
+    let button_layout = QHBoxLayout::new_1a(buttons);
+    button_layout.set_margin(0);
+    button_layout.set_contents_margins_4a(0, 0, 0, 0);
+    button_layout.set_spacing(0);
+
+    let add_hash = {
+        let button = QPushButton::from_q_string_q_widget(&qs("\u{f0fe}"), parent);
+        button.set_font(font);
+        button
+    };
+    let remove = {
+        let button = QPushButton::from_q_string_q_widget(&qs("\u{f146}"), parent);
+        button.set_font(font);
+        button
+    };
+    let add_file = {
+        let button = QPushButton::from_q_string_q_widget(&qs("\u{f477}"), parent);
+        button.set_font(font);
+        button
+    };
+
+    add_hash.set_tool_tip(&qs("Add hash"));
+    remove.set_tool_tip(&qs("Remove selected"));
+    add_file.set_tool_tip(&qs("Add file"));
+
+    remove.set_enabled(false);
+
+    let parent_ptr = parent.as_ptr();
+    let input_ptr = input.as_ptr();
+    let remove_ptr = remove.as_ptr();
+
+    let add_hash_clicked = SlotNoArgs::new(parent, move || {
+        let input = QInputDialog::get_multi_line_text_4a(
+            parent_ptr,
+            &qs("Input"),
+            &qs("Hashes to crack:"),
+            &qs("Separated by space, tab, or a new line"),
+        );
+
+        if !input.is_null() {
+            let list = input
+                .to_std_string()
+                .split_whitespace()
+                .filter_map(|line| {
+                    if line.is_empty() {
+                        None
+                    } else {
+                        Some(String::from(line))
+                    }
+                })
+                .fold(QStringList::new(), |acc, curr| {
+                    acc.append_q_string(&qs(&curr));
+                    acc
+                });
+            input_ptr.add_items(&list);
+        }
+    });
+    add_hash.clicked().connect(&add_hash_clicked);
+
+    let input_selection_changed = SlotNoArgs::new(parent, move || {
+        remove_ptr.set_enabled(!input_ptr.selected_items().is_empty());
+    });
+    input
+        .item_selection_changed()
+        .connect(&input_selection_changed);
+
+    let remove_clicked = SlotNoArgs::new(parent, move || {
+        input_ptr
+            .selection_model()
+            .selected_indexes()
+            .iter()
+            .for_each(|item| {
+                input_ptr.model().remove_row_1a(item.row());
+            });
+    });
+    remove.clicked().connect(&remove_clicked);
+
+    let add_file_clicked = SlotNoArgs::new(parent, move || {
+        let text = qt_widgets::QFileDialog::get_open_file_name_1a(parent_ptr);
+        if !text.is_null() {
+            let icon = input_ptr
+                .style()
+                .standard_icon_1a(qt_widgets::q_style::StandardPixmap::SPFileIcon);
+            let item = qt_widgets::QListWidgetItem::from_q_icon_q_string(&icon, &text);
+            input_ptr.add_item_q_list_widget_item(item.into_ptr());
+        }
+    });
+    add_file.clicked().connect(&add_file_clicked);
+
+    button_layout.add_widget(&add_hash);
+    button_layout.add_widget(&remove);
+    button_layout.add_widget(&add_file);
 }
