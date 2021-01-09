@@ -63,9 +63,9 @@ macro_rules! hash {
                     let mut hash = Self::default();
                     for (i, c) in string.chars().enumerate() {
                         let int = match c as u8 {
-                            c if c >= 0x30 && c < 0x3a => c - 0x30, // decimal
-                            c if c >= 0x41 && c < 0x47 => c - 0x41 + 0xa, // uppercase
-                            c if c >= 0x61 && c < 0x67 => c - 0x61 + 0xa, // lowercase
+                            c if (0x30..0x3a).contains(&c) => c - 0x30, // decimal
+                            c if (0x41..0x47).contains(&c) => c - 0x41 + 0xa, // uppercase
+                            c if (0x61..0x67).contains(&c) => c - 0x61 + 0xa, // lowercase
                             c => {
                                 bail!("Failed to build hash: invalid character {}", c as char);
                             }
