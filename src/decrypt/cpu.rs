@@ -1,3 +1,4 @@
+use crate::channel;
 use crate::error;
 use crate::hash;
 use crate::options;
@@ -24,7 +25,7 @@ unsafe impl<T> Send for Sender<T> {}
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    reporter: impl results::Reporter,
+    channel: impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 
@@ -35,7 +36,7 @@ pub fn execute<H: hash::Hash>(
     let thread_space = options.number_space() / u64::from(thread_count);
     let mut threads = Vec::<_>::with_capacity(thread_count as usize);
 
-    reporter.progress(0);
+    channel.progress(0);
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender { data: &count };
         let input_sender = Sender { data: &input };
@@ -59,9 +60,9 @@ pub fn execute<H: hash::Hash>(
                         // Allowed because of division; value will stay in bound
                         // `n` is less than `last`
                         #[allow(clippy::cast_possible_truncation)]
-                        reporter.progress((n * 100 / last) as u8);
+                        channel.progress((n * 100 / last) as u8);
                     }
-                    if count.load(std::sync::atomic::Ordering::Acquire) == 0 {
+                    if channel.should_terminate() {
                         return (n - first, decrypted);
                     }
                 }
@@ -73,7 +74,7 @@ pub fn execute<H: hash::Hash>(
                     let result = format!("{}{:02$}", &prefix, n, length);
                     decrypted.push(results::Pair::new(hash.to_string(), result.clone()));
 
-                    reporter.report(&format!("{:x}", hash), &result);
+                    channel.result(&format!("{:x}", hash), &result);
                     if input.len() == 1 {
                         return (n - first, decrypted);
                     }
@@ -81,15 +82,6 @@ pub fn execute<H: hash::Hash>(
             }
             (last - first, decrypted)
         }));
-    }
-
-    let count_sender = Sender { data: &count };
-    if let Err(err) = ctrlc::set_handler(move || {
-        let count = &count_sender;
-        count.store(0, std::sync::atomic::Ordering::Relaxed);
-    }) {
-        eprintln!("Failed to capture SIGINT: {}", err);
-        eprintln!("CTRL + C will not interrupt the threads");
     }
 
     let (hash_count, results) = threads
@@ -129,14 +121,17 @@ pub fn execute<H: hash::Hash>(
 
 #[cfg(test)]
 mod test {
-    use super::{execute, hash, options, results};
+    use super::{channel, execute, hash, options, results};
 
     #[derive(Copy, Clone)]
-    struct Reporter;
+    struct Channel;
 
-    impl results::Reporter for Reporter {
+    impl channel::Channel for Channel {
         fn progress(&self, _: u8) {}
-        fn report(&self, _: &str, _: &str) {}
+        fn result(&self, _: &str, _: &str) {}
+        fn should_terminate(&self) -> bool {
+            false
+        }
     }
 
     #[test]
@@ -179,6 +174,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(execute(&options, Reporter).unwrap().results, expected);
+        assert_eq!(execute(&options, Channel).unwrap().results, expected);
     }
 }

@@ -1,8 +1,3 @@
-pub trait Reporter: Copy + Clone + Send + 'static {
-    fn progress(&self, progress: u8);
-    fn report(&self, input: &str, output: &str);
-}
-
 pub struct Summary {
     pub total_count: usize,
     pub duration: std::time::Duration,
