@@ -94,14 +94,29 @@ pub fn execute<H: hash::Hash>(
 
     let (hash_count, results) = threads
         .into_iter()
-        .map(|t| t.join().expect("Failed to join threads"))
-        .fold((0, Vec::new()), |acc, curr| {
-            (acc.0 + curr.0, {
-                let mut v = acc.1;
-                v.extend(curr.1);
-                v
+        .map(|t| {
+            t.join().map_err(|err| {
+                if let Some(message) = err.downcast_ref::<&str>() {
+                    error!(message; "Thread error")
+                } else if let Some(message) = err.downcast_ref::<String>() {
+                    error!(message; "Thread error")
+                } else {
+                    error!("Thread error")
+                }
             })
-        });
+        })
+        .fold(Ok((0, Vec::new())), |acc, curr| {
+            if let Ok(mut acc) = acc {
+                curr.map(|(count, results)| {
+                    (acc.0 + count, {
+                        acc.1.extend(results);
+                        acc.1
+                    })
+                })
+            } else {
+                acc
+            }
+        })?;
 
     Ok(results::Summary {
         total_count: input.len(),
