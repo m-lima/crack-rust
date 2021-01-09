@@ -28,9 +28,10 @@ pub fn read_from_stream<H: hash::Hash>(
                 }
 
                 input.extend(
-                    regex.find_iter(&buffer).map(|h| {
-                        H::from_str(h.as_str()).expect("Regex failed to capture valid hash")
-                    }),
+                    regex
+                        .find_iter(&buffer)
+                        .map(|h| H::from_str(h.as_str()))
+                        .collect::<Result<Vec<_>, _>>()?,
                 );
             }
             Err(e) => {
