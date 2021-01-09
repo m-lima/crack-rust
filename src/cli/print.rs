@@ -132,17 +132,16 @@ impl Printer {
         }
     }
 
-    // Allowed because interface feels better
-    #[allow(clippy::unused_self)]
-    pub fn clear_progress(self) {
-        use std::io::Write;
-        eprint!("\x1b[1K\r");
-        let _ = std::io::stderr().flush();
+    pub fn report(self, input: &str, output: &str) {
+        self.clear_progress();
+        if self.single_input {
+            println!("{}", output);
+        } else {
+            println!("{}:{}", input, output);
+        }
     }
-}
 
-impl results::Reporter for Printer {
-    fn progress(&self, progress: u8) {
+    pub fn progress(self, progress: u8) {
         use std::io::Write;
         if self.colored {
             use colored::Colorize;
@@ -153,13 +152,12 @@ impl results::Reporter for Printer {
         let _ = std::io::stderr().flush();
     }
 
-    fn report(&self, input: &str, output: &str) {
-        self.clear_progress();
-        if self.single_input {
-            println!("{}", output);
-        } else {
-            println!("{}:{}", input, output);
-        }
+    // Allowed because interface feels better
+    #[allow(clippy::unused_self)]
+    pub fn clear_progress(self) {
+        use std::io::Write;
+        eprint!("\x1b[1K\r");
+        let _ = std::io::stderr().flush();
     }
 }
 

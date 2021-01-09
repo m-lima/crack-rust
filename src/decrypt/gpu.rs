@@ -1,5 +1,6 @@
 use super::opencl;
 
+use crate::channel;
 use crate::error;
 use crate::hash;
 use crate::options;
@@ -57,7 +58,7 @@ fn compute_results<'a, H: hash::Hash>(
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    reporter: impl results::Reporter,
+    channel: impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 
@@ -85,7 +86,7 @@ pub fn execute<H: hash::Hash>(
         .build()
         .map_err(|err| error!(err; "OpenCL: Failed to create output buffer"))?;
 
-    reporter.progress(0);
+    channel.progress(0);
     for i in 0..environment.cpu_iterations() {
         let kernel = ocl::Kernel::builder()
             .program(&program)
@@ -109,7 +110,10 @@ pub fn execute<H: hash::Hash>(
         if i & 0b111 == 0b111 {
             // Allowed because it will always be <= 100
             #[allow(clippy::cast_possible_truncation)]
-            reporter.progress((i * 100 / environment.cpu_iterations()) as u8);
+            channel.progress((i * 100 / environment.cpu_iterations()) as u8);
+            if channel.should_terminate() {
+                break;
+            }
             environment
                 .queue()
                 .finish()
@@ -125,7 +129,7 @@ pub fn execute<H: hash::Hash>(
     let results = compute_results(&environment, &input, &out_buffer, &options)?;
 
     for result in &results {
-        reporter.report(&result.hash, &result.plain);
+        channel.result(&result.hash, &result.plain);
     }
 
     Ok(results::Summary {

@@ -30,7 +30,6 @@
 - [ ] Hold the "raw" data in the input field, and allow the algorithm to change (capturing new inputs using the algorithm hash)
 
 ## Refactor
-- [ ] Remove the CTRL-C from the cpu::decrypt (add canceling to the API)
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
 - [X] Move encrypt to a directory
 - [X] Move printer to cli module
@@ -61,3 +60,4 @@
   - [X] Remove panic from args and options
   - [X] Move checks from args to options
 - [X] Bubble result all the way up, even if unrecoverable (allows for GUI error presenting)
+- [X] Remove the CTRL-C from the cpu::decrypt (add canceling to the API)

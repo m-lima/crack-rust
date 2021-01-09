@@ -5,6 +5,7 @@ use crate::hash;
 use crate::options;
 
 mod args;
+mod channel;
 mod print;
 
 pub fn run() {
@@ -33,25 +34,34 @@ fn setup_panic() {
 }
 
 fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Printer)) {
-    printer.options(&options);
+    let channel: channel::Channel = printer.into();
+
+    if let Err(err) = ctrlc::set_handler(move || {
+        channel::cancel();
+    }) {
+        eprintln!("Failed to capture SIGINT: {}", err);
+        eprintln!("CTRL + C will not interrupt the threads");
+    }
+
+    channel.options(&options);
 
     match &options {
-        options::Mode::Encrypt(options) => encrypt::execute(options, printer),
-        options::Mode::Decrypt(options) => decrypt(options, printer),
+        options::Mode::Encrypt(options) => encrypt::execute(options, channel),
+        options::Mode::Decrypt(options) => decrypt(options, channel),
     }
 }
 
-fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, printer: print::Printer) {
-    let summary = decrypt::execute(options, printer).unwrap();
+fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Channel) {
+    let summary = decrypt::execute(options, channel).unwrap();
 
-    printer.clear_progress();
-    printer.summary(&summary);
+    channel.clear_progress();
+    channel.summary(&summary);
 
     if !options.files().is_empty() {
-        printer.files();
+        channel.files();
         for file in options.files() {
-            printer.write_start(file.display().to_string());
-            printer.write_done(files::write(H::regex(), file, &summary));
+            channel.write_start(file.display().to_string());
+            channel.write_done(files::write(H::regex(), file, &summary));
         }
     }
 

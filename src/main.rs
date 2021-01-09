@@ -4,6 +4,7 @@
 #[macro_use]
 mod error;
 
+mod channel;
 mod cli;
 mod decrypt;
 mod encrypt;
