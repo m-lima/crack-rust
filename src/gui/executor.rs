@@ -1,31 +1,45 @@
 use crate::channel;
+use crate::decrypt;
 use crate::encrypt;
 use crate::error;
+use crate::files;
 use crate::hash;
 use crate::options;
 
 use qt_widgets::cpp_core::Ptr;
 use qt_widgets::qt_core::{
-    qs, MatchFlag, QBox, QStringList, SignalOfInt, SignalOfQString, SlotOfQString,
+    qs, MatchFlag, QBox, QString, QStringList, SignalOfInt, SignalOfQString, SlotOfQString,
 };
 use qt_widgets::{
     q_header_view, q_message_box, QDialog, QLabel, QMessageBox, QProgressBar, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidgetItem, QVBoxLayout,
 };
 
 pub struct Dialog {
     root: QBox<QDialog>,
     progress: QBox<SignalOfInt>,
     result: QBox<SignalOfQString>,
+    done: QBox<SignalOfQString>,
 }
 
 #[derive(Copy, Clone)]
 pub struct Channel {
     progress: Ptr<SignalOfInt>,
     result: Ptr<SignalOfQString>,
+    done: Ptr<SignalOfQString>,
 }
 
 unsafe impl Send for Channel {}
+
+impl Channel {
+    unsafe fn done(&self) {
+        self.done.emit(&QString::new());
+    }
+
+    unsafe fn fail(&self, err: &error::Error) {
+        self.done.emit(&qs(&err.to_string()));
+    }
+}
 
 impl channel::Channel for Channel {
     fn progress(&self, progress: u8) {
@@ -46,21 +60,87 @@ impl channel::Channel for Channel {
 }
 
 impl Dialog {
-    pub unsafe fn new(parent: Ptr<QWidget>, input: &std::collections::HashSet<String>) -> Self {
-        let root = QDialog::new_1a(parent);
+    pub unsafe fn new(input: &std::collections::HashSet<String>) -> Self {
+        let root = QDialog::new_0a();
         let layout = QVBoxLayout::new_1a(&root);
 
         let (table, result) = Self::build_table(&root, input);
         let (progress_bar, progress) = Self::build_progress_bar(&root);
 
+        let done = SignalOfQString::new();
+
         layout.add_widget(&table);
         layout.add_widget(&progress_bar);
+
+        let root_ptr = root.as_ptr();
+        let progress_bar_ptr = progress_bar.as_ptr();
+
+        let when_done = SlotOfQString::new(&root, move |message| {
+            if message.is_empty() {
+                progress_bar_ptr.hide();
+            } else {
+                QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
+                    q_message_box::Icon::Warning,
+                    &qs("Error"),
+                    message,
+                    q_message_box::StandardButton::Ok.into(),
+                    root_ptr,
+                )
+                .exec();
+            }
+        });
+        done.connect(&when_done);
+
+        root.destroyed().connect(progress.slot_delete_later());
+        root.destroyed().connect(result.slot_delete_later());
+        root.destroyed().connect(done.slot_delete_later());
 
         Self {
             root,
             progress,
             result,
+            done,
         }
+    }
+
+    pub unsafe fn crack<H: hash::Hash>(
+        &self,
+        input: std::collections::HashSet<String>,
+        files: std::collections::HashSet<std::path::PathBuf>,
+        salt: Option<String>,
+        length: u8,
+        prefix: String,
+        device: Option<options::Device>,
+    ) {
+        let channel = self.as_channel();
+
+        std::thread::spawn(move || {
+            if let Err(ref err) = std::thread::spawn(move || {
+                let mut hashes = input
+                    .into_iter()
+                    .map(|h| H::from_str(&h))
+                    .collect::<Result<_, _>>()?;
+
+                for file in &files {
+                    files::read(&mut hashes, file)?;
+                }
+
+                decrypt::execute(
+                    &options::Decrypt::<H>::new(hashes, files, salt, length, prefix, None, device)?,
+                    channel,
+                )?;
+                channel.done();
+                Ok(())
+            })
+            .join()
+            .map_err(error::on_join)
+            .and_then(|res| res)
+            {
+                channel.fail(err);
+            }
+        });
+
+        self.root.exec();
     }
 
     pub unsafe fn hash<H: hash::Hash>(
@@ -68,35 +148,29 @@ impl Dialog {
         input: std::collections::HashSet<String>,
         salt: Option<String>,
     ) {
-        self.root.show();
-
-        let root_ptr = self.root.as_ptr();
         let channel = self.as_channel();
 
-        if let Err(err) = std::thread::spawn(move || {
-            encrypt::execute(&options::Encrypt::<H>::new(input, salt)?, channel);
-            Ok(())
-        })
-        .join()
-        .map_err(error::on_join)
-        .and_then(|res| res)
-        {
-            QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
-                q_message_box::Icon::Warning,
-                &qs("Cannot hash"),
-                &qs(&err.to_string()),
-                q_message_box::StandardButton::Ok.into(),
-                root_ptr,
-            )
-            .exec();
-            root_ptr.hide();
-        }
+        std::thread::spawn(move || {
+            if let Err(ref err) = std::thread::spawn(move || {
+                encrypt::execute(&options::Encrypt::<H>::new(input, salt)?, channel);
+                channel.done();
+                Ok(())
+            })
+            .join()
+            .map_err(error::on_join)
+            .and_then(|res| res)
+            {
+                channel.fail(err);
+            }
+        });
+        self.root.exec();
     }
 
     pub unsafe fn as_channel(&self) -> Channel {
         Channel {
             progress: self.progress.as_ptr(),
             result: self.result.as_ptr(),
+            done: self.done.as_ptr(),
         }
     }
 
@@ -157,16 +231,14 @@ impl Dialog {
                 },
             ) {
                 let matches = table_ptr.find_items(&qs(first), MatchFlag::MatchExactly.into());
-                if !matches.is_empty() {
-                    if let Some(row) = matches
-                        .first()
-                        .as_ref()
-                        .and_then(|ptr| ptr.as_ref())
-                        .map(|item| item.row())
-                    {
-                        let item = QTableWidgetItem::from_q_string(&qs(second));
-                        table_ptr.set_item(row, 1, item.into_ptr());
-                    }
+                if let Some(row) = matches
+                    .first()
+                    .as_ref()
+                    .and_then(|ptr| ptr.as_ref())
+                    .map(|item| item.row())
+                {
+                    let item = QTableWidgetItem::from_q_string(&qs(second));
+                    table_ptr.set_item(row, 1, item.into_ptr());
                 }
             }
         });
@@ -183,6 +255,7 @@ impl Dialog {
         progress_bar.set_range(0, 100);
 
         let progress = SignalOfInt::new();
+
         progress.connect(progress_bar.slot_set_value());
 
         (progress_bar, progress)

@@ -1,10 +1,5 @@
-use crate::decrypt;
-use crate::error;
-use crate::files;
 use crate::hash;
-use crate::options;
 use crate::options::Device;
-use crate::results;
 
 use std::collections::HashSet;
 
@@ -68,30 +63,6 @@ unsafe fn button_with_icon(
     button
 }
 
-unsafe fn decrypt<H: hash::Hash>(
-    input: std::collections::HashSet<String>,
-    files: std::collections::HashSet<std::path::PathBuf>,
-    salt: Option<String>,
-    length: u8,
-    prefix: String,
-    device: Option<Device>,
-    channel: executor::Channel,
-) -> Result<results::Summary, error::Error> {
-    let mut hashes = input
-        .into_iter()
-        .map(|h| H::from_str(&h))
-        .collect::<Result<_, _>>()?;
-
-    for file in &files {
-        files::read(&mut hashes, file)?;
-    }
-
-    decrypt::execute(
-        &options::Decrypt::<H>::new(hashes, files, salt, length, prefix, None, device)?,
-        channel,
-    )
-}
-
 unsafe fn send_to_main_screen(widget: &QBox<QWidget>) {
     widget.adjust_size();
     let width = widget.width();
@@ -149,7 +120,6 @@ unsafe fn crack_tab(parent: &QBox<QWidget>, font: &CppBox<QFont>) -> QBox<QWidge
     };
     let crack = button_with_icon("\u{f085}", "Crack", &root, font);
 
-    let root_ptr = root.as_ptr();
     let crack_clicked = SlotNoArgs::new(&root, move || {
         let (hashes, files) = input_fn();
         let algorithm = algorithm_fn();
@@ -158,33 +128,16 @@ unsafe fn crack_tab(parent: &QBox<QWidget>, font: &CppBox<QFont>) -> QBox<QWidge
         let prefix = prefix_fn();
         let device = device_fn();
 
-        let executor = executor::Dialog::new(root_ptr, &hashes);
-        let channel = executor.as_channel();
+        let executor = executor::Dialog::new(&hashes);
 
-        // progress.exec();
-
-        // if let Err(err) = std::thread::spawn(move || match algorithm {
-        std::thread::spawn(move || match algorithm {
+        match algorithm {
             hash::Algorithm::sha256 => {
-                decrypt::<hash::sha256::Hash>(hashes, files, salt, length, prefix, device, channel)
+                executor.crack::<hash::sha256::Hash>(hashes, files, salt, length, prefix, device)
             }
             hash::Algorithm::md5 => {
-                decrypt::<hash::md5::Hash>(hashes, files, salt, length, prefix, device, channel)
+                executor.crack::<hash::md5::Hash>(hashes, files, salt, length, prefix, device)
             }
-        });
-        // .join()
-        // .map_err(error::on_join)
-        // .and_then(|res| res)
-        // {
-        //     QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
-        //         q_message_box::Icon::Warning,
-        //         &qs("Cannot hash"),
-        //         &qs(&err.to_string()),
-        //         q_message_box::StandardButton::Ok.into(),
-        //         root_ptr,
-        //     )
-        //     .exec();
-        // }
+        }
     });
     crack.clicked().connect(&crack_clicked);
 
@@ -216,20 +169,19 @@ unsafe fn hash_tab(parent: &QBox<QWidget>, font: &CppBox<QFont>) -> QBox<QWidget
     let (salt, salt_fn) = salt_group(&root);
     let (input, input_fn) = hash_input_group(&root);
     let advanced = {
-        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font); //QPushButton::from_q_widget(&root);
+        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font);
         button.set_checkable(true);
         button.set_checked(false);
         button
     };
     let hash = button_with_icon("\u{f085}", "Hash", &root, font);
 
-    let root_ptr = root.as_ptr();
     let hash_clicked = SlotNoArgs::new(&root, move || {
         let input = input_fn();
         let algorithm = algorithm_fn();
         let salt = salt_fn();
 
-        let executor = executor::Dialog::new(root_ptr, &input);
+        let executor = executor::Dialog::new(&input);
 
         match algorithm {
             hash::Algorithm::sha256 => executor.hash::<hash::sha256::Hash>(input, salt),
@@ -460,7 +412,6 @@ unsafe fn crack_input_group(
                 ));
             }
         }
-        println!("{} {}", hashes.len(), files.len());
         (hashes, files)
     })
 }
