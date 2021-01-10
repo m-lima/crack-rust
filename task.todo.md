@@ -28,6 +28,7 @@
 - [ ] Remove the "Invalid Input" dialog and let the library report back errors
 - [ ] Allow "hash" to have line breaks
 - [ ] Hold the "raw" data in the input field, and allow the algorithm to change (capturing new inputs using the algorithm hash)
+- [ ] Render errors before actually cracking (red invalid hashes, list out file hashes)
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
