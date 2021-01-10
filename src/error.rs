@@ -34,3 +34,15 @@ impl std::fmt::Display for Error {
         self.0.fmt(fmt)
     }
 }
+
+// Allowed because it matches the thread join
+#[allow(clippy::needless_pass_by_value)]
+pub fn on_join(err: Box<dyn std::any::Any + Send>) -> Error {
+    if let Some(message) = err.downcast_ref::<&str>() {
+        error!(message; "Thread error")
+    } else if let Some(message) = err.downcast_ref::<String>() {
+        error!(message; "Thread error")
+    } else {
+        error!("Thread error")
+    }
+}
