@@ -1,5 +1,6 @@
 use crate::decrypt;
-use crate::encrypt;
+use crate::error;
+use crate::files;
 use crate::hash;
 use crate::options;
 use crate::options::Device;
@@ -9,29 +10,17 @@ use std::collections::HashSet;
 
 use qt_widgets::cpp_core::{CastInto, CppBox, Ptr};
 use qt_widgets::qt_core::{
-    qs, QBox, QSignalBlocker, QStringList, SlotNoArgs, SlotOfInt, SlotOfQString,
+    qs, QBox, QSignalBlocker, QStringList, Signal, SlotNoArgs, SlotOfInt, SlotOfQString,
 };
 use qt_widgets::qt_gui::{QFont, QIntValidator};
 use qt_widgets::{
-    q_message_box, QApplication, QButtonGroup, QComboBox, QFormLayout, QGridLayout, QGroupBox,
-    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QMessageBox, QPlainTextEdit,
+    QApplication, QButtonGroup, QComboBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox,
+    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit,
     QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 };
 
+mod executor;
 mod template;
-
-#[derive(Copy, Clone)]
-struct Printer;
-
-impl results::Reporter for Printer {
-    fn progress(&self, progress: u8) {
-        eprintln!("\rProgress: {:02}%", progress);
-    }
-
-    fn report(&self, input: &str, output: &str) {
-        println!("{}:{}", input, output);
-    }
-}
 
 unsafe fn load_font() -> CppBox<QFont> {
     use qt_widgets::qt_gui::QFontDatabase;
@@ -79,7 +68,32 @@ unsafe fn button_with_icon(
     button
 }
 
+unsafe fn decrypt<H: hash::Hash>(
+    input: std::collections::HashSet<String>,
+    files: std::collections::HashSet<std::path::PathBuf>,
+    salt: Option<String>,
+    length: u8,
+    prefix: String,
+    device: Option<Device>,
+    channel: executor::Channel,
+) -> Result<results::Summary, error::Error> {
+    let mut hashes = input
+        .into_iter()
+        .map(|h| H::from_str(&h))
+        .collect::<Result<_, _>>()?;
+
+    for file in &files {
+        files::read(&mut hashes, file)?;
+    }
+
+    decrypt::execute(
+        &options::Decrypt::<H>::new(hashes, files, salt, length, prefix, None, device)?,
+        channel,
+    )
+}
+
 unsafe fn send_to_main_screen(widget: &QBox<QWidget>) {
+    widget.adjust_size();
     let width = widget.width();
     let height = widget.height();
 
@@ -90,7 +104,7 @@ unsafe fn send_to_main_screen(widget: &QBox<QWidget>) {
     let x = (screen_width - width) / 2;
     let y = (screen_height - height) / 2;
 
-    widget.move_2a(x, y);
+    widget.set_geometry_4a(x, y, width, height);
 }
 
 pub fn run() {
@@ -117,24 +131,25 @@ pub fn run() {
     });
 }
 
-unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -> QBox<QWidget> {
+unsafe fn crack_tab(parent: &QBox<QWidget>, font: &CppBox<QFont>) -> QBox<QWidget> {
     let root = QWidget::new_1a(parent);
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
 
     let (details, prefix_fn, length_fn) = details_group(&root);
-    let (algorithm, algorithm_fn) = algorithm_group(&root);
+    let (algorithm, algorithm_fn, is_sha256) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
     let (device, device_fn) = device_group(&root);
-    let (input, input_fn) = crack_input_group(&root, font);
+    let (input, input_fn) = crack_input_group(&root, font, is_sha256);
     let advanced = {
-        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font); //QPushButton::from_q_widget(&root);
+        let button = button_with_icon("\u{f0ad}", "Advanced", &root, font);
         button.set_checkable(true);
         button.set_checked(false);
         button
     };
     let crack = button_with_icon("\u{f085}", "Crack", &root, font);
 
+    let root_ptr = root.as_ptr();
     let crack_clicked = SlotNoArgs::new(&root, move || {
         let (hashes, files) = input_fn();
         let algorithm = algorithm_fn();
@@ -143,40 +158,33 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -
         let prefix = prefix_fn();
         let device = device_fn();
 
+        let executor = executor::Dialog::new(root_ptr, &hashes);
+        let channel = executor.as_channel();
+
+        // progress.exec();
+
+        // if let Err(err) = std::thread::spawn(move || match algorithm {
         std::thread::spawn(move || match algorithm {
-            hash::Algorithm::sha256 => decrypt::execute(
-                &options::Decrypt::new(
-                    hashes
-                        .into_iter()
-                        .filter_map(|h| <hash::sha256::Hash as hash::Hash>::from_str(&h).ok())
-                        .collect(),
-                    files,
-                    salt,
-                    length,
-                    prefix,
-                    None,
-                    device,
-                )
-                .unwrap(),
-                Printer,
-            ),
-            hash::Algorithm::md5 => decrypt::execute(
-                &options::Decrypt::new(
-                    hashes
-                        .into_iter()
-                        .filter_map(|h| <hash::md5::Hash as hash::Hash>::from_str(&h).ok())
-                        .collect(),
-                    files,
-                    salt,
-                    length,
-                    prefix,
-                    None,
-                    device,
-                )
-                .unwrap(),
-                Printer,
-            ),
+            hash::Algorithm::sha256 => {
+                decrypt::<hash::sha256::Hash>(hashes, files, salt, length, prefix, device, channel)
+            }
+            hash::Algorithm::md5 => {
+                decrypt::<hash::md5::Hash>(hashes, files, salt, length, prefix, device, channel)
+            }
         });
+        // .join()
+        // .map_err(error::on_join)
+        // .and_then(|res| res)
+        // {
+        //     QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
+        //         q_message_box::Icon::Warning,
+        //         &qs("Cannot hash"),
+        //         &qs(&err.to_string()),
+        //         q_message_box::StandardButton::Ok.into(),
+        //         root_ptr,
+        //     )
+        //     .exec();
+        // }
     });
     crack.clicked().connect(&crack_clicked);
 
@@ -199,12 +207,12 @@ unsafe fn crack_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -
     root
 }
 
-unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) -> QBox<QWidget> {
+unsafe fn hash_tab(parent: &QBox<QWidget>, font: &CppBox<QFont>) -> QBox<QWidget> {
     let root = QWidget::new_1a(parent);
     let layout = QGridLayout::new_1a(&root);
     layout.set_contents_margins_4a(5, 5, 5, 5);
 
-    let (algorithm, algorithm_fn) = algorithm_group(&root);
+    let (algorithm, algorithm_fn, _) = algorithm_group(&root);
     let (salt, salt_fn) = salt_group(&root);
     let (input, input_fn) = hash_input_group(&root);
     let advanced = {
@@ -218,29 +226,14 @@ unsafe fn hash_tab(parent: impl CastInto<Ptr<QWidget>>, font: &CppBox<QFont>) ->
     let root_ptr = root.as_ptr();
     let hash_clicked = SlotNoArgs::new(&root, move || {
         let input = input_fn();
-        if input.is_empty() {
-            QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
-                q_message_box::Icon::Warning,
-                &qs("Cannot hash"),
-                &qs("No valid input provided"),
-                q_message_box::StandardButton::Ok.into(),
-                root_ptr,
-            )
-            .exec();
-        } else {
-            let algorithm = algorithm_fn();
-            let salt = salt_fn();
+        let algorithm = algorithm_fn();
+        let salt = salt_fn();
 
-            std::thread::spawn(move || match algorithm {
-                hash::Algorithm::sha256 => encrypt::execute(
-                    &options::Encrypt::<hash::sha256::Hash>::new(input, salt).unwrap(),
-                    Printer,
-                ),
-                hash::Algorithm::md5 => encrypt::execute(
-                    &options::Encrypt::<hash::md5::Hash>::new(input, salt).unwrap(),
-                    Printer,
-                ),
-            });
+        let executor = executor::Dialog::new(root_ptr, &input);
+
+        match algorithm {
+            hash::Algorithm::sha256 => executor.hash::<hash::sha256::Hash>(input, salt),
+            hash::Algorithm::md5 => executor.hash::<hash::md5::Hash>(input, salt),
         }
     });
     hash.clicked().connect(&hash_clicked);
@@ -325,7 +318,11 @@ unsafe fn details_group(
 
 unsafe fn algorithm_group(
     parent: &QBox<QWidget>,
-) -> (QBox<QGroupBox>, impl Fn() -> hash::Algorithm) {
+) -> (
+    QBox<QGroupBox>,
+    impl Fn() -> hash::Algorithm,
+    Signal<(bool,)>,
+) {
     let root = QGroupBox::from_q_string_q_widget(&qs("Algorithm"), parent);
     let layout = QVBoxLayout::new_1a(&root);
 
@@ -335,6 +332,7 @@ unsafe fn algorithm_group(
     let md5 = QRadioButton::from_q_string_q_widget(&qs("Md5"), &root);
 
     sha256.set_checked(true);
+    let is_sha256 = sha256.toggled();
 
     group.add_button_1a(&sha256);
     group.add_button_1a(&md5);
@@ -342,13 +340,17 @@ unsafe fn algorithm_group(
     layout.add_widget(&sha256);
     layout.add_widget(&md5);
 
-    (root, move || {
-        if sha256.is_checked() {
-            hash::Algorithm::sha256
-        } else {
-            hash::Algorithm::md5
-        }
-    })
+    (
+        root,
+        move || {
+            if sha256.is_checked() {
+                hash::Algorithm::sha256
+            } else {
+                hash::Algorithm::md5
+            }
+        },
+        is_sha256,
+    )
 }
 
 unsafe fn salt_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() -> Option<String>) {
@@ -418,6 +420,7 @@ unsafe fn device_group(parent: &QBox<QWidget>) -> (QBox<QGroupBox>, impl Fn() ->
 unsafe fn crack_input_group(
     parent: &QBox<QWidget>,
     font: &CppBox<QFont>,
+    _is_sha256: Signal<(bool,)>,
 ) -> (
     QBox<QGroupBox>,
     impl Fn() -> (HashSet<String>, HashSet<std::path::PathBuf>),
@@ -427,10 +430,6 @@ unsafe fn crack_input_group(
 
     let input = QListWidget::new_1a(&root);
     input.set_selection_mode(qt_widgets::q_abstract_item_view::SelectionMode::ExtendedSelection);
-    // input.set_drag_enabled(true);
-    input.set_drag_drop_mode(qt_widgets::q_abstract_item_view::DragDropMode::DropOnly);
-    input.set_drop_indicator_shown(true);
-    input.set_accept_drops(true);
 
     let buttons = QWidget::new_1a(&root);
     crack_input_buttons(&root, &input, &buttons, font);
@@ -445,6 +444,7 @@ unsafe fn crack_input_group(
         let mut files = HashSet::new();
         for i in 0..input.count() {
             use qt_widgets::qt_core::ItemDataRole;
+
             let item = input.item(i);
             if item.icon().is_null() {
                 hashes.insert(
@@ -576,12 +576,12 @@ unsafe fn crack_input_buttons(
     remove.clicked().connect(&remove_clicked);
 
     let add_file_clicked = SlotNoArgs::new(parent, move || {
-        let text = qt_widgets::QFileDialog::get_open_file_name_1a(parent_ptr);
+        let text = QFileDialog::get_open_file_name_1a(parent_ptr);
         if !text.is_null() {
             let icon = input_ptr
                 .style()
                 .standard_icon_1a(qt_widgets::q_style::StandardPixmap::SPFileIcon);
-            let item = qt_widgets::QListWidgetItem::from_q_icon_q_string(&icon, &text);
+            let item = QListWidgetItem::from_q_icon_q_string(&icon, &text);
             input_ptr.add_item_q_list_widget_item(item.into_ptr());
         }
     });
