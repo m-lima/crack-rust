@@ -8,16 +8,14 @@ use crate::options::SharedAccessor;
 
 pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
-#[derive(Clone)]
-pub struct Sender<T> {
-    data: *const T,
-}
+#[derive(Clone, Copy)]
+pub struct Sender<T>(*const T);
 
 impl<T> std::ops::Deref for Sender<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*self.data }
+        unsafe { &*self.0 }
     }
 }
 
@@ -38,8 +36,8 @@ pub fn execute<H: hash::Hash>(
 
     channel.progress(0);
     for t in 0..u64::from(thread_count) {
-        let count_sender = Sender { data: &count };
-        let input_sender = Sender { data: &input };
+        let count_sender = Sender(&count);
+        let input_sender = Sender(&input);
 
         let prefix = String::from(options.prefix());
         let salted_prefix = format!("{}{}", options.salt(), options.prefix());
@@ -86,17 +84,7 @@ pub fn execute<H: hash::Hash>(
 
     let (hash_count, results) = threads
         .into_iter()
-        .map(|t| {
-            t.join().map_err(|err| {
-                if let Some(message) = err.downcast_ref::<&str>() {
-                    error!(message; "Thread error")
-                } else if let Some(message) = err.downcast_ref::<String>() {
-                    error!(message; "Thread error")
-                } else {
-                    error!("Thread error")
-                }
-            })
-        })
+        .map(|t| t.join().map_err(error::on_join))
         .fold(Ok((0, Vec::new())), |acc, curr| {
             if let Ok(mut acc) = acc {
                 curr.map(|(count, results)| {
