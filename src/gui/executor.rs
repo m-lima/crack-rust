@@ -91,9 +91,9 @@ impl Dialog {
         });
         done.connect(&when_done);
 
-        root.destroyed().connect(progress.slot_delete_later());
-        root.destroyed().connect(result.slot_delete_later());
-        root.destroyed().connect(done.slot_delete_later());
+        result.set_parent(&root);
+        progress.set_parent(&root);
+        done.set_parent(&root);
 
         Self {
             root,
