@@ -8,7 +8,8 @@ use crate::options;
 
 use qt_widgets::cpp_core::Ptr;
 use qt_widgets::qt_core::{
-    qs, MatchFlag, QBox, QString, QStringList, SignalOfInt, SignalOfQString, SlotOfQString,
+    qs, MatchFlag, QBox, QString, QStringList, SignalOfInt, SignalOfQString, SlotNoArgs,
+    SlotOfQString,
 };
 use qt_widgets::{
     q_header_view, q_message_box, QDialog, QLabel, QMessageBox, QProgressBar, QTableWidget,
@@ -20,6 +21,17 @@ pub struct Dialog {
     progress: QBox<SignalOfInt>,
     result: QBox<SignalOfQString>,
     done: QBox<SignalOfQString>,
+    running: *const bool,
+}
+
+struct BoolUnleaker(*const bool);
+
+unsafe impl Send for BoolUnleaker {}
+
+impl BoolUnleaker {
+    unsafe fn destroy(&self) {
+        Box::from_raw(self.0 as *mut bool);
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -27,35 +39,44 @@ pub struct Channel {
     progress: Ptr<SignalOfInt>,
     result: Ptr<SignalOfQString>,
     done: Ptr<SignalOfQString>,
+    running: *const bool,
 }
 
 unsafe impl Send for Channel {}
 
 impl Channel {
     unsafe fn done(&self) {
-        self.done.emit(&QString::new());
+        if *self.running {
+            self.done.emit(&QString::new());
+        }
     }
 
     unsafe fn fail(&self, err: &error::Error) {
-        self.done.emit(&qs(&err.to_string()));
+        if *self.running {
+            self.done.emit(&qs(&err.to_string()));
+        }
     }
 }
 
 impl channel::Channel for Channel {
     fn progress(&self, progress: u8) {
         unsafe {
-            self.progress.emit(i32::from(progress));
+            if *self.running {
+                self.progress.emit(i32::from(progress));
+            }
         }
     }
 
     fn result(&self, input: &str, output: &str) {
         unsafe {
-            self.result.emit(&qs(format!("{}:{}", input, output)));
+            if *self.running {
+                self.result.emit(&qs(format!("{}:{}", input, output)));
+            }
         }
     }
 
     fn should_terminate(&self) -> bool {
-        false
+        unsafe { !*self.running }
     }
 }
 
@@ -68,6 +89,7 @@ impl Dialog {
         let (progress_bar, progress) = Self::build_progress_bar(&root);
 
         let done = SignalOfQString::new();
+        let running = Box::into_raw(Box::new(true));
 
         layout.add_widget(&table);
         layout.add_widget(&progress_bar);
@@ -91,6 +113,11 @@ impl Dialog {
         });
         done.connect(&when_done);
 
+        let finished = SlotNoArgs::new(&root, move || {
+            *running = false;
+        });
+        root.finished().connect(&finished);
+
         result.set_parent(&root);
         progress.set_parent(&root);
         done.set_parent(&root);
@@ -100,6 +127,7 @@ impl Dialog {
             progress,
             result,
             done,
+            running,
         }
     }
 
@@ -113,6 +141,7 @@ impl Dialog {
         device: Option<options::Device>,
     ) {
         let channel = self.as_channel();
+        let running = BoolUnleaker(self.running);
 
         std::thread::spawn(move || {
             if let Err(ref err) = std::thread::spawn(move || {
@@ -138,6 +167,7 @@ impl Dialog {
             {
                 channel.fail(err);
             }
+            running.destroy();
         });
 
         self.root.exec();
@@ -149,6 +179,7 @@ impl Dialog {
         salt: Option<String>,
     ) {
         let channel = self.as_channel();
+        let running = BoolUnleaker(self.running);
 
         std::thread::spawn(move || {
             if let Err(ref err) = std::thread::spawn(move || {
@@ -162,6 +193,7 @@ impl Dialog {
             {
                 channel.fail(err);
             }
+            running.destroy();
         });
         self.root.exec();
     }
@@ -171,6 +203,7 @@ impl Dialog {
             progress: self.progress.as_ptr(),
             result: self.result.as_ptr(),
             done: self.done.as_ptr(),
+            running: self.running,
         }
     }
 
