@@ -115,8 +115,17 @@ fn write_output_file(
                         return Ok(());
                     }
 
-                    if regex.is_match(&buffer) {
-                        for decrypted in &summary.results {
+                    let matches = regex
+                        .captures_iter(&buffer)
+                        .filter_map(|capture| capture.get(1).map(|group| group.as_str().to_owned()))
+                        .collect::<Vec<_>>();
+
+                    for matched in &matches {
+                        if let Some(decrypted) = summary
+                            .results
+                            .iter()
+                            .find(|decrypted| decrypted.hash == matched.as_str())
+                        {
                             buffer = buffer.replace(&decrypted.hash, &decrypted.plain);
                         }
                     }
