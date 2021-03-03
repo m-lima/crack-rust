@@ -91,6 +91,10 @@ macro_rules! hash {
                 fn name() -> &'static str {
                     stringify!($name)
                 }
+
+                fn bytes() -> u64 {
+                    byte_size_of!($size)
+                }
             }
 
             impl Default for Hash {
@@ -268,6 +272,7 @@ pub trait Hash: ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + crate::Inp
     fn from_str(string: &str) -> Result<Self, crate::error::Error>;
     fn regex() -> &'static regex::Regex;
     fn name() -> &'static str;
+    fn bytes() -> u64;
 }
 
 hash!(md5: 128 from md5::Md5, sha256: 256 from sha2::Sha256);

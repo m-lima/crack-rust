@@ -71,13 +71,16 @@ pub fn execute<H: hash::Hash>(
     let environment = opencl::setup_for(options)?;
     let program = environment.make_program()?;
 
-    let in_buffer = ocl::Buffer::builder()
-        .flags(ocl::MemFlags::READ_ONLY)
-        .len(options.input().len())
-        .queue(environment.queue().clone())
-        .copy_host_slice(&input)
-        .build()
-        .map_err(|err| error!(err; "OpenCL: Failed to create input buffer"))?;
+    let in_buffer = if environment.memory() < H::bytes() * input.len() as u64 {
+        unsafe { ocl::Buffer::builder().use_host_slice(&input) }
+    } else {
+        ocl::Buffer::builder().copy_host_slice(&input)
+    }
+    .flags(ocl::MemFlags::READ_ONLY)
+    .len(options.input().len())
+    .queue(environment.queue().clone())
+    .build()
+    .map_err(|err| error!(err; "OpenCL: Failed to create input buffer"))?;
 
     let out_buffer = ocl::Buffer::builder()
         .flags(ocl::MemFlags::WRITE_ONLY)
