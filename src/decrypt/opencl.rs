@@ -86,31 +86,44 @@ impl Configuration {
     }
 
     fn first_gpu() -> Result<(ocl::Platform, ocl::Device), error::Error> {
-        let mut out = Vec::new();
+        let mut devices = Vec::new();
         for platform in ocl::Platform::list() {
             if let Ok(all_devices) = ocl::Device::list_all(&platform) {
                 for device in all_devices {
-                    out.push((platform, device));
+                    devices.push((platform, device));
                 }
             }
         }
 
         // Prefer GPU
-        out.sort_by(|&(_, ref a), &(_, ref b)| {
-            let a_type = a.info(ocl::core::DeviceInfo::Type);
-            let b_type = b.info(ocl::core::DeviceInfo::Type);
-            if let (
-                Ok(ocl::core::DeviceInfoResult::Type(a_type)),
-                Ok(ocl::core::DeviceInfoResult::Type(b_type)),
-            ) = (a_type, b_type)
+        devices.sort_by(|&(_, ref a), &(_, ref b)| {
+            use ocl::core::{DeviceInfo, DeviceInfoResult};
+
+            if let (Ok(DeviceInfoResult::Type(a_type)), Ok(DeviceInfoResult::Type(b_type))) =
+                (a.info(DeviceInfo::Type), b.info(DeviceInfo::Type))
             {
-                b_type.cmp(&a_type)
+                let cmp = b_type.cmp(&a_type);
+                if std::cmp::Ordering::Equal == cmp {
+                    if let (
+                        Ok(DeviceInfoResult::GlobalMemSize(a_mem)),
+                        Ok(DeviceInfoResult::GlobalMemSize(b_mem)),
+                    ) = (
+                        a.info(DeviceInfo::GlobalMemSize),
+                        b.info(DeviceInfo::GlobalMemSize),
+                    ) {
+                        b_mem.cmp(&a_mem)
+                    } else {
+                        cmp
+                    }
+                } else {
+                    cmp
+                }
             } else {
-                (0).cmp(&0)
+                std::cmp::Ordering::Equal
             }
         });
 
-        match out.first() {
+        match devices.first() {
             Some(pair) => Ok(*pair),
             None => Err(error!("OpenCL: Failed to find any OpenCL devices")),
         }
