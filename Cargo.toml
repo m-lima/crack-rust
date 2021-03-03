@@ -4,6 +4,15 @@ version = "0.5.0"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
 build = "build.rs"
+description = "A hasher/unhasher"
+
+[package.metadata.bundle]
+name = "Hasher"
+identifier = "com.mflima.opet"
+icon = [ "res/icon*.png" ]
+version = "0.5.0"
+category = "public.app-category.utilities"
+short_description = "A hasher/unhasher"
 
 [dependencies]
 atty = "0.2"
@@ -30,5 +39,5 @@ rand = "0.7"
 qt_ritual_build = { version = "0.5", optional = true }
 
 [features]
-default = [ "qt" ]
+default = []
 qt = [ "qt_widgets", "qt_ritual_build" ]
