@@ -27,6 +27,7 @@ fn main() {
     #[cfg(feature = "qt")]
     if std::env::args().len() == 1 {
         gui::run();
+        return;
     }
 
     cli::run();
