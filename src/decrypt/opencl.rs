@@ -58,12 +58,17 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
     pub(super) fn range(&self) -> u32 {
         self.kernel_parameters.range
     }
+
+    pub(super) fn memory(&self) -> u64 {
+        self.configuration.memory
+    }
 }
 
 struct Configuration {
     device: ocl::Device,
     context: ocl::Context,
     queue: ocl::Queue,
+    memory: u64,
 }
 
 impl Configuration {
@@ -78,10 +83,17 @@ impl Configuration {
         let queue = ocl::Queue::new(&context, device, None)
             .map_err(|err| error!(err; "OpenCL: Failed to create queue"))?;
 
+        let memory = match device.info(ocl::core::DeviceInfo::LocalMemSize) {
+            Ok(ocl::core::DeviceInfoResult::LocalMemSize(memory)) => memory,
+            Ok(_) => bail!("OpenCL: Failed query local memory size"),
+            Err(err) => bail!(err; "OpenCL: Failed query local memory size"),
+        };
+
         Ok(Self {
             device,
             context,
             queue,
+            memory,
         })
     }
 
