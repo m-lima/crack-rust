@@ -11,29 +11,33 @@ mod print;
 pub fn run() {
     setup_panic();
 
-    match args::algorithm() {
+    if !match args::algorithm() {
         hash::Algorithm::sha256 => run_algorithm(args::parse_sha256()),
         hash::Algorithm::md5 => run_algorithm(args::parse_md5()),
+    } {
+        std::process::exit(-1);
     }
 }
 
 fn setup_panic() {
     std::panic::set_hook(Box::new(|info| {
-        use colored::Colorize;
         let payload = info.payload();
         if let Some(message) = payload.downcast_ref::<&str>() {
-            eprintln!("{} {}", "Error:".bright_red(), message);
-            return;
+            print_error(message);
+        } else if let Some(message) = payload.downcast_ref::<String>() {
+            print_error(message);
+        } else {
+            print_error("unhandled exception");
         }
-        if let Some(message) = payload.downcast_ref::<String>() {
-            eprintln!("{} {}", "Error:".bright_red(), message);
-            return;
-        }
-        eprintln!("{} unhandled exception", "Error:".bright_red());
     }));
 }
 
-fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Printer)) {
+fn print_error<E: std::fmt::Display>(error: E) {
+    use colored::Colorize;
+    eprintln!("{} {}", "Error:".bright_red(), error);
+}
+
+fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Printer)) -> bool {
     let channel: channel::Channel = printer.into();
 
     if let Err(err) = ctrlc::set_handler(move || {
@@ -51,8 +55,14 @@ fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Pr
     }
 }
 
-fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Channel) {
-    let summary = decrypt::execute(options, channel).unwrap();
+fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Channel) -> bool {
+    let summary = match decrypt::execute(options, channel) {
+        Ok(summary) => summary,
+        Err(err) => {
+            print_error(err);
+            return false;
+        }
+    };
 
     channel.clear_progress();
     channel.summary(&summary);
@@ -65,7 +75,5 @@ fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Chann
         }
     }
 
-    if summary.results.len() < summary.total_count {
-        std::process::exit(-1);
-    }
+    summary.results.len() == summary.total_count
 }
