@@ -27,19 +27,28 @@ ApplicationWindow {
 
         width: parent.width
 
-        // TODO: Avoid initial movement
-        // TODO: Avoid lag when resizing window
-        Behavior on y {
-            NumberAnimation {
-                duration: 200
+        NumberAnimation {
+            id: moveUpAnimation
+            target: content
+            property: 'y'
+            from: (parent.height - next.height) / 2 - (implicitHeight / 2)
+            to: 0
+            duration: 200
+        }
+
+        function expand(expanded) {
+            if (y > 0) {
+              moveUpAnimation.start()
             }
+
+            current = expanded
         }
 
         CollapsibleItem {
             id: format
             title: qsTr('Format')
             expanded: content.current === this
-            onClicked: content.current = this
+            onClicked: content.expand(this)
             innerSpacing: 10
 
             ComboBox {
@@ -67,7 +76,9 @@ ApplicationWindow {
                 width: parent.width
                 placeholderText: qsTr('Prefix')
                 maximumLength: 25
-                // TODO: Get a validator
+                validator: RegExpValidator {
+                    regExp: /[0-9]{0,25}/
+                }
             }
 
             RowLayout {
@@ -91,7 +102,7 @@ ApplicationWindow {
             // TODO: Add OPET
             title: qsTr('Salt')
             expanded: content.current === this
-            onClicked: content.current = this
+            onClicked: content.expand(this)
 
             Switch {
                 id: saltCustom
@@ -112,7 +123,7 @@ ApplicationWindow {
         CollapsibleItem {
             title: qsTr('Algorithm')
             expanded: content.current === this
-            onClicked: content.current = this
+            onClicked: content.expand(this)
 
             Radio {
                 text: qsTr('Sha256')
@@ -127,7 +138,7 @@ ApplicationWindow {
             title: qsTr('Device')
             showLine: false
             expanded: content.current === this
-            onClicked: content.current = this
+            onClicked: content.expand(this)
 
             Switch {
                 id: deviceCustom
