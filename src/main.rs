@@ -14,7 +14,7 @@ mod options;
 mod results;
 mod secrets;
 
-#[cfg(feature = "qt")]
+#[cfg(feature = "qml")]
 mod gui;
 
 pub trait Input:
@@ -24,7 +24,7 @@ pub trait Input:
 impl Input for String {}
 
 fn main() {
-    #[cfg(feature = "qt")]
+    #[cfg(feature = "qml")]
     if std::env::args().len() == 1 {
         gui::run();
         return;
