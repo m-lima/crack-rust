@@ -8,8 +8,8 @@ description = "A hasher/unhasher"
 
 [package.metadata.bundle]
 name = "Hasher"
-identifier = "com.mflima.opet"
-icon = [ "res/icon*.png" ]
+identifier = "com.mflima.hasher"
+icon = [ "res/icon/icon*.png" ]
 version = "0.5.0"
 category = "public.app-category.utilities"
 short_description = "A hasher/unhasher"
@@ -39,5 +39,5 @@ rand = "0.7"
 qt_ritual_build = { version = "0.5", optional = true }
 
 [features]
-default = []
+default = [ "qt" ]
 qt = [ "qt_widgets", "qt_ritual_build" ]

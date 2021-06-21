@@ -361,13 +361,13 @@ __kernel void crack(constant Hash * targets,
 
 #if CONST_TARGET_COUNT < 32
 #pragma unroll
-  for (int i = 0; i < CONST_TARGET_COUNT; i++) {
+  for (unsigned int i = 0; i < CONST_TARGET_COUNT; i++) {
     if (hash.longs[3] == targets[i].longs[3]
         && hash.longs[2] == targets[i].longs[2]
         && hash.longs[1] == targets[i].longs[1]
         && hash.longs[0] == targets[i].longs[0]) {
-      output[i << 1] = index;
-      output[(i << 1) + 1] = prefix;
+      output[i << 1] = (unsigned int)(index & 0xFFFFFF);
+      output[(i << 1) + 1] = (unsigned int)(prefix & 0xFFFFFF);
       return;
     }
   }
@@ -378,8 +378,8 @@ __kernel void crack(constant Hash * targets,
       if (hash.longs[2] == targets[i].longs[2]) {
         if (hash.longs[1] == targets[i].longs[1]) {
           if (hash.longs[0] == targets[i].longs[0]) {
-            output[i << 1] = index;
-            output[(i << 1) + 1] = prefix;
+            output[i << 1] = (unsigned int)(index & 0xFFFFFF);
+            output[(i << 1) + 1] = (unsigned int)(prefix & 0xFFFFFF);
             return;
           } else {
             i = hash.longs[0] < targets[i].longs[0]
