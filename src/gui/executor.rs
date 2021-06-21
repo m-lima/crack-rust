@@ -12,8 +12,8 @@ use qt_widgets::qt_core::{
     SlotOfQString,
 };
 use qt_widgets::{
-    q_header_view, q_message_box, QDialog, QLabel, QMessageBox, QProgressBar, QTableWidget,
-    QTableWidgetItem, QVBoxLayout,
+    q_header_view, q_message_box, QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 };
 
 pub struct Dialog {
@@ -30,7 +30,7 @@ unsafe impl Send for BoolUnleaker {}
 
 impl BoolUnleaker {
     unsafe fn destroy(&self) {
-        Box::from_raw(self.0 as *mut bool);
+        // Box::from_raw(self.0 as *mut bool);
     }
 }
 
@@ -88,18 +88,30 @@ impl Dialog {
         let (table, result) = Self::build_table(&root, input);
         let (progress_bar, progress) = Self::build_progress_bar(&root);
 
+        let bottom = QWidget::new_1a(&root);
+        let bootom_layout = QHBoxLayout::new_1a(&bottom);
+
+        let cancel = QPushButton::from_q_string_q_widget(&qs("Abort"), &bottom);
+        let ok = QPushButton::from_q_string_q_widget(&qs("Ok"), &bottom);
+
         let done = SignalOfQString::new();
         let running = Box::into_raw(Box::new(true));
 
+        bootom_layout.add_widget(&progress_bar);
+        bootom_layout.add_widget(&cancel);
+        bootom_layout.add_widget(&ok);
+
         layout.add_widget(&table);
-        layout.add_widget(&progress_bar);
+        layout.add_widget(&bottom);
 
         let root_ptr = root.as_ptr();
         let progress_bar_ptr = progress_bar.as_ptr();
+        let cancel_ptr = cancel.as_ptr();
 
         let when_done = SlotOfQString::new(&root, move |message| {
             if message.is_empty() {
                 progress_bar_ptr.hide();
+                cancel_ptr.hide();
             } else {
                 QMessageBox::from_icon2_q_string_q_flags_standard_button_q_widget(
                     q_message_box::Icon::Warning,
@@ -113,10 +125,14 @@ impl Dialog {
         });
         done.connect(&when_done);
 
-        let finished = SlotNoArgs::new(&root, move || {
+        let abort = SlotNoArgs::new(&root, move || {
+            progress_bar_ptr.hide();
+            cancel_ptr.hide();
             *running = false;
         });
-        root.finished().connect(&finished);
+        root.finished().connect(&abort);
+        cancel.clicked().connect(&abort);
+        ok.clicked().connect(root.slot_accept());
 
         result.set_parent(&root);
         progress.set_parent(&root);
