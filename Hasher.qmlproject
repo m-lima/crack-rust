@@ -1,0 +1,9 @@
+import QmlProject 1.1
+
+Project {
+  mainFile: "res/qml/Main.qml"
+
+  QmlFiles {
+    directory: "res/qml"
+  }
+}

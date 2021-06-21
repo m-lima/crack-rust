@@ -1,4 +1,5 @@
 qmetaobject::qrc!(qml, "res/qml" as "/" {
+    "qtquickcontrols2.conf",
     "Main.qml",
     "CollapsibleItem.qml",
     "Radio.qml",

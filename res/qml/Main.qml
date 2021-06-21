@@ -1,7 +1,6 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-import QtQuick.Layouts 2.12
-import QtQuick.Controls.Fusion 2.12
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
 ApplicationWindow {
     title: 'Hasher'
@@ -36,17 +35,11 @@ ApplicationWindow {
             }
         }
 
-        function toggleExpanded(expanded) {
-            if (content.current)
-                content.current.expanded = false
-            content.current = expanded
-        }
-
         CollapsibleItem {
             id: format
             title: qsTr('Format')
-            expanded: parent.current === this
-            onClicked: parent.current = this
+            expanded: content.current === this
+            onClicked: content.current = this
             innerSpacing: 10
 
             ComboBox {
@@ -97,8 +90,8 @@ ApplicationWindow {
         CollapsibleItem {
             // TODO: Add OPET
             title: qsTr('Salt')
-            expanded: parent.current === this
-            onClicked: parent.current = this
+            expanded: content.current === this
+            onClicked: content.current = this
 
             Switch {
                 id: saltCustom
@@ -118,8 +111,8 @@ ApplicationWindow {
 
         CollapsibleItem {
             title: qsTr('Algorithm')
-            expanded: parent.current === this
-            onClicked: parent.current = this
+            expanded: content.current === this
+            onClicked: content.current = this
 
             Radio {
                 text: qsTr('Sha256')
@@ -133,8 +126,8 @@ ApplicationWindow {
         CollapsibleItem {
             title: qsTr('Device')
             showLine: false
-            expanded: parent.current === this
-            onClicked: parent.current = this
+            expanded: content.current === this
+            onClicked: content.current = this
 
             Switch {
                 id: deviceCustom
@@ -173,12 +166,13 @@ ApplicationWindow {
 
         background: Rectangle {
             anchors.fill: parent
-            color: parent.down ? palette.highlight.lighter(1.2) : parent.hovered ? palette.highlight.darker(1.2) : palette.highlight
+            color: next.down ? Qt.lighter(palette.highlight, 1.2) : parent.hovered ? Qt.darker(palette.highlight, 1.2) : palette.highlight
 
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onPressed: mouse.accepted = false
             }
 
             // TODO: Make hover start instantaneous
@@ -191,9 +185,5 @@ ApplicationWindow {
     }
 }
 
-/*##^##
-Designer {
-    D{i:0;formeditorZoom:0.9;height:800;width:600}
-}
-##^##*/
+
 

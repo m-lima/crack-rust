@@ -1,5 +1,5 @@
-import QtQuick 2.0
-import QtQuick.Controls 2.12
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 RadioButton {
     property bool paintDisabled: true
@@ -12,7 +12,7 @@ RadioButton {
         x: radio.leftPadding
         y: radio.height / 2 - height / 2
         radius: 4
-        border.color: radio.down ? palette.highlight.darker() : palette.base
+        border.color: radio.down ? Qt.darker(palette.highlight) : palette.base
         color: palette.base
 
         Rectangle {
@@ -21,7 +21,7 @@ RadioButton {
             x: 4
             y: 4
             radius: 4
-            color: radio.down ? palette.highlight.darker() : palette.highlight
+            color: radio.down ? Qt.darker(palette.highlight) : palette.highlight
             visible: radio.checked && (radio.paintDisabled || radio.enabled)
         }
     }
