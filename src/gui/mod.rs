@@ -7,7 +7,7 @@ qrc!(qml, "res/qml" as "/" {
     "Radio.qml",
 });
 
-#[derive(SimpleListItem, Default)]
+#[derive(SimpleListItem, Clone, Default)]
 struct Template {
     pub name: String,
     pub prefix: String,
@@ -26,14 +26,10 @@ impl Template {
 
 pub fn run() {
     qml();
-
     let templates = QObjectBox::new(
-        vec![
-            Template::new("Custom", "", 8),
-            Template::new("TP", "923", 4),
-        ]
-        .into_iter()
-        .collect::<SimpleListModel<_>>(),
+        include!("../../hidden/template.in")
+            .iter()
+            .collect::<SimpleListModel<_>>(),
     );
 
     let mut engine = QmlEngine::new();

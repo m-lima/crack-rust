@@ -55,6 +55,7 @@ ApplicationWindow {
             innerSpacing: 10
 
             ComboBox {
+                id: templates
                 width: parent.width
                 textRole: 'name'
 
@@ -69,23 +70,21 @@ ApplicationWindow {
                            ]
                        }
 
-                onCurrentIndexChanged: {
-                    if (currentIndex) {
-                        console.log('Index:', currentIndex)
-                        console.log('Model:', model)
-                        console.log('Model.data:', model.data)
-                        console.log('Model[]:', model[currentIndex])
-                        console.log('Model.data[]:', model.data[currentIndex])
-                        prefix.text = model.data(model.index(currentIndex, 0), 0, 'prefix')
-                        length.value = model.data(model.index(currentIndex, 0), 0, Qt.UserRole + 2)
-                    } else {
-                        console.log('Index: ', currentIndex)
+                delegate: MenuItem {
+                    width: ListView.view.width
+                    text: Array.isArray(templates.model) ? modelData['name'] : name
+                    font.weight: templates.currentIndex === index ? Font.DemiBold : Font.Normal
+                    highlighted: templates.highlightedIndex === index
+                    hoverEnabled: true
+                    onClicked: {
+                        formatPrefix.text = Array.isArray(templates.model) ? modelData['prefix'] : prefix
+                        formatLength.value = Array.isArray(templates.model) ? modelData['length'] : length
                     }
                 }
             }
 
             TextField {
-                id: prefix
+                id: formatPrefix
                 width: parent.width
                 placeholderText: qsTr('Prefix')
                 maximumLength: 25
@@ -103,9 +102,9 @@ ApplicationWindow {
                 }
 
                 SpinBox {
-                    id: length
+                    id: formatLength
                     value: 12
-                    from: Math.max(prefix.text.length, 3)
+                    from: Math.max(formatPrefix.text.length, 3)
                     to: 25
                     Layout.fillWidth: true
                 }
