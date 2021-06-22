@@ -31,7 +31,7 @@ Column {
 
         background: Rectangle {
             anchors.fill: parent
-            color: root.expanded ? Qt.lighter(palette.window) : parent.hovered ? hoverColor() : parent.down ? palette.highlight : palette.button
+            color: root.expanded ? palette.window.lighter() : parent.hovered ? hoverColor() : parent.down ? palette.highlight : palette.button
 
             function hoverColor() {
                 return Qt.rgba(
@@ -45,7 +45,6 @@ Column {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onPressed: mouse.accepted = false
             }
 
             // TODO: Make hover start instantaneous
@@ -79,7 +78,7 @@ Column {
     Rectangle {
         width: parent.width
         height: 1
-        color: Qt.lighter(palette.window)
+        color: palette.window.lighter()
         visible: expanded && showLine
     }
 }

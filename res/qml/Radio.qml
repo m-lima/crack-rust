@@ -12,7 +12,7 @@ RadioButton {
         x: radio.leftPadding
         y: radio.height / 2 - height / 2
         radius: 4
-        border.color: radio.down ? Qt.darker(palette.highlight) : palette.base
+        border.color: radio.down ? palette.highlight.darker() : palette.base
         color: palette.base
 
         Rectangle {
@@ -21,7 +21,7 @@ RadioButton {
             x: 4
             y: 4
             radius: 4
-            color: radio.down ? Qt.darker(palette.highlight) : palette.highlight
+            color: radio.down ? palette.highlight.darker() : palette.highlight
             visible: radio.checked && (radio.paintDisabled || radio.enabled)
         }
     }

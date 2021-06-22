@@ -1,7 +1,9 @@
+// TODO: QQmlEngine::setContextForObject(): Object already has a QQmlContext
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Controls.Fusion 2.15
+import QtQuick.Layouts 2.15
 import QtQuick.Window 2.15
-import QtQuick.Layouts 1.15
 
 ApplicationWindow {
     title: 'Hasher'
@@ -30,6 +32,7 @@ ApplicationWindow {
 
         width: parent.width
 
+        // TODO: Fix flicker (y is set before animation)
         NumberAnimation {
             id: moveUpAnimation
             target: content
@@ -40,7 +43,7 @@ ApplicationWindow {
         }
 
         function expand(expanded) {
-            if (y > 0) {
+            if (!current) {
               moveUpAnimation.start()
             }
 
@@ -63,18 +66,18 @@ ApplicationWindow {
                            return _templates
                        } else {
                            return [
-                             { name: 'Custom', prefix: '', length: 10 },
                              { name: 'One', prefix: '1', length: 11 },
                              { name: 'Two', prefix: '2', length: 12 },
-                             { name: 'Three', prefix: '3', length: 13 }
+                             { name: 'Three', prefix: '3', length: 13 },
+                             { name: 'Custom', prefix: '', length: 14 }
                            ]
                        }
 
                 delegate: MenuItem {
                     width: ListView.view.width
                     text: Array.isArray(templates.model) ? modelData['name'] : name
-                    font.weight: templates.currentIndex === index ? Font.DemiBold : Font.Normal
-                    highlighted: templates.highlightedIndex === index
+                    font.weight: index == templates.currentIndex ? Font.DemiBold : Font.Normal
+                    highlighted: index == templates.highlightedIndex
                     hoverEnabled: true
                     onClicked: {
                         formatPrefix.text = Array.isArray(templates.model) ? modelData['prefix'] : prefix
@@ -88,8 +91,8 @@ ApplicationWindow {
                 width: parent.width
                 placeholderText: qsTr('Prefix')
                 maximumLength: 25
-                validator: RegExpValidator {
-                    regExp: /[0-9]{0,25}/
+                validator: RegularExpressionValidator {
+                    regularExpression: /[0-9]{0,25}/
                 }
             }
 
@@ -190,13 +193,12 @@ ApplicationWindow {
 
         background: Rectangle {
             anchors.fill: parent
-            color: next.down ? Qt.lighter(palette.highlight, 1.2) : parent.hovered ? Qt.darker(palette.highlight, 1.2) : palette.highlight
+            color: next.down ? palette.highlight.lighter(1.2) : parent.hovered ? palette.highlight.darker(1.2) : palette.highlight
 
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onPressed: mouse.accepted = false
             }
 
             // TODO: Make hover start instantaneous
