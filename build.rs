@@ -18,13 +18,6 @@ fn generate_dummys() {
     }
 }
 
-#[cfg(feature = "qt")]
-fn add_resources() {
-    qt_ritual_build::add_resources(concat!(env!("CARGO_MANIFEST_DIR"), "/res/resources.qrc"));
-}
-
 fn main() {
     generate_dummys();
-    #[cfg(feature = "qt")]
-    add_resources();
 }

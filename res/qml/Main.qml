@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
 
 ApplicationWindow {
@@ -8,6 +9,8 @@ ApplicationWindow {
 
     width: 400
     height: 400
+    x: Screen.width / 2 - 200
+    y: Screen.height / 2 - 200
 
     palette.window: '#353535'
     palette.windowText: '#cccccc'
