@@ -79,30 +79,31 @@ ApplicationWindow {
                 width: parent.width
                 textRole: 'name'
 
-                // TODO: add imported model
-                // model: _templates
-                model: ListModel{
-                    ListElement { name: 'One'; prefix: '1'; length: 11 }
-                    ListElement { name: 'Two'; prefix: '2'; length: 12 }
-                    ListElement { name: 'Three'; prefix: '3'; length: 13 }
-                    ListElement { name: 'Custom'; prefix: ''; length: 14 }
-                }
+                model: if (typeof _templates !== 'undefined') {
+                           _templates
+                       } else {
+                           [
+                               { name: 'One', prefix: '1', length: 11 },
+                               { name: 'Two', prefix: '2', length: 12 },
+                               { name: 'Three', prefix: '3', length: 13 },
+                               { name: 'Custom', prefix: '', length: 14 }
+                           ]
+                       }
 
-               delegate: MenuItem {
-                   width: ListView.view.width
-                   text: name
-                   font.weight: index == templates.currentIndex ? Font.DemiBold : Font.Normal
-                   highlighted: index == templates.highlightedIndex
-                   hoverEnabled: true
-                   onClicked: {
-                       formatPrefix.text = prefix
-                       formatLength.value = length
-                   }
-               }
+                onCurrentIndexChanged: {
+                    if (Array.isArray(model)) {
+                        prefix.text = model[currentIndex].prefix
+                        length.value = model[currentIndex].length
+                    } else {
+                        let idx = model.index(currentIndex, 0)
+                        prefix.text = model.data(idx, Qt.UserRole + 1)
+                        length.value = model.data(idx, Qt.UserRole + 2)
+                    }
+                }
             }
 
             TextField {
-                id: formatPrefix
+                id: prefix
                 width: parent.width
                 placeholderText: qsTr('Prefix')
                 maximumLength: 25
@@ -120,9 +121,9 @@ ApplicationWindow {
                 }
 
                 SpinBox {
-                    id: formatLength
+                    id: length
                     value: 12
-                    from: Math.max(formatPrefix.text.length, 3)
+                    from: Math.max(prefix.text.length, 3)
                     to: 25
                     Layout.fillWidth: true
                 }
