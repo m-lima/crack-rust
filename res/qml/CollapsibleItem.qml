@@ -30,8 +30,59 @@ Column {
         }
 
         background: Rectangle {
+            id: background
             anchors.fill: parent
-            color: root.expanded ? palette.window.lighter() : parent.hovered ? hoverColor() : parent.down ? palette.highlight : palette.button
+            color: palette.button
+            state: root.expanded ? 'Expanded' : parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
+
+            states: [
+                State {
+                    name: 'Expanded'
+                    PropertyChanges {
+                        target: background
+                        color: palette.window.lighter()
+                    }
+                },
+                State {
+                    name: 'Hovered'
+                    PropertyChanges {
+                        target: background
+                        color: hoverColor()
+                    }
+                },
+                State {
+                    name: 'Down'
+                    PropertyChanges {
+                        target: background
+                        color: palette.highlight
+                    }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    to: ''
+                    ColorAnimation {
+                        duration: 200
+                        property: 'color'
+                    }
+                },
+                Transition {
+                    to: 'Expanded'
+                    ColorAnimation {
+                        duration: 200
+                        property: 'color'
+                    }
+                },
+                Transition {
+                    from: 'Down'
+                    to: 'Hovered'
+                    ColorAnimation {
+                        duration: 200
+                        property: 'color'
+                    }
+                }
+            ]
 
             function hoverColor() {
                 return Qt.rgba(
@@ -45,13 +96,6 @@ Column {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
-
-            // TODO: Make hover start instantaneous
-            Behavior on color {
-                ColorAnimation {
-                    duration: 200
-                }
             }
         }
     }

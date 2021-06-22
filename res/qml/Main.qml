@@ -207,20 +207,50 @@ ApplicationWindow {
         }
 
         background: Rectangle {
+            id: background
             anchors.fill: parent
-            color: next.down ? palette.highlight.lighter(1.2) : parent.hovered ? palette.highlight.darker(1.2) : palette.highlight
+            color: palette.highlight
+            state: next.down ? 'Down' : next.hovered ? 'Hovered' : ''
+
+            states: [
+                State {
+                    name: 'Hovered'
+                    PropertyChanges {
+                        target: background
+                        color: palette.highlight.darker(1.2)
+                    }
+                },
+                State {
+                    name: 'Down'
+                    PropertyChanges {
+                        target: background
+                        color: palette.highlight.lighter(1.2)
+                    }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    to: ''
+                    ColorAnimation {
+                        duration: 200
+                        property: 'color'
+                    }
+                },
+                Transition {
+                    from: 'Down'
+                    to: 'Hovered'
+                    ColorAnimation {
+                        duration: 200
+                        property: 'color'
+                    }
+                }
+            ]
 
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
-
-            // TODO: Make hover start instantaneous
-            Behavior on color {
-                ColorAnimation {
-                    duration: 200
-                }
             }
         }
     }
