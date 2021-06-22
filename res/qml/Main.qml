@@ -57,12 +57,31 @@ ApplicationWindow {
             ComboBox {
                 width: parent.width
                 textRole: 'name'
-                valueRole: 'length'
 
-                model: [
-                    { name: qsTr('Custom'), prefix: null, length: null },
-                    { name: qsTr('TP'), prefix: '932', length: 12 }
-                ]
+                model: if (typeof _templates !== 'undefined') {
+                           return _templates
+                       } else {
+                           return [
+                             { name: 'Custom', prefix: '', length: 10 },
+                             { name: 'One', prefix: '1', length: 11 },
+                             { name: 'Two', prefix: '2', length: 12 },
+                             { name: 'Three', prefix: '3', length: 13 }
+                           ]
+                       }
+
+                onCurrentIndexChanged: {
+                    if (currentIndex) {
+                        console.log('Index:', currentIndex)
+                        console.log('Model:', model)
+                        console.log('Model.data:', model.data)
+                        console.log('Model[]:', model[currentIndex])
+                        console.log('Model.data[]:', model.data[currentIndex])
+                        prefix.text = model.data(model.index(currentIndex, 0), 0, 'prefix')
+                        length.value = model.data(model.index(currentIndex, 0), 0, Qt.UserRole + 2)
+                    } else {
+                        console.log('Index: ', currentIndex)
+                    }
+                }
             }
 
             TextField {
