@@ -1,9 +1,8 @@
-// TODO: QQmlEngine::setContextForObject(): Object already has a QQmlContext
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Controls.Fusion 2.15
-import QtQuick.Layouts 2.15
-import QtQuick.Window 2.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Fusion
+import QtQuick.Layouts
+import QtQuick.Window
 
 ApplicationWindow {
     title: 'Hasher'
@@ -80,28 +79,26 @@ ApplicationWindow {
                 width: parent.width
                 textRole: 'name'
 
-                model: if (typeof _templates !== 'undefined') {
-                           return _templates
-                       } else {
-                           return [
-                             { name: 'One', prefix: '1', length: 11 },
-                             { name: 'Two', prefix: '2', length: 12 },
-                             { name: 'Three', prefix: '3', length: 13 },
-                             { name: 'Custom', prefix: '', length: 14 }
-                           ]
-                       }
-
-                delegate: MenuItem {
-                    width: ListView.view.width
-                    text: Array.isArray(templates.model) ? modelData['name'] : name
-                    font.weight: index == templates.currentIndex ? Font.DemiBold : Font.Normal
-                    highlighted: index == templates.highlightedIndex
-                    hoverEnabled: true
-                    onClicked: {
-                        formatPrefix.text = Array.isArray(templates.model) ? modelData['prefix'] : prefix
-                        formatLength.value = Array.isArray(templates.model) ? modelData['length'] : length
-                    }
+                // TODO: add imported model
+                // model: _templates
+                model: ListModel{
+                    ListElement { name: 'One'; prefix: '1'; length: 11 }
+                    ListElement { name: 'Two'; prefix: '2'; length: 12 }
+                    ListElement { name: 'Three'; prefix: '3'; length: 13 }
+                    ListElement { name: 'Custom'; prefix: ''; length: 14 }
                 }
+
+               delegate: MenuItem {
+                   width: ListView.view.width
+                   text: name
+                   font.weight: index == templates.currentIndex ? Font.DemiBold : Font.Normal
+                   highlighted: index == templates.highlightedIndex
+                   hoverEnabled: true
+                   onClicked: {
+                       formatPrefix.text = prefix
+                       formatLength.value = length
+                   }
+               }
             }
 
             TextField {
