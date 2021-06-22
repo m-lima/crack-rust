@@ -28,11 +28,29 @@ ApplicationWindow {
         property Item current: null
 
         id: content
-        y: current ? 0 : (parent.height - next.height) / 2 - (implicitHeight / 2)
+        y: (parent.height - next.height) / 2 - (implicitHeight / 2)
 
         width: parent.width
 
-        // TODO: Fix flicker (y is set before animation)
+        states: [
+            State {
+                name: 'Expanded'
+                PropertyChanges {
+                    target: content
+                    y: 0
+                }
+            }
+        ]
+
+        transitions: [
+            Transition {
+                NumberAnimation {
+                    duration: 200
+                    property: 'y'
+                }
+            }
+        ]
+
         NumberAnimation {
             id: moveUpAnimation
             target: content
@@ -43,8 +61,8 @@ ApplicationWindow {
         }
 
         function expand(expanded) {
-            if (!current) {
-              moveUpAnimation.start()
+            if (!state) {
+              state = 'Expanded'
             }
 
             current = expanded
