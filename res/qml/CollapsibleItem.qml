@@ -61,13 +61,6 @@ Column {
 
             transitions: [
                 Transition {
-                    to: ''
-                    ColorAnimation {
-                        duration: 200
-                        property: 'color'
-                    }
-                },
-                Transition {
                     to: 'Expanded'
                     ColorAnimation {
                         duration: 200
@@ -76,7 +69,6 @@ Column {
                 },
                 Transition {
                     from: 'Down'
-                    to: 'Hovered'
                     ColorAnimation {
                         duration: 200
                         property: 'color'
