@@ -31,7 +31,7 @@ ApplicationWindow {
             id: moveUpAnimation
             target: content
             property: 'y'
-            from: (parent.height - next.height) / 2 - (implicitHeight / 2)
+            from: (content.parent.height - next.height) / 2 - (content.implicitHeight / 2)
             to: 0
             duration: 200
         }
@@ -52,23 +52,14 @@ ApplicationWindow {
             innerSpacing: 10
 
             ComboBox {
-                id: formatTemplates
                 width: parent.width
                 textRole: 'name'
                 valueRole: 'length'
 
-                model: ListModel {
-                    ListElement {
-                        name: qsTr('Custom')
-                        prefix: null
-                        length: null
-                    }
-                    ListElement {
-                        name: qsTr('TP')
-                        prefix: '932'
-                        length: 12
-                    }
-                }
+                model: [
+                    { name: qsTr('Custom'), prefix: null, length: null },
+                    { name: qsTr('TP'), prefix: '932', length: 12 }
+                ]
             }
 
             TextField {
@@ -90,6 +81,7 @@ ApplicationWindow {
                 }
 
                 SpinBox {
+                    id: length
                     value: 12
                     from: Math.max(prefix.text.length, 3)
                     to: 25
@@ -141,19 +133,19 @@ ApplicationWindow {
             onClicked: content.expand(this)
 
             Switch {
-                id: deviceCustom
+                id: deviceAutomatic
                 text: qsTr('Automatic')
                 checked: true
             }
             Radio {
                 text: qsTr('GPU')
-                enabled: !deviceCustom.checked
+                enabled: !deviceAutomatic.checked
                 checked: true
                 paintDisabled: false
             }
             Radio {
                 text: qsTr('CPU')
-                enabled: !deviceCustom.checked
+                enabled: !deviceAutomatic.checked
                 paintDisabled: false
             }
         }
