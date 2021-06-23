@@ -9,8 +9,8 @@ qrc!(qml, "res/qml" as "/" {
     "Radio.qml",
 });
 
-qrc!(img, "res/qml" as "/" {
-    "img/left.svg",
+qrc!(img, "res/img" as "/img" {
+    "left.svg",
 });
 
 #[derive(SimpleListItem, Clone, Default)]
@@ -33,6 +33,7 @@ impl Template {
 pub fn run() {
     qml();
     img();
+
     let templates = QObjectBox::new(
         include!("../../hidden/template.in")
             .iter()

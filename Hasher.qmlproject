@@ -6,4 +6,8 @@ Project {
   QmlFiles {
     directory: "res/qml"
   }
+
+  ImageFiles {
+    directory: "res/img"
+  }
 }
