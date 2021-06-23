@@ -10,7 +10,6 @@ Column {
     signal clicked
 
     id: root
-
     width: parent.width
 
     Button {
@@ -23,7 +22,7 @@ Column {
             anchors.fill: parent
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
-            text: parent.text
+            text: root.title
             font.bold: true
             font.pointSize: 14
             color: palette.text
@@ -94,7 +93,7 @@ Column {
 
     Pane {
         clip: height < implicitHeight
-        height: parent.expanded ? implicitHeight : 0
+        height: root.expanded ? implicitHeight : 0
         width: parent.width
         padding: 20
 

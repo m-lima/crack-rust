@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Fusion
-import QtQuick.Layouts
 import QtQuick.Window
 
 ApplicationWindow {
+    id: root
     title: 'Hasher'
     visible: true
 
@@ -23,239 +23,129 @@ ApplicationWindow {
     palette.highlight: 'green'
     palette.highlightedText: '#cccccc'
 
-    Column {
-        property Item current: null
-
+    Item {
         id: content
-        y: (parent.height - next.height) / 2 - (implicitHeight / 2)
 
-        width: parent.width
+        width: root.width
+        height: root.height - footer.height
 
-        states: [
-            State {
-                name: 'Expanded'
-                PropertyChanges {
-                    target: content
-                    y: 0
-                }
-            }
-        ]
+        // TODO: Transition is wrong
+        StackView {
+            id: stack
 
-        transitions: [
-            Transition {
-                NumberAnimation {
-                    duration: 200
-                    property: 'y'
-                }
-            }
-        ]
+            anchors.fill: parent
 
-        NumberAnimation {
-            id: moveUpAnimation
-            target: content
-            property: 'y'
-            from: (content.parent.height - next.height) / 2 - (content.implicitHeight / 2)
-            to: 0
-            duration: 200
-        }
+            initialItem: parameters
 
-        function expand(expanded) {
-            if (!state) {
-              state = 'Expanded'
+            Parameters {
+                id: parameters
             }
 
-            current = expanded
-        }
-
-        CollapsibleItem {
-            id: format
-            title: qsTr('Format')
-            expanded: content.current === this
-            onClicked: content.expand(this)
-            innerSpacing: 10
-
-            ComboBox {
-                id: templates
-                width: parent.width
-                textRole: 'name'
-
-                model: if (typeof _templates !== 'undefined') {
-                           _templates
-                       } else {
-                           [
-                               { name: 'One', prefix: '1', length: 11 },
-                               { name: 'Two', prefix: '2', length: 12 },
-                               { name: 'Three', prefix: '3', length: 13 },
-                               { name: 'Custom', prefix: '', length: 14 }
-                           ]
-                       }
-
-                onCurrentIndexChanged: {
-                    if (Array.isArray(model)) {
-                        prefix.text = model[currentIndex].prefix
-                        length.value = model[currentIndex].length
-                    } else {
-                        let idx = model.index(currentIndex, 0)
-                        prefix.text = model.data(idx, Qt.UserRole + 1)
-                        length.value = model.data(idx, Qt.UserRole + 2)
-                    }
-                }
-            }
-
-            TextField {
-                id: prefix
-                width: parent.width
-                placeholderText: qsTr('Prefix')
-                maximumLength: 25
-                validator: RegularExpressionValidator {
-                    regularExpression: /[0-9]{0,25}/
-                }
-            }
-
-            RowLayout {
-                width: parent.width
-
-                Text {
-                    text: qsTr('Length:')
-                    color: palette.buttonText
-                }
-
-                SpinBox {
-                    id: length
-                    value: 12
-                    from: Math.max(prefix.text.length, 3)
-                    to: 25
-                    Layout.fillWidth: true
-                }
-            }
-        }
-
-        CollapsibleItem {
-            // TODO: Add OPET
-            title: qsTr('Salt')
-            expanded: content.current === this
-            onClicked: content.expand(this)
-
-            Switch {
-                id: saltCustom
-                text: qsTr('Custom')
-                checked: false
-                onCheckedChanged: saltCustom.checked && saltValue.forceActiveFocus()
-            }
-
-            TextField {
-                id: saltValue
-                width: parent.width
-                enabled: saltCustom.checked
-                placeholderText: qsTr('Salt')
-                opacity: saltCustom.checked ? 1 : 0.5
-            }
-        }
-
-        CollapsibleItem {
-            title: qsTr('Algorithm')
-            expanded: content.current === this
-            onClicked: content.expand(this)
-
-            Radio {
-                text: qsTr('Sha256')
-                checked: true
-            }
-            Radio {
-                text: qsTr('Md5')
-            }
-        }
-
-        CollapsibleItem {
-            title: qsTr('Device')
-            showLine: false
-            expanded: content.current === this
-            onClicked: content.expand(this)
-
-            Switch {
-                id: deviceAutomatic
-                text: qsTr('Automatic')
-                checked: true
-            }
-            Radio {
-                text: qsTr('GPU')
-                enabled: !deviceAutomatic.checked
-                checked: true
-                paintDisabled: false
-            }
-            Radio {
-                text: qsTr('CPU')
-                enabled: !deviceAutomatic.checked
-                paintDisabled: false
+            Parameters {
+                id: two
             }
         }
     }
 
-    Button {
-        id: next
+    // TODO: Should we have these items that dictate the layout?
+    Item {
+        id: footer
+
+        y: root.height - height
+        width: root.width
         height: 50
-        y: parent.height - height
-        width: parent.width
 
-        contentItem: Text {
+        Item {
             anchors.fill: parent
-            verticalAlignment: Text.AlignVCenter
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr('Next')
-            font.bold: true
-            font.pointSize: 18
-            color: palette.base
-        }
 
-        background: Rectangle {
-            id: background
-            anchors.fill: parent
-            color: palette.highlight
-            state: next.down ? 'Down' : next.hovered ? 'Hovered' : ''
+            Button {
+                id: back
 
-            states: [
-                State {
-                    name: 'Hovered'
-                    PropertyChanges {
-                        target: background
-                        color: palette.highlight.darker(1.2)
-                    }
-                },
-                State {
-                    name: 'Down'
-                    PropertyChanges {
-                        target: background
-                        color: palette.highlight.lighter(1.2)
+                visible: width > 0
+                width: stack.depth > 1 ? implicitWidth : 0
+                height: parent.height
+
+                text: 'Back'
+                onClicked: stack.pop()
+
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 200
+                        easing.type: Easing.Linear
                     }
                 }
-            ]
+            }
 
-            transitions: [
-                Transition {
-                    to: ''
-                    ColorAnimation {
-                        duration: 200
-                        property: 'color'
-                    }
-                },
-                Transition {
-                    from: 'Down'
-                    to: 'Hovered'
-                    ColorAnimation {
-                        duration: 200
-                        property: 'color'
+            Button {
+                id: next
+
+                x: back.width
+                width: parent.width - back.width
+                height: parent.height
+
+                onClicked: stack.push(two)
+
+                contentItem: Text {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: qsTr('Next')
+                    font.bold: true
+                    font.pointSize: 18
+                    color: palette.base
+                }
+
+                background: Rectangle {
+                    id: background
+
+                    anchors.fill: parent
+                    color: palette.highlight
+                    border.color: color.lighter(1.2)
+                    border.width: 1
+                    state: parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
+
+                    states: [
+                        State {
+                            name: 'Hovered'
+                            PropertyChanges {
+                                target: background
+                                color: palette.highlight.darker(1.2)
+                            }
+                        },
+                        State {
+                            name: 'Down'
+                            PropertyChanges {
+                                target: background
+                                color: palette.highlight.lighter(1.2)
+                            }
+                        }
+                    ]
+
+                    transitions: [
+                        Transition {
+                            to: ''
+                            ColorAnimation {
+                                duration: 200
+                                property: 'color'
+                            }
+                        },
+                        Transition {
+                            from: 'Down'
+                            to: 'Hovered'
+                            ColorAnimation {
+                                duration: 200
+                                property: 'color'
+                            }
+                        }
+                    ]
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
                     }
                 }
-            ]
-
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
             }
         }
     }
 }
-
-
-
