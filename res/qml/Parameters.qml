@@ -7,7 +7,6 @@ Column {
 
     id: root
     y: parent.height / 2 - implicitHeight / 2
-    width: parent.width
     state: current ? 'Expanded' : ''
 
     states: [
@@ -15,7 +14,7 @@ Column {
             name: 'Expanded'
             PropertyChanges {
                 target: root
-                y: 100
+                y: 0
             }
         }
     ]

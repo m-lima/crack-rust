@@ -23,29 +23,23 @@ ApplicationWindow {
     palette.highlight: 'green'
     palette.highlightedText: '#cccccc'
 
-    // TODO: Transition is wrong
-    StackView {
-        id: stack
+    SwipeView {
+        id: content
 
         anchors {
             top: parent.top
             bottom: footer.top
-            right: parent.right
             left: parent.left
+            right: parent.right
         }
 
-        initialItem: parameters
+        currentIndex: 0
+        interactive: false
 
-        Parameters {
-            id: parameters
-        }
+        Parameters {}
 
-        Loader {
-            id: two
-            active: stack.depth > 1
-            BigButton {
-              text: 'Yooooo'
-            }
+        BigButton {
+            text: 'Yooooo'
         }
     }
 
@@ -66,11 +60,11 @@ ApplicationWindow {
             }
 
             visible: width > 0
-            width: stack.depth > 1 ? 50 : 0
+            width: content.currentIndex > 0 ? 50 : 0
 
             icon.source: 'qrc:/img/left.svg'
             icon.color: palette.buttonText
-            onClicked: stack.pop()
+            onClicked: content.currentIndex--
             palette.button: root.palette.button.lighter(1.3)
 
             Behavior on width {
@@ -90,7 +84,25 @@ ApplicationWindow {
             }
 
             text: 'Next'
-            onClicked: stack.push(two)
+            visible: content.currentIndex < content.count - 1
+            onClicked: content.currentIndex++
+
+            palette.button: 'darkgreen'
+            palette.buttonText: '#252525'
+            font.bold: true
+            font.pointSize: 18
+        }
+
+        BigButton {
+            anchors {
+                top: parent.top
+                bottom: parent.bottom
+                right: parent.right
+                left: back.right
+            }
+
+            text: 'Crack'
+            visible: content.currentIndex === content.count - 1
 
             palette.button: 'darkgreen'
             palette.buttonText: '#252525'
