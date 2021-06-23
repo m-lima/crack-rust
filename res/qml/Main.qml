@@ -75,6 +75,8 @@ ApplicationWindow {
         }
 
         BigButton {
+            id: next
+
             anchors {
                 top: parent.top
                 bottom: parent.bottom
@@ -82,13 +84,70 @@ ApplicationWindow {
                 left: back.right
             }
 
-            text: content.currentIndex > 0 ? 'Crack' : 'Next'
-            onClicked: content.currentIndex > 0 ? console.log('Crack') : content.currentIndex++
+            text: 'Next'
+            onClicked: content.currentIndex++
+            state: content.currentIndex > 0 ? 'Crack' : ''
 
             palette.button: 'darkgreen'
-            palette.buttonText: '#252525'
+            palette.buttonText: '#ff252525'
             font.bold: true
             font.pointSize: 18
+
+            states: State {
+                name: 'Crack'
+                PropertyChanges {
+                    target: next
+
+                    onClicked: console.log('Crack')
+                }
+            }
+
+            transitions: [
+                Transition {
+                    to: ''
+                    SequentialAnimation {
+                        NumberAnimation {
+                            target: next
+                            duration: 100
+                            to: 1
+                            property: 'font.pointSize'
+                        }
+                        PropertyAction {
+                            target: next
+                            value: 'Next'
+                            property: 'text'
+                        }
+                        NumberAnimation {
+                            target: next
+                            duration: 100
+                            to: 18
+                            property: 'font.pointSize'
+                        }
+                    }
+                },
+                Transition {
+                    to: 'Crack'
+                    SequentialAnimation {
+                        NumberAnimation {
+                            target: next
+                            duration: 100
+                            to: 1
+                            property: 'font.pointSize'
+                        }
+                        PropertyAction {
+                            target: next
+                            value: 'Crack'
+                            property: 'text'
+                        }
+                        NumberAnimation {
+                            target: next
+                            duration: 100
+                            to: 18
+                            property: 'font.pointSize'
+                        }
+                    }
+                }
+            ]
         }
     }
 }
