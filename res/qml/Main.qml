@@ -43,7 +43,7 @@ ApplicationWindow {
         Loader {
             id: two
             active: stack.depth > 1
-            Button {
+            BigButton {
               text: 'Yooooo'
             }
         }
@@ -56,7 +56,7 @@ ApplicationWindow {
         width: parent.width
         height: 50
 
-        Button {
+        BigButton {
             id: back
 
             anchors {
@@ -71,6 +71,7 @@ ApplicationWindow {
             icon.source: 'qrc:/img/left.svg'
             icon.color: palette.buttonText
             onClicked: stack.pop()
+            palette.button: root.palette.button.lighter(1.3)
 
             Behavior on width {
                 NumberAnimation {
@@ -80,9 +81,7 @@ ApplicationWindow {
             }
         }
 
-        Button {
-            id: next
-
+        BigButton {
             anchors {
                 top: parent.top
                 bottom: parent.bottom
@@ -97,67 +96,6 @@ ApplicationWindow {
             palette.buttonText: '#252525'
             font.bold: true
             font.pointSize: 18
-
-//            contentItem: Text {
-//                anchors.fill: parent
-//                verticalAlignment: Text.AlignVCenter
-//                horizontalAlignment: Text.AlignHCenter
-//                text: qsTr('Next')
-//                font.bold: true
-//                font.pointSize: 18
-//                color: palette.base
-//            }
-
-//            background: Rectangle {
-//                id: background
-
-//                anchors.fill: parent
-//                color: palette.highlight
-//                border.color: color.lighter(1.2)
-//                border.width: 1
-//                state: parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
-
-//                states: [
-//                    State {
-//                        name: 'Hovered'
-//                        PropertyChanges {
-//                            target: background
-//                            color: palette.highlight.darker(1.2)
-//                        }
-//                    },
-//                    State {
-//                        name: 'Down'
-//                        PropertyChanges {
-//                            target: background
-//                            color: palette.highlight.lighter(1.2)
-//                        }
-//                    }
-//                ]
-
-//                transitions: [
-//                    Transition {
-//                        to: ''
-//                        ColorAnimation {
-//                            duration: 200
-//                            property: 'color'
-//                        }
-//                    },
-//                    Transition {
-//                        from: 'Down'
-//                        to: 'Hovered'
-//                        ColorAnimation {
-//                            duration: 200
-//                            property: 'color'
-//                        }
-//                    }
-//                ]
-
-//                MouseArea {
-//                    anchors.fill: parent
-//                    hoverEnabled: true
-//                    cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-//                }
-//            }
         }
     }
 }

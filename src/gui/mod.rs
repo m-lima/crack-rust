@@ -3,9 +3,13 @@ use qmetaobject::*;
 qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
     "Main.qml",
+    "BigButton.qml",
     "CollapsibleItem.qml",
     "Parameters.qml",
     "Radio.qml",
+});
+
+qrc!(img, "res/qml" as "/" {
     "img/left.svg",
 });
 
@@ -28,6 +32,7 @@ impl Template {
 
 pub fn run() {
     qml();
+    img();
     let templates = QObjectBox::new(
         include!("../../hidden/template.in")
             .iter()
