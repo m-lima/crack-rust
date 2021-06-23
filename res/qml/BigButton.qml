@@ -21,13 +21,13 @@ Button {
             GradientStop {
                 id: gradientTop
                 position: 0
-                color: background.baseColor.lighter(1.1)
+                color: background.baseColor.lighter(1.2)
             }
 
             GradientStop {
                 id: gradientBottom
                 position: 1
-                color: background.baseColor.darker(1.1)
+                color: background.baseColor.darker(1.2)
             }
         }
 
