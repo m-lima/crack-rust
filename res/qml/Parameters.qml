@@ -9,15 +9,13 @@ Column {
     y: parent.height / 2 - implicitHeight / 2
     state: current ? 'Expanded' : ''
 
-    states: [
-        State {
-            name: 'Expanded'
-            PropertyChanges {
-                target: root
-                y: 0
-            }
+    states: State {
+        name: 'Expanded'
+        PropertyChanges {
+            target: root
+            y: 0
         }
-    ]
+    }
 
     transitions: [
         Transition {
@@ -28,15 +26,11 @@ Column {
         }
     ]
 
-    function expand(expanded) {
-        current = expanded
-    }
-
     CollapsibleItem {
         id: format
         title: qsTr('Format')
         expanded: root.current === this
-        onClicked: root.expand(this)
+        onClicked: root.current = this
         innerSpacing: 10
 
         ComboBox {
@@ -99,7 +93,7 @@ Column {
         // TODO: Add OPET
         title: qsTr('Salt')
         expanded: root.current === this
-        onClicked: root.expand(this)
+        onClicked: root.current = this
 
         Switch {
             id: saltCustom
@@ -120,7 +114,7 @@ Column {
     CollapsibleItem {
         title: qsTr('Algorithm')
         expanded: root.current === this
-        onClicked: root.expand(this)
+        onClicked: root.current = this
 
         Radio {
             text: qsTr('Sha256')
@@ -136,7 +130,7 @@ Column {
         title: qsTr('Device')
         showLine: false
         expanded: root.current === this
-        onClicked: root.expand(this)
+        onClicked: root.current = this
 
         Switch {
             id: deviceAutomatic

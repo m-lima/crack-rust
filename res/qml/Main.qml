@@ -89,7 +89,7 @@ ApplicationWindow {
             state: content.currentIndex > 0 ? 'Crack' : ''
 
             palette.button: 'darkgreen'
-            palette.buttonText: '#ff252525'
+            palette.buttonText: '#252525'
             font.bold: true
             font.pointSize: 18
 
