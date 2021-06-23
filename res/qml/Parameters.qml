@@ -8,6 +8,7 @@ Column {
     id: root
     y: parent.height / 2 - implicitHeight / 2
     width: parent.width
+    state: current ? 'Expanded' : ''
 
     states: [
         State {
@@ -29,10 +30,6 @@ Column {
     ]
 
     function expand(expanded) {
-        if (!state) {
-          state = 'Expanded'
-        }
-
         current = expanded
     }
 

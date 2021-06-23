@@ -6,6 +6,7 @@ qrc!(qml, "res/qml" as "/" {
     "CollapsibleItem.qml",
     "Parameters.qml",
     "Radio.qml",
+    "img/left.svg",
 });
 
 #[derive(SimpleListItem, Clone, Default)]
