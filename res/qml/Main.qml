@@ -70,7 +70,6 @@ ApplicationWindow {
             Behavior on width {
                 NumberAnimation {
                     duration: 200
-                    easing.type: Easing.Linear
                 }
             }
         }
@@ -83,26 +82,8 @@ ApplicationWindow {
                 left: back.right
             }
 
-            text: 'Next'
-            visible: content.currentIndex < content.count - 1
-            onClicked: content.currentIndex++
-
-            palette.button: 'darkgreen'
-            palette.buttonText: '#252525'
-            font.bold: true
-            font.pointSize: 18
-        }
-
-        BigButton {
-            anchors {
-                top: parent.top
-                bottom: parent.bottom
-                right: parent.right
-                left: back.right
-            }
-
-            text: 'Crack'
-            visible: content.currentIndex === content.count - 1
+            text: content.currentIndex > 0 ? 'Crack' : 'Next'
+            onClicked: content.currentIndex > 0 ? console.log('Crack') : content.currentIndex++
 
             palette.button: 'darkgreen'
             palette.buttonText: '#252525'
