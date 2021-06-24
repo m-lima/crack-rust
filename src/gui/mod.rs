@@ -5,6 +5,7 @@ qrc!(qml, "res/qml" as "/" {
     "Main.qml",
     "BigButton.qml",
     "CollapsibleItem.qml",
+    "Input.qml",
     "Navigation.qml",
     "Parameters.qml",
     "Radio.qml",

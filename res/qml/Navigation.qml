@@ -54,7 +54,7 @@ Item {
             PropertyChanges {
                 target: next
 
-                onClicked: diag.visible = true
+                onClicked: console.log('Crack')
             }
         }
 

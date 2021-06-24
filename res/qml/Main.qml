@@ -38,9 +38,7 @@ ApplicationWindow {
 
         Parameters {}
 
-        BigButton {
-            text: 'Yooooo'
-        }
+        Input {}
     }
 
     Navigation {
