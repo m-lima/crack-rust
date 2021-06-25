@@ -81,13 +81,16 @@ Item {
       }
     }
 
-    function localFile(url) {
-      let parsedUrl = new URL(url)
-      return parsedUrl.protocol === 'file' && !parsedUrl.pathname.endsWith('/')
+    function toURL(url) {
+      return new URL(url)
     }
 
-    onEntered: (evt) => evt.accepted = evt.urls.filter(localFile).length > 0
+    function localFile(url) {
+      return url.protocol === 'file' && !url.pathname.endsWith('/')
+    }
 
-    onDropped: (evt) => evt.urls.filter(localFile).forEach(u => fileList.model.append({ path: u.toString().substr(7) }))
+    onEntered: (evt) => evt.accepted = evt.urls.map(toURL).filter(localFile).length > 0
+
+    onDropped: (evt) => evt.urls.map(toURL).filter(localFile).forEach(u => fileList.model.append({ path: u.pathname }))
   }
 }
