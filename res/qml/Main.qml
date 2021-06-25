@@ -6,59 +6,59 @@ import QtQuick.Window
 // TODO: Window resize breaks first page
 // TODO: Window resize makes inner component resizing slow
 ApplicationWindow {
-    property color colorA: '#9a14cc'
-    property color colorB: '#5e0680'
-    property color colorCenter: '#008000'
-    property color colorD: '#cc2f14'
-    property color colorE: '#801806'
+  property color colorA: '#9a14cc'
+  property color colorB: '#5e0680'
+  property color colorCenter: '#008000'
+  property color colorD: '#cc2f14'
+  property color colorE: '#801806'
 
-    id: root
-    title: 'Hasher'
-    visible: true
+  id: root
+  title: 'Hasher'
+  visible: true
 
-    width: 400
-    height: 400
-    x: Screen.width / 2 - 200
-    y: Screen.height / 2 - 200
+  width: 400
+  height: 400
+  x: Screen.width / 2 - 200
+  y: Screen.height / 2 - 200
 
-    palette.window: '#353535'
-    palette.windowText: '#cccccc'
-    palette.base: '#252525'
-    palette.alternateBase: '#353535'
-    palette.text: '#cccccc'
-    palette.button: '#353535'
-    palette.buttonText: '#aaaaaa'
-    palette.highlight: colorCenter
-    palette.highlightedText: '#cccccc'
+  palette.window: '#353535'
+  palette.windowText: '#cccccc'
+  palette.base: '#252525'
+  palette.alternateBase: '#353535'
+  palette.text: '#cccccc'
+  palette.button: '#353535'
+  palette.buttonText: '#aaaaaa'
+  palette.highlight: colorCenter
+  palette.highlightedText: '#cccccc'
 
-    SwipeView {
-        id: content
+  SwipeView {
+    id: content
 
-        anchors {
-            top: parent.top
-            bottom: footer.top
-            left: parent.left
-            right: parent.right
-        }
-
-        currentIndex: 0
-        interactive: false
-
-        Parameters {}
-
-        Input {}
+    anchors {
+      top: parent.top
+      bottom: footer.top
+      left: parent.left
+      right: parent.right
     }
 
-    Navigation {
-        id: footer
+    currentIndex: 0
+    interactive: false
 
-        anchors {
-            bottom: parent.bottom
-            left: parent.left
-            right: parent.right
-        }
+    Parameters {}
 
-        height: 50
-        content: content
+    Input {}
+  }
+
+  Navigation {
+    id: footer
+
+    anchors {
+      bottom: parent.bottom
+      left: parent.left
+      right: parent.right
     }
+
+    height: 50
+    content: content
+  }
 }
