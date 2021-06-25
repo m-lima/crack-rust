@@ -3,7 +3,15 @@ import QtQuick.Controls
 import QtQuick.Controls.Fusion
 import QtQuick.Window
 
+// TODO: Window resize breaks first page
+// TODO: Window resize makes inner component resizing slow
 ApplicationWindow {
+    property color colorA: '#9a14cc'
+    property color colorB: '#5e0680'
+    property color colorCenter: '#008000'
+    property color colorD: '#cc2f14'
+    property color colorE: '#801806'
+
     id: root
     title: 'Hasher'
     visible: true
@@ -20,7 +28,7 @@ ApplicationWindow {
     palette.text: '#cccccc'
     palette.button: '#353535'
     palette.buttonText: '#aaaaaa'
-    palette.highlight: 'green'
+    palette.highlight: colorCenter
     palette.highlightedText: '#cccccc'
 
     SwipeView {
