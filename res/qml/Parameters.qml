@@ -37,6 +37,7 @@ Column {
     onClicked: root.current = this
     innerSpacing: 10
 
+    // TODO: Select "custom" is the fields were edited
     ComboBox {
       id: templates
       width: parent.width
@@ -155,4 +156,6 @@ Column {
       paintDisabled: false
     }
   }
+
+  // TODO: Add CPU and GPU options
 }

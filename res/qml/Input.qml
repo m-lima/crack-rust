@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Controls
 
+// TODO: Add section titles
 Item {
-
   anchors.fill: parent
 
+  // TODO: Render the detected hashes
   Rectangle {
     anchors {
       top: parent.top
@@ -19,7 +20,7 @@ Item {
 
     radius: 2
     color: edit.palette.base
-    border.color: edit.activeFocus ? palette.highlight : palette.base.darker()
+    border.color: edit.activeFocus ? palette.highlight : palette.base
 
     Flickable {
       anchors.fill: parent
@@ -56,7 +57,7 @@ Item {
 
       radius: 2
       color: palette.base
-      border.color: parent.containsDrag ? colorA: activeFocus ? palette.highlight : palette.base
+      border.color: parent.containsDrag ? colorA: fileList.activeFocus ? palette.highlight : palette.base
     }
 
     ListView {
@@ -72,6 +73,8 @@ Item {
 
       model: ListModel {}
 
+      // TODO: Add delete button
+      // TODO: Add fileDialog
       delegate: Text {
         text: path
         color: palette.text

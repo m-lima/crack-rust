@@ -16,11 +16,11 @@ Item {
     }
 
     visible: width > 0
-    width: content.state === 'Parameters' ? 0 : 50
+    width: content.state ? 50 : 0
 
     icon.source: 'qrc:/img/left.svg'
     icon.color: palette.buttonText
-    onClicked: content.state = 'Parameters'
+    onClicked: content.state = ''
     palette.button: root.palette.button.lighter(1.3)
 
     Behavior on width {
@@ -41,8 +41,8 @@ Item {
     }
 
     text: 'Next'
-    onClicked: content.state = 'Input'
-    state: content.state === 'Input' ? 'Crack' : ''
+    onClicked: content.state = 'Crack'
+    state: content.state
 
     palette.button: 'green'
     palette.buttonText: '#252525'
@@ -53,7 +53,6 @@ Item {
       name: 'Crack'
       PropertyChanges {
         target: next
-
         onClicked: console.log('Crack')
       }
     }

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Fusion
 import QtQuick.Window
 
+// TODO: Add "hash" flow
 ApplicationWindow {
   property color colorA: '#9a14cc'
   property color colorB: '#5e0680'
@@ -39,26 +40,21 @@ ApplicationWindow {
       right: parent.right
     }
 
-    state: 'Parameters'
+    // TODO: If focus is on the input TextArea, when switching state, focus must be given away
+    // TODO: Explore using a movement instead of simple opacity for the state changes
+    states: State {
+      name: 'Crack'
 
-    states: [
-      State {
-        name: 'Parameters'
-      },
-      State {
-        name: 'Input'
-
-        PropertyChanges {
-          target: parameters
-          opacity: 0
-        }
-
-        PropertyChanges {
-          target: input
-          opacity: 1
-        }
+      PropertyChanges {
+        target: parameters
+        opacity: 0
       }
-    ]
+
+      PropertyChanges {
+        target: input
+        opacity: 1
+      }
+    }
 
     Parameters {
       id: parameters
