@@ -10,8 +10,6 @@ Button {
         id: background
 
         anchors.fill: parent
-        border.color: baseColor
-        border.width: 1
         state: button.down ? 'Down' : button.hovered ? 'Hovered' : ''
         gradient: gradient
 

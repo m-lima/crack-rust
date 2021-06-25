@@ -44,7 +44,7 @@ Item {
         onClicked: content.currentIndex++
         state: content.currentIndex > 0 ? 'Crack' : ''
 
-        palette.button: 'darkgreen'
+        palette.button: 'green'
         palette.buttonText: '#252525'
         font.bold: true
         font.pointSize: 18

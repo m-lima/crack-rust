@@ -13,20 +13,7 @@ Item {
 
         radius: 2
         color: edit.palette.base
-        border.color: edit.activeFocus ? palette.highlight : palette.text
-
-        Rectangle {
-            x: 1;
-            y: 1
-            width: parent.width - 2
-            height: parent.height - 2
-
-            color: "transparent"
-
-            border.color: Color.transparent(palette.highlight, 40 / 255)
-            visible: edit.activeFocus
-            radius: 1.7
-        }
+        border.color: edit.activeFocus ? palette.highlight : palette.base.darker()
 
         Flickable {
             anchors.fill: parent
