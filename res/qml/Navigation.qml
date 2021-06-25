@@ -16,11 +16,11 @@ Item {
     }
 
     visible: width > 0
-    width: content.currentIndex > 0 ? 50 : 0
+    width: content.state === 'Parameters' ? 0 : 50
 
     icon.source: 'qrc:/img/left.svg'
     icon.color: palette.buttonText
-    onClicked: content.currentIndex--
+    onClicked: content.state = 'Parameters'
     palette.button: root.palette.button.lighter(1.3)
 
     Behavior on width {
@@ -41,8 +41,8 @@ Item {
     }
 
     text: 'Next'
-    onClicked: content.currentIndex++
-    state: content.currentIndex > 0 ? 'Crack' : ''
+    onClicked: content.state = 'Input'
+    state: content.state === 'Input' ? 'Crack' : ''
 
     palette.button: 'green'
     palette.buttonText: '#252525'

@@ -3,8 +3,6 @@ import QtQuick.Controls
 import QtQuick.Controls.Fusion
 import QtQuick.Window
 
-// TODO: Window resize breaks first page
-// TODO: Window resize makes inner component resizing slow
 ApplicationWindow {
   property color colorA: '#9a14cc'
   property color colorB: '#5e0680'
@@ -31,7 +29,7 @@ ApplicationWindow {
   palette.highlight: colorCenter
   palette.highlightedText: '#cccccc'
 
-  SwipeView {
+  Item {
     id: content
 
     anchors {
@@ -41,12 +39,51 @@ ApplicationWindow {
       right: parent.right
     }
 
-    currentIndex: 0
-    interactive: false
+    state: 'Parameters'
 
-    Parameters {}
+    states: [
+      State {
+        name: 'Parameters'
+      },
+      State {
+        name: 'Input'
 
-    Input {}
+        PropertyChanges {
+          target: parameters
+          opacity: 0
+        }
+
+        PropertyChanges {
+          target: input
+          opacity: 1
+        }
+      }
+    ]
+
+    Parameters {
+      id: parameters
+
+      visible: opacity > 0
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 200
+        }
+      }
+    }
+
+    Input {
+      id: input
+
+      opacity: 0
+      visible: opacity > 0
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 200
+        }
+      }
+    }
   }
 
   Navigation {

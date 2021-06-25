@@ -2,6 +2,9 @@ import QtQuick
 import QtQuick.Controls
 
 Item {
+
+  anchors.fill: parent
+
   Rectangle {
     anchors {
       top: parent.top

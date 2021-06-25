@@ -6,25 +6,29 @@ Column {
   property Item current: null
 
   id: root
-  y: parent.height / 2 - implicitHeight / 2
+
+  anchors {
+    verticalCenter: parent.verticalCenter
+    left: parent.left
+    right: parent.right
+  }
+
   state: current ? 'Expanded' : ''
 
   states: State {
     name: 'Expanded'
-    PropertyChanges {
+    AnchorChanges {
       target: root
-      y: 0
+      anchors.verticalCenter: undefined
+      anchors.top: parent.top
     }
   }
 
-  transitions: [
-    Transition {
-      NumberAnimation {
-        duration: 200
-        property: 'y'
-      }
+  transitions: Transition {
+    AnchorAnimation {
+      duration: 200
     }
-  ]
+  }
 
   CollapsibleItem {
     id: format
