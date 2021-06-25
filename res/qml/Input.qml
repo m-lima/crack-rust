@@ -91,6 +91,12 @@ Item {
 
     onEntered: (evt) => evt.accepted = evt.urls.map(toURL).filter(localFile).length > 0
 
-    onDropped: (evt) => evt.urls.map(toURL).filter(localFile).forEach(u => fileList.model.append({ path: u.pathname }))
+    onDropped: (evt) => {
+      let urls = evt.urls.map(toURL).filter(localFile)
+      if (urls.length > 0) {
+        urls.forEach(u => fileList.model.append({ path: u.pathname }))
+        evt.accept()
+      }
+    }
   }
 }
