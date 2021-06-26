@@ -148,9 +148,8 @@ fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
         bail!("{} is not a file", value)
     } else if let Err(e) = std::fs::File::open(&path) {
         bail!(e; "could not open {}", value)
-    } else {
-        Ok(path)
     }
+    Ok(path)
 }
 
 fn to_device(value: &str) -> Result<options::Device, error::Error> {

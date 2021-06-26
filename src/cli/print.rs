@@ -83,7 +83,7 @@ impl Printer {
         } else {
             eprint!("Loading {}", file.as_ref());
         }
-        let _ = std::io::stderr().flush();
+        let _ignored = std::io::stderr().flush();
     }
 
     pub fn read_done(self, result: Result<(), error::Error>) {
@@ -97,7 +97,7 @@ impl Printer {
         } else {
             use std::io::Write;
             eprint!("\x1b[1K\r");
-            let _ = std::io::stderr().flush();
+            let _ignored = std::io::stderr().flush();
         }
     }
 
@@ -109,7 +109,7 @@ impl Printer {
         } else {
             eprint!("Writing {}", file.as_ref());
         }
-        let _ = std::io::stderr().flush();
+        let _ignored = std::io::stderr().flush();
     }
 
     pub fn write_done(self, result: Result<(), error::Error>) {
@@ -149,7 +149,7 @@ impl Printer {
         } else {
             eprint!("\rProgress: {:02}%", progress);
         }
-        let _ = std::io::stderr().flush();
+        let _ignored = std::io::stderr().flush();
     }
 
     // Allowed because interface feels better
@@ -157,7 +157,7 @@ impl Printer {
     pub fn clear_progress(self) {
         use std::io::Write;
         eprint!("\x1b[1K\r");
-        let _ = std::io::stderr().flush();
+        let _ignored = std::io::stderr().flush();
     }
 }
 
@@ -240,7 +240,7 @@ fn print_summary(colored: bool, summary: &results::Summary) {
         number(summary.hash_count)
     );
     if summary.duration.as_micros() == 0 {
-        eprintln!("{:21}{}", colorize!("Hashes per millisec:", colored), "NaN");
+        eprintln!("{:21}NaN", colorize!("Hashes per millisec:", colored));
     } else {
         // Allowed because division by micros will not go over u64::max_value()
         #[allow(clippy::cast_possible_truncation)]

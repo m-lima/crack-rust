@@ -169,9 +169,9 @@ impl KernelParameters {
 
         Self {
             cpu_iterations,
-            length_on_cpu_iterations,
             range,
             length_on_gpu_kernel,
+            length_on_cpu_iterations,
         }
     }
 

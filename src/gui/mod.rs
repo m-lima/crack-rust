@@ -1,6 +1,8 @@
-use qmetaobject::*;
+use qmetaobject::{
+    QByteArray, QMetaType, QObjectBox, QVariant, QmlEngine, SimpleListItem, SimpleListModel,
+};
 
-qrc!(qml, "res/qml" as "/" {
+qmetaobject::qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
     "Main.qml",
     "BigButton.qml",
@@ -11,7 +13,7 @@ qrc!(qml, "res/qml" as "/" {
     "Radio.qml",
 });
 
-qrc!(img, "res/img" as "/img" {
+qmetaobject::qrc!(img, "res/img" as "/img" {
     "left.svg",
 });
 

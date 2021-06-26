@@ -4,7 +4,7 @@ use crate::results;
 
 pub fn read<H: hash::Hash>(
     input: &mut std::collections::HashSet<H>,
-    path: &std::path::PathBuf,
+    path: &std::path::Path,
 ) -> Result<(), error::Error> {
     std::fs::File::open(path)
         .map(std::io::BufReader::new)
@@ -44,14 +44,14 @@ pub fn read_from_stream<H: hash::Hash>(
 
 pub fn write(
     regex: &regex::Regex,
-    path: &std::path::PathBuf,
+    path: &std::path::Path,
     summary: &results::Summary,
 ) -> Result<(), error::Error> {
     create_file(path).and_then(|(i, o, p)| write_output_file(regex, &summary, &i, &o, p))
 }
 
 fn create_file(
-    input: &std::path::PathBuf,
+    input: &std::path::Path,
 ) -> Result<(std::fs::File, std::fs::File, std::path::PathBuf), error::Error> {
     let input_file = std::fs::File::open(input)
         .map_err(|e| error!(e; "Could not open '{}' for translating", input.display()))?;
@@ -75,17 +75,17 @@ fn create_file(
             "Could not create output file name for '{}': too many name collisions",
             file_name
         )
-    } else {
-        std::fs::File::create(&output)
-            .map(|file| (input_file, file, output))
-            .map_err(|e| {
-                error!(
-                    e;
-                    "Could not open output file for '{}'",
-                    file_name,
-                )
-            })
     }
+
+    std::fs::File::create(&output)
+        .map(|file| (input_file, file, output))
+        .map_err(|e| {
+            error!(
+                e;
+                "Could not open output file for '{}'",
+                file_name,
+            )
+        })
 }
 
 fn write_output_file(
@@ -142,7 +142,7 @@ fn write_output_file(
     }
 
     inner(regex, summary, input, output).map_err(|e| {
-        let _ = std::fs::remove_file(output_path);
+        let _ignored = std::fs::remove_file(output_path);
         e
     })
 }

@@ -117,7 +117,7 @@ impl<H: hash::Hash> Decrypt<H> {
         #[allow(clippy::cast_possible_truncation)]
         let variable_length = length - prefix.len() as u8;
         let number_space = 10_u64.pow(u32::from(variable_length));
-        let threads = threads(maybe_threads, number_space)?;
+        let threads = threads(maybe_threads, number_space);
         let device = device(maybe_device, number_space, threads);
 
         Ok(Self {
@@ -191,7 +191,7 @@ impl<H: hash::Hash> Mode<H> {
 
 // Allowed because the count was checked for overflow
 #[allow(clippy::cast_possible_truncation)]
-fn threads(requested_count: Option<u8>, number_space: u64) -> Result<u8, error::Error> {
+fn threads(requested_count: Option<u8>, number_space: u64) -> u8 {
     let threads = std::cmp::min(
         number_space / decrypt::OPTIMAL_HASHES_PER_THREAD + 1,
         requested_count.map_or_else(
@@ -208,7 +208,7 @@ fn threads(requested_count: Option<u8>, number_space: u64) -> Result<u8, error::
     );
 
     // Due to `min`, it will always be less than u8::MAX (255)
-    Ok(threads as u8)
+    threads as u8
 }
 
 fn salt(maybe_salt: Option<String>) -> String {
