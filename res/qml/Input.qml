@@ -6,7 +6,7 @@ import Qt.labs.platform
 Item {
   anchors.fill: parent
 
-  // TODO: Render the detected hashes
+  // TODO: Render the detected hashes (maybe use QSyntaxHighlighter)
   Rectangle {
     anchors {
       top: parent.top
@@ -20,15 +20,15 @@ Item {
     }
 
     radius: 2
-    color: edit.palette.base
-    border.color: edit.activeFocus ? palette.highlight : palette.base
+    color: hashesEdit.palette.base
+    border.color: hashesEdit.activeFocus ? palette.highlight : palette.base
 
     Flickable {
       anchors.fill: parent
       flickableDirection: Flickable.VerticalFlick
 
       TextArea.flickable: TextArea {
-        id: edit
+        id: hashesEdit
 
         wrapMode: TextArea.Wrap
         selectByMouse: true
@@ -115,7 +115,7 @@ Item {
 
         // TODO: Avoid repetition from CollapsibleItem
         background: Rectangle {
-          id: background
+          id: fileButtonBackground
           anchors.fill: parent
           color: palette.button
           state: files.containsDrag ? 'Dropping' : parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
@@ -124,21 +124,21 @@ Item {
             State {
               name: 'Dropping'
               PropertyChanges {
-                target: background
+                target: fileButtonBackground
                 color: palette.highlight
               }
             },
             State {
               name: 'Hovered'
               PropertyChanges {
-                target: background
+                target: fileButtonBackground
                 color: hoverColor()
               }
             },
             State {
               name: 'Down'
               PropertyChanges {
-                target: background
+                target: fileButtonBackground
                 color: palette.highlight
               }
             }
@@ -176,6 +176,7 @@ Item {
           }
         }
 
+        // TODO: Focus not being passed to listView
         Rectangle {
           x: 10
           width: parent.width - 20
@@ -209,6 +210,11 @@ Item {
             delegate: Text {
               text: path
               color: palette.text
+
+              MouseArea {
+                anchors.fill: parent
+                onClicked: fileList.currentIndex = model.index
+              }
             }
 
             highlight: Rectangle {
