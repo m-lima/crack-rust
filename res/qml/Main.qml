@@ -40,13 +40,13 @@ ApplicationWindow {
       right: parent.right
     }
 
-    // TODO: Explore using a movement instead of simple opacity for the state changes
     states: State {
       name: 'Crack'
 
       PropertyChanges {
         target: parameters
         opacity: 0
+        x: -parent.width
       }
 
       PropertyChanges {
@@ -55,8 +55,11 @@ ApplicationWindow {
       }
     }
 
-    Parameters {
+    Item {
       id: parameters
+
+      width: parent.width
+      height: parent.height
 
       visible: opacity > 0
       focus: visible
@@ -66,6 +69,14 @@ ApplicationWindow {
           duration: 200
         }
       }
+
+      Behavior on x {
+        NumberAnimation {
+          duration: 200
+        }
+      }
+
+      Parameters {}
     }
 
     Input {
