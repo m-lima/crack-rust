@@ -40,7 +40,7 @@ Item {
       left: back.right
     }
 
-    text: 'Next'
+    text: qsTr('Next')
     onClicked: content.state = 'Crack'
     state: content.state
 
@@ -69,7 +69,7 @@ Item {
           }
           PropertyAction {
             target: next
-            value: 'Next'
+            value: qsTr('Next')
             property: 'text'
           }
           NumberAnimation {
@@ -91,7 +91,7 @@ Item {
           }
           PropertyAction {
             target: next
-            value: 'Crack'
+            value: qsTr('Crack')
             property: 'text'
           }
           NumberAnimation {

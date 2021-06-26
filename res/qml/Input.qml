@@ -32,6 +32,7 @@ Item {
 
         wrapMode: TextArea.Wrap
         selectByMouse: true
+        placeholderText: qsTr('Enter text to extract hashes from')
       }
 
       ScrollBar.vertical: ScrollBar {}
@@ -107,7 +108,7 @@ Item {
           anchors.fill: parent
           verticalAlignment: Text.AlignVCenter
           horizontalAlignment: Text.AlignHCenter
-          text: 'Files'
+          text: qsTr('Files')
           font.bold: true
           font.pointSize: 14
           color: palette.text

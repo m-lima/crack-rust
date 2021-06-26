@@ -156,6 +156,4 @@ Column {
       paintDisabled: false
     }
   }
-
-  // TODO: Add CPU and GPU options
 }
