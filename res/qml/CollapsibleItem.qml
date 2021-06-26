@@ -10,13 +10,15 @@ Column {
   signal clicked
 
   id: root
+
   width: parent.width
 
   Button {
+    width: parent.width
+    height: 36
+
     text: root.title
     onClicked: root.clicked()
-    height: 36
-    width: parent.width
 
     contentItem: Text {
       anchors.fill: parent
@@ -30,7 +32,9 @@ Column {
 
     background: Rectangle {
       id: background
+
       anchors.fill: parent
+
       color: palette.button
       state: root.expanded ? 'Expanded' : parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
 
@@ -92,9 +96,10 @@ Column {
     }
 
     Pane {
-      clip: height < implicitHeight
-      height: root.expanded ? implicitHeight : 0
       width: parent.width
+      height: root.expanded ? implicitHeight : 0
+
+      clip: height < implicitHeight
       padding: 20
 
       Column {
@@ -110,9 +115,11 @@ Column {
       }
     }
 
+    // TODO: See if we can use Line here
     Rectangle {
       width: parent.width
       height: 1
+
       color: palette.window.lighter()
       visible: expanded && showLine
     }
