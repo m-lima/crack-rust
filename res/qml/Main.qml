@@ -40,7 +40,6 @@ ApplicationWindow {
       right: parent.right
     }
 
-    // TODO: If focus is on the input TextArea, when switching state, focus must be given away
     // TODO: Explore using a movement instead of simple opacity for the state changes
     states: State {
       name: 'Crack'
@@ -60,6 +59,7 @@ ApplicationWindow {
       id: parameters
 
       visible: opacity > 0
+      focus: visible
 
       Behavior on opacity {
         NumberAnimation {
@@ -73,6 +73,7 @@ ApplicationWindow {
 
       opacity: 0
       visible: opacity > 0
+      focus: visible
 
       Behavior on opacity {
         NumberAnimation {

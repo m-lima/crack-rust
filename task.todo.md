@@ -18,18 +18,6 @@
 - [ ] print::io_* is printing colored and out of place (no section and for writes, it comes before Summary on -vv)
 
 ## GUI
-- [ ] Add drag and drop for files (and possibly text)
-- [ ] Add input dialog for "crack" view
-- [ ] Add progress dialog
-- [ ] Add results dialog
-- [ ] Add file parsing dialog
-- [ ] Decouple UI from the lib calls
-- [ ] Allow "hash" to have line breaks
-- [ ] Hold the "raw" data in the input field, and allow the algorithm to change (capturing new inputs using the algorithm hash)
-- [ ] Render errors before actually cracking (red invalid hashes, list out file hashes)
-- [ ] If executor dialog closes, the signals will panic
-- [X] Handle panics from rust within QT
-- [X] Remove the "Invalid Input" dialog and let the library report back errors
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
