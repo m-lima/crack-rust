@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import Cracker
 
 Item {
   required property Item content
@@ -53,7 +54,10 @@ Item {
       name: 'Crack'
       PropertyChanges {
         target: next
-        onClicked: console.log('Crack')
+        onClicked: {
+          console.log('Crack')
+          Cracker.crack('bla', 2)
+        }
       }
     }
 
