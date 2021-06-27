@@ -26,7 +26,7 @@ Column {
 
     x: 20
     width: parent.width - 40
-    height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.contentHeight > 0 ? hashesList.contentHeight + 12 : 0, root.parent.height - hashesButton.height - 10 - files.height - 10)
+    height: 0
 
     radius: 2
     clip: true
@@ -39,15 +39,20 @@ Column {
         name: 'Display'
 
         PropertyChanges {
+          target: hashesScroll
+          visible: false
+          focus: false
+        }
+
+        PropertyChanges {
           target: hashesList
           visible: true
           focus: true
         }
 
         PropertyChanges {
-          target: hashesScroll
-          visible: false
-          focus: false
+          target: hashes
+          height: Math.min(hashesList.contentHeight > 0 ? hashesList.contentHeight + 12 : 0, root.parent.height - hashesButton.height - 10 - files.height - 10)
         }
       },
       State {
@@ -64,8 +69,20 @@ Column {
           visible: true
           focus: true
         }
+
+        PropertyChanges {
+          target: hashes
+          height: Math.min(hashesEdit.implicitHeight, root.parent.height - hashesButton.height - 10 - files.height - 10)
+        }
       }
     ]
+
+    transitions: Transition {
+      NumberAnimation {
+        property: 'height'
+        duration: 200
+      }
+    }
 
     function edit() {
       state = 'Edit'
@@ -97,6 +114,7 @@ Column {
       }
     }
 
+    // TODO: Text is getting clipped during animation
     Flickable {
       id: hashesScroll
 
