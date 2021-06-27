@@ -183,7 +183,6 @@ Column {
       active: files.containsDrag
     }
 
-    // TODO: Focus not being passed to listView
     Rectangle {
       id: filesBorder
 
@@ -195,7 +194,7 @@ Column {
       radius: 2
       clip: true
       color: palette.base
-      border.color: files.containsDrag || filesList.activeFocus ? palette.highlight : palette.base
+      border.color: files.containsDrag ? palette.highlight : palette.base
 
       Behavior on height {
         NumberAnimation {
@@ -218,8 +217,16 @@ Column {
 
         model: ListModel {}
 
-        // TODO: This NEEDS to render better
+        displaced: Transition {
+          NumberAnimation {
+            property: 'y'
+            duration: 200
+          }
+        }
+
         delegate: Item {
+          property real gonePaint: 0
+
           width: filesBorder.width - 20
           height: 16
 
