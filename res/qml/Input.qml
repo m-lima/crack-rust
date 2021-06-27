@@ -3,44 +3,100 @@ import QtQuick.Controls
 import Qt.labs.platform
 
 // TODO: Manage sizes. Try to replicate same feeling as Parameters
-Item {
-  anchors.fill: parent
+// TODO: THe manual layout here is a mess.. Can it be done better?
+Column {
+  readonly property int maxHeight: parent.height - hashesButton.height - 20 - filesButton.height - 20 - 20
 
-  Item {
-    anchors {
-      top: parent.top
-      bottom: files.top
-      right: parent.right
-      left: parent. left
-    }
+  anchors {
+    verticalCenter: parent.verticalCenter
+    left: parent.left
+    right: parent.right
+  }
 
-    Text {
-      id: hashesTitle
+  spacing: 10
 
-      width: parent.width
-      height: 36
+  Button {
+    id: hashesButton
 
+    width: parent.width
+    height: 36
+
+    onClicked: hashes.edit()
+
+    contentItem: Text {
+      anchors.fill: parent
       verticalAlignment: Text.AlignVCenter
       horizontalAlignment: Text.AlignHCenter
-      text: 'Hashes'
+      text: qsTr('Hashes')
       font.bold: true
       font.pointSize: 14
       color: palette.text
+    }
+
+    background: Rectangle {
+      id: hashesButtonBackground
+
+      anchors.fill: parent
+      color: palette.button
+      state: parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
+
+      states: [
+        State {
+          name: 'Hovered'
+          PropertyChanges {
+            target: hashesButtonBackground
+            color: hoverColor()
+          }
+        },
+        State {
+          name: 'Down'
+          PropertyChanges {
+            target: hashesButtonBackground
+            color: palette.highlight
+          }
+        }
+      ]
+
+      transitions: [
+        Transition {
+          from: 'Down'
+          ColorAnimation {
+            duration: 200
+            property: 'color'
+          }
+        },
+        Transition {
+          to: 'Down'
+          ColorAnimation {
+            duration: 200
+            property: 'color'
+          }
+        }
+      ]
+
+      function hoverColor() {
+        return Qt.rgba(
+          (palette.window.r * 3 + palette.highlight.r) / 4,
+          (palette.window.g * 3 + palette.highlight.g) / 4,
+          (palette.window.b * 3 + palette.highlight.b) / 4,
+          1)
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+      }
     }
 
     // TODO: Render the detected hashes (maybe use QSyntaxHighlighter)
     Rectangle {
       id: hashes
 
-      anchors {
-        top: hashesTitle.bottom
-        bottom: parent.bottom
-        right: parent.right
-        left: parent.left
-        bottomMargin: 10
-        rightMargin: 20
-        leftMargin: 20
-      }
+      x: 20
+      width: parent.width - 40
+      height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.contentHeight, maxHeight - filesList.height)
 
       radius: 2
       color: hashesEdit.palette.base
@@ -56,10 +112,15 @@ Item {
         }
 
         PropertyChanges {
-          target: hashesView
+          target: hashesList
           visible: true
           focus: true
         }
+      }
+
+      function edit() {
+        hashes.state = ''
+        hashesEdit.forceActiveFocus()
       }
 
       Flickable {
@@ -74,7 +135,7 @@ Item {
 
           wrapMode: TextArea.Wrap
           selectByMouse: true
-          placeholderText: qsTr('Enter text to extract hashes from')
+          placeholderText: qsTr('Enter text from which to extract hashes')
 
           function handleEnter(evt) {
             if (evt.modifiers & Qt.ShiftModifier) {
@@ -95,7 +156,7 @@ Item {
       }
 
       ListView {
-        id: hashesView
+        id: hashesList
 
         anchors {
           fill: parent
@@ -118,26 +179,16 @@ Item {
 
         MouseArea {
           anchors.fill: parent
-          onClicked: {
-            hashes.state = ''
-            hashesEdit.forceActiveFocus()
-          }
+          onClicked: hashes.edit()
         }
       }
     }
-  }
 
   DropArea {
     id: files
 
-    anchors {
-      bottom: parent.bottom
-      left: parent.left
-      right: parent.right
-      bottomMargin: 10
-    }
-
-    height: fileColumn.implicitHeight
+    width: parent.width
+    height: filesButton.height + 10 + filesBorder.height + 10
 
     keys: [ 'text/uri-list' ]
 
@@ -150,8 +201,8 @@ Item {
     }
 
     function unique(url) {
-      for (let i = 0; i < fileList.model.count; i++) {
-        if (fileList.model.get(i).path === url.pathname) {
+      for (let i = 0; i < filesList.model.count; i++) {
+        if (filesList.model.get(i).path === url.pathname) {
           return false
         }
       }
@@ -159,9 +210,9 @@ Item {
     }
 
     function add(urls) {
-      let count = fileList.model.count
-      urls.map(toURL).filter(localFile).filter(unique).forEach(u => fileList.model.append({ path: u.pathname }))
-      return fileList.model.count > count
+      let count = filesList.model.count
+      urls.map(toURL).filter(localFile).filter(unique).forEach(u => filesList.model.append({ path: u.pathname }))
+      return filesList.model.count > count
     }
 
     onEntered: (evt) => evt.accepted = evt.urls.map(toURL).filter(localFile).length > 0
@@ -169,28 +220,26 @@ Item {
     onDropped: (evt) => add(evt.urls) && evt.accept()
 
     FileDialog {
-      id: fileDialog
+      id: filesDialog
 
       fileMode: FileDialog.OpenFiles
       folder: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
 
-      onAccepted: files.add(fileDialog.files)
+      onAccepted: files.add(filesDialog.files)
     }
 
     Column {
-      id: fileColumn
-
-      width: parent.width
+      anchors.fill: parent
 
       spacing: 10
 
       Button {
-        id: fileButton
+        id: filesButton
 
         width: parent.width
         height: 36
 
-        onClicked: fileDialog.open()
+        onClicked: filesDialog.open()
 
         contentItem: Text {
           anchors.fill: parent
@@ -204,7 +253,7 @@ Item {
 
         // TODO: Avoid repetition from CollapsibleItem
         background: Rectangle {
-          id: fileButtonBackground
+          id: filesButtonBackground
           anchors.fill: parent
           color: palette.button
           state: files.containsDrag ? 'Dropping' : parent.down ? 'Down' : parent.hovered ? 'Hovered' : ''
@@ -213,21 +262,21 @@ Item {
             State {
               name: 'Dropping'
               PropertyChanges {
-                target: fileButtonBackground
+                target: filesButtonBackground
                 color: palette.highlight
               }
             },
             State {
               name: 'Hovered'
               PropertyChanges {
-                target: fileButtonBackground
+                target: filesButtonBackground
                 color: hoverColor()
               }
             },
             State {
               name: 'Down'
               PropertyChanges {
-                target: fileButtonBackground
+                target: filesButtonBackground
                 color: palette.highlight
               }
             }
@@ -267,13 +316,15 @@ Item {
 
         // TODO: Focus not being passed to listView
         Rectangle {
-          x: 10
-          width: parent.width - 20
-          height: fileList.model.count > 0 ? 56 : 0
+          id: filesBorder
+
+          x: 20
+          width: parent.width - 40
+          height: Math.min(filesList.contentHeight, maxHeight - 36)
 
           radius: 2
           color: palette.base
-          border.color: files.containsDrag || fileList.activeFocus ? palette.highlight : palette.base
+          border.color: files.containsDrag || filesList.activeFocus ? palette.highlight : palette.base
 
           Behavior on height {
             NumberAnimation {
@@ -282,7 +333,7 @@ Item {
           }
 
           ListView {
-            id: fileList
+            id: filesList
 
             anchors {
               fill: parent
@@ -302,7 +353,7 @@ Item {
 
               MouseArea {
                 anchors.fill: parent
-                onClicked: fileList.currentIndex = model.index
+                onClicked: filesList.currentIndex = model.index
               }
             }
 
