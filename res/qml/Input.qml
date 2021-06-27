@@ -105,8 +105,7 @@ Column {
         color: palette.text
       }
 
-      // TODO: Regex should be conditioned to hash algorithm selected
-      model: [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
+      model: []
 
       MouseArea {
         anchors.fill: parent
@@ -141,8 +140,11 @@ Column {
           }
         }
 
-        onEditingFinished: hashes.state = 'Display'
-
+        onEditingFinished: {
+          // TODO: Regex should be conditioned to hash algorithm selected
+          hashesList.model = [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
+          hashes.state = 'Display'
+        }
         Keys.onReturnPressed: (evt) => handleEnter(evt)
         Keys.onEnterPressed: (evt) => handleEnter(evt)
       }
