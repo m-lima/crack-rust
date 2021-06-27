@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import Qt.labs.platform
 
 // TODO: Manage sizes. Try to replicate same feeling as Parameters
@@ -320,6 +321,7 @@ Column {
 
           x: 20
           width: parent.width - 40
+          // TODO: There's a magic number here: 36 = 16 + 10 * 2 (minimum size of the Hashes input)
           height: Math.min(filesList.contentHeight, maxHeight - 36)
 
           radius: 2
@@ -346,19 +348,32 @@ Column {
 
             model: ListModel {}
 
-            // TODO: Add delete button
-            delegate: Text {
-              text: path
-              color: palette.text
+            // TODO: This NEEDS to render better
+            delegate: RowLayout {
+              width: filesBorder.width - 20
 
-              MouseArea {
-                anchors.fill: parent
-                onClicked: filesList.currentIndex = model.index
+              Text {
+                id: filesPath
+
+                Layout.maximumWidth: parent.width - 16
+
+                text: path
+                color: palette.text
               }
-            }
 
-            highlight: Rectangle {
-              color: palette.highlight
+              Button {
+                visible: filesHover.hovered
+                background: Item {}
+                icon.source: 'qrc:/img/trash.svg'
+                icon.color: colorA
+                padding: 0
+
+                onClicked: filesList.model.remove(index)
+              }
+
+              HoverHandler {
+                id: filesHover
+              }
             }
           }
         }

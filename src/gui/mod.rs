@@ -15,6 +15,7 @@ qmetaobject::qrc!(qml, "res/qml" as "/" {
 
 qmetaobject::qrc!(img, "res/img" as "/img" {
     "left.svg",
+    "trash.svg",
 });
 
 #[derive(SimpleListItem, Clone, Default)]
