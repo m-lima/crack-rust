@@ -27,7 +27,7 @@ Column {
 
     x: 20
     width: parent.width - 40
-    height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.height > 0 ? hashesList.height + 12 : 0, root.parent.height - hashesButton.height - 10 - files.height)
+    height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.contentHeight > 0 ? hashesList.contentHeight + 12 : 0, root.parent.height - hashesButton.height - 10 - files.height - 10)
 
     radius: 2
     clip: true
@@ -89,6 +89,7 @@ Column {
         color: palette.text
       }
 
+      // TODO: Regex should be conditioned to hash algorithm selected
       model: [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
 
       MouseArea {
@@ -135,7 +136,7 @@ Column {
     id: files
 
     width: parent.width
-    height: filesButton.height + 10 + filesBorder.height
+    height: filesButton.height + 10 + filesBorder.height + 10
 
     keys: [ 'text/uri-list' ]
 
@@ -187,15 +188,9 @@ Column {
     Rectangle {
       id: filesBorder
 
-      anchors {
-        top: filesButton.bottom
-        left: parent.left
-        right: parent.right
-        topMargin: 10
-        leftMargin: 20
-        rightMargin: 20
-      }
-
+      x: 20
+      y: filesButton.height + 10
+      width: parent.width - 40
       height: filesList.model.count > 0 ? Math.min(root.parent.height / 4, filesList.contentHeight + 12) : 0
 
       radius: 2
