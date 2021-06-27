@@ -5,7 +5,7 @@ import Qt.labs.platform
 
 // TODO: The manual layout here is a mess.. Can it be done better?
 Column {
-  readonly property int maxHeight: parent.height - hashesButton.height - 20 - filesButton.height - 20 - 20
+  id: root
 
   anchors {
     verticalCenter: parent.verticalCenter
@@ -27,31 +27,74 @@ Column {
 
     x: 20
     width: parent.width - 40
-    height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.contentHeight, maxHeight - filesList.height)
+    height: Math.min(hashesEdit.visible ? hashesEdit.implicitHeight : hashesList.height > 0 ? hashesList.height + 12 : 0, root.parent.height - hashesButton.height - 10 - files.height)
 
     radius: 2
+    clip: true
     color: hashesEdit.palette.base
     border.color: hashesEdit.activeFocus ? palette.highlight : palette.base
+    state: 'Display'
 
-    states: State {
-      name: 'Display'
+    states: [
+      State {
+        name: 'Display'
 
-      PropertyChanges {
-        target: hashesScroll
-        visible: false
-        focus: false
+        PropertyChanges {
+          target: hashesList
+          visible: true
+          focus: true
+        }
+
+        PropertyChanges {
+          target: hashesScroll
+          visible: false
+          focus: false
+        }
+      },
+      State {
+        name: 'Edit'
+
+        PropertyChanges {
+          target: hashesList
+          visible: false
+          focus: false
+        }
+
+        PropertyChanges {
+          target: hashesScroll
+          visible: true
+          focus: true
+        }
       }
-
-      PropertyChanges {
-        target: hashesList
-        visible: true
-        focus: true
-      }
-    }
+    ]
 
     function edit() {
-      hashes.state = ''
+      state = 'Edit'
       hashesEdit.forceActiveFocus()
+    }
+
+    ListView {
+      id: hashesList
+
+      anchors {
+        fill: parent
+        topMargin: 6
+        bottomMargin: 6
+        leftMargin: 10
+        rightMargin: 10
+      }
+
+      delegate: Text {
+        text: modelData
+        color: palette.text
+      }
+
+      model: [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
+
+      MouseArea {
+        anchors.fill: parent
+        onClicked: hashes.edit()
+      }
     }
 
     Flickable {
@@ -86,41 +129,13 @@ Column {
         Keys.onEnterPressed: (evt) => handleEnter(evt)
       }
     }
-
-    ListView {
-      id: hashesList
-
-      anchors {
-        fill: parent
-        topMargin: 10
-        bottomMargin: 10
-        leftMargin: 10
-        rightMargin: 10
-      }
-
-      clip: true
-      visible: false
-      focus: false
-
-      delegate: Text {
-        text: modelData
-        color: palette.text
-      }
-
-      model: [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
-
-      MouseArea {
-        anchors.fill: parent
-        onClicked: hashes.edit()
-      }
-    }
   }
 
   DropArea {
     id: files
 
     width: parent.width
-    height: filesButton.height + 10 + filesBorder.height + 10
+    height: filesButton.height + 10 + filesBorder.height
 
     keys: [ 'text/uri-list' ]
 
@@ -160,78 +175,78 @@ Column {
       onAccepted: files.add(filesDialog.files)
     }
 
-    Column {
-      anchors.fill: parent
+    TitleButton {
+      id: filesButton
 
-      spacing: 10
+      onClicked: filesDialog.open()
+      text: qsTr('Files')
+      active: files.containsDrag
+    }
 
-      TitleButton {
-        id: filesButton
+    // TODO: Focus not being passed to listView
+    Rectangle {
+      id: filesBorder
 
-        onClicked: filesDialog.open()
-        text: qsTr('Files')
-        active: files.containsDrag
+      anchors {
+        top: filesButton.bottom
+        left: parent.left
+        right: parent.right
+        topMargin: 10
+        leftMargin: 20
+        rightMargin: 20
       }
 
-      // TODO: Focus not being passed to listView
-      Rectangle {
-        id: filesBorder
+      height: filesList.model.count > 0 ? Math.min(root.parent.height / 4, filesList.contentHeight + 12) : 0
 
-        x: 20
-        width: parent.width - 40
-        // TODO: There's a magic number here: 36 = 16 + 10 * 2 (minimum size of the Hashes input)
-        height: Math.min(filesList.contentHeight, maxHeight - 36)
+      radius: 2
+      clip: true
+      color: palette.base
+      border.color: files.containsDrag || filesList.activeFocus ? palette.highlight : palette.base
 
-        radius: 2
-        color: palette.base
-        border.color: files.containsDrag || filesList.activeFocus ? palette.highlight : palette.base
+      Behavior on height {
+        NumberAnimation {
+          duration: 200
+        }
+      }
 
-        Behavior on height {
-          NumberAnimation {
-            duration: 200
-          }
+      ListView {
+        id: filesList
+
+        anchors {
+          fill: parent
+          topMargin: 6
+          bottomMargin: 6
+          leftMargin: 10
+          rightMargin: 10
         }
 
-        ListView {
-          id: filesList
+        model: ListModel {}
 
-          anchors {
-            fill: parent
-            leftMargin: 10
-            rightMargin: 10
+        // TODO: This NEEDS to render better
+        delegate: RowLayout {
+          width: filesBorder.width - 20
+
+          Text {
+            id: filesPath
+
+            Layout.maximumWidth: parent.width - 16
+
+            text: path
+            color: palette.text
           }
 
-          clip: true
-          focus: true
+          Button {
+            visible: filesHover.hovered
+            background: Item {}
+            icon.source: 'qrc:/img/trash.svg'
+            icon.color: colorA
+            padding: 0
 
-          model: ListModel {}
+            onClicked: filesList.model.remove(index)
+          }
 
-          // TODO: This NEEDS to render better
-          delegate: RowLayout {
-            width: filesBorder.width - 20
-
-            Text {
-              id: filesPath
-
-              Layout.maximumWidth: parent.width - 16
-
-              text: path
-              color: palette.text
-            }
-
-            Button {
-              visible: filesHover.hovered
-              background: Item {}
-              icon.source: 'qrc:/img/trash.svg'
-              icon.color: colorA
-              padding: 0
-
-              onClicked: filesList.model.remove(index)
-            }
-
-            HoverHandler {
-              id: filesHover
-            }
+          HoverHandler {
+            id: filesHover
           }
         }
       }
