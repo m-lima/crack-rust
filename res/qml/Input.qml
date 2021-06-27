@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import Qt.labs.platform
 
 // TODO: The manual layout here is a mess.. Can it be done better?
@@ -205,6 +204,8 @@ Column {
       }
 
       ListView {
+        readonly property string home: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0].toString().substr(7)
+
         id: filesList
 
         anchors {
@@ -218,26 +219,39 @@ Column {
         model: ListModel {}
 
         // TODO: This NEEDS to render better
-        delegate: RowLayout {
+        delegate: Item {
           width: filesBorder.width - 20
+          height: 16
 
           Text {
-            id: filesPath
+            anchors {
+              left: parent.left
+              right: filesDelete.left
+              rightMargin: 10
+            }
 
-            Layout.maximumWidth: parent.width - 16
-
-            text: path
+            text: path.startsWith(filesList.home) ? path.replace(filesList.home, '~') : path
+            elide: Text.ElideLeft
             color: palette.text
           }
 
-          Button {
-            visible: filesHover.hovered
-            background: Item {}
-            icon.source: 'qrc:/img/trash.svg'
-            icon.color: colorA
-            padding: 0
+          IconLabel {
+            id: filesDelete
 
-            onClicked: filesList.model.remove(index)
+            width: 16
+            height: 16
+
+            anchors.right: parent.right
+            visible: filesHover.hovered
+            icon.source: 'qrc:/img/trash.svg'
+            icon.color: colorD
+
+            MouseArea {
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
+              onClicked: filesList.model.remove(index)
+            }
           }
 
           HoverHandler {
