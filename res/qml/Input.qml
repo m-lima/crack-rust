@@ -6,36 +6,124 @@ import Qt.labs.platform
 Item {
   anchors.fill: parent
 
-  // TODO: Render the detected hashes (maybe use QSyntaxHighlighter)
-  Rectangle {
+  Item {
     anchors {
       top: parent.top
       bottom: files.top
-      left: parent.left
       right: parent.right
-      topMargin: 10
-      bottomMargin: 10
-      leftMargin: 10
-      rightMargin: 10
+      left: parent. left
     }
 
-    radius: 2
-    color: hashesEdit.palette.base
-    border.color: hashesEdit.activeFocus ? palette.highlight : palette.base
+    Text {
+      id: hashesTitle
 
-    Flickable {
-      anchors.fill: parent
-      flickableDirection: Flickable.VerticalFlick
+      width: parent.width
+      height: 36
 
-      TextArea.flickable: TextArea {
-        id: hashesEdit
+      verticalAlignment: Text.AlignVCenter
+      horizontalAlignment: Text.AlignHCenter
+      text: 'Hashes'
+      font.bold: true
+      font.pointSize: 14
+      color: palette.text
+    }
 
-        wrapMode: TextArea.Wrap
-        selectByMouse: true
-        placeholderText: qsTr('Enter text to extract hashes from')
+    // TODO: Render the detected hashes (maybe use QSyntaxHighlighter)
+    Rectangle {
+      id: hashes
+
+      anchors {
+        top: hashesTitle.bottom
+        bottom: parent.bottom
+        right: parent.right
+        left: parent.left
+        bottomMargin: 10
+        rightMargin: 20
+        leftMargin: 20
       }
 
-      ScrollBar.vertical: ScrollBar {}
+      radius: 2
+      color: hashesEdit.palette.base
+      border.color: hashesEdit.activeFocus ? palette.highlight : palette.base
+
+      states: State {
+        name: 'Display'
+
+        PropertyChanges {
+          target: hashesScroll
+          visible: false
+          focus: false
+        }
+
+        PropertyChanges {
+          target: hashesView
+          visible: true
+          focus: true
+        }
+      }
+
+      Flickable {
+        id: hashesScroll
+
+        anchors.fill: parent
+
+        flickableDirection: Flickable.VerticalFlick
+
+        TextArea.flickable: TextArea {
+          id: hashesEdit
+
+          wrapMode: TextArea.Wrap
+          selectByMouse: true
+          placeholderText: qsTr('Enter text to extract hashes from')
+
+          function handleEnter(evt) {
+            if (evt.modifiers & Qt.ShiftModifier) {
+              remove(selectionStart, selectionEnd)
+              insert(selectionStart, '\n')
+              evt.accepted = true
+            } else if (evt.modifiers === 0) {
+              hashes.state = 'Display'
+              evt.accepted = true
+            }
+          }
+
+          onEditingFinished: hashes.state = 'Display'
+
+          Keys.onReturnPressed: (evt) => handleEnter(evt)
+          Keys.onEnterPressed: (evt) => handleEnter(evt)
+        }
+
+        ScrollBar.vertical: ScrollBar {}
+      }
+
+      ListView {
+        id: hashesView
+
+        anchors {
+          fill: parent
+          leftMargin: 10
+          rightMargin: 10
+        }
+
+        clip: true
+        visible: false
+        focus: false
+
+        delegate: Text {
+          text: modelData
+          color: palette.text
+        }
+
+        model: hashesEdit.text.match(/([a-fA-F0-9]{16})/g)
+
+        MouseArea {
+          anchors.fill: parent
+          onClicked: {
+            hashes.state = ''
+            hashesEdit.forceActiveFocus()
+          }
+        }
+      }
     }
   }
 

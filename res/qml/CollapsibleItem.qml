@@ -79,6 +79,7 @@ Column {
         }
       ]
 
+      // TODO: Try Qt.tint() + Color.transparent()
       function hoverColor() {
         return Qt.rgba(
           (palette.window.r * 3 + palette.highlight.r) / 4,
