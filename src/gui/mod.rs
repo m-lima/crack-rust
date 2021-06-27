@@ -11,6 +11,7 @@ qmetaobject::qrc!(qml, "res/qml" as "/" {
     "Navigation.qml",
     "Parameters.qml",
     "Radio.qml",
+    "TitleButton.qml",
 });
 
 qmetaobject::qrc!(img, "res/img" as "/img" {
