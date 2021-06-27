@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Qt.labs.platform
 
-// TODO: Add section titles
+// TODO: Manage sizes. Try to replicate same feeling as Parameters
 Item {
   anchors.fill: parent
 
@@ -92,8 +92,6 @@ Item {
           Keys.onReturnPressed: (evt) => handleEnter(evt)
           Keys.onEnterPressed: (evt) => handleEnter(evt)
         }
-
-        ScrollBar.vertical: ScrollBar {}
       }
 
       ListView {
@@ -101,6 +99,8 @@ Item {
 
         anchors {
           fill: parent
+          topMargin: 10
+          bottomMargin: 10
           leftMargin: 10
           rightMargin: 10
         }
@@ -114,7 +114,7 @@ Item {
           color: palette.text
         }
 
-        model: hashesEdit.text.match(/([a-fA-F0-9]{16})/g)
+        model: [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
 
         MouseArea {
           anchors.fill: parent
