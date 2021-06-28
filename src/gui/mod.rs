@@ -1,8 +1,5 @@
-// TODO: Remove these once `derive(SimpleListItem)` is fixed
-use qmetaobject::{
-    QByteArray, QMetaType, QObject, QObjectBox, QVariant, QmlEngine, SimpleListItem,
-    SimpleListModel,
-};
+// TODO: Remove this once Path is used instead of Ident in qmetaobject_impl
+use qmetaobject::QObject;
 
 qmetaobject::qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
@@ -21,7 +18,7 @@ qmetaobject::qrc!(img, "res/img" as "/img" {
     "trash.svg",
 });
 
-#[derive(SimpleListItem, Clone, Default)]
+#[derive(qmetaobject::SimpleListItem, Clone, Default)]
 struct Template {
     pub name: String,
     pub prefix: String,
@@ -38,7 +35,7 @@ impl Template {
     }
 }
 
-#[derive(QObject, Default)]
+#[derive(qmetaobject::QObject, Default)]
 struct Cracker {
     base: qmetaobject::qt_base_class!(trait QObject),
     crack: qmetaobject::qt_method!(
@@ -59,13 +56,13 @@ pub fn run() {
     qml();
     img();
 
-    let templates = QObjectBox::new(
+    let templates = qmetaobject::QObjectBox::new(
         include!("../../hidden/template.in")
             .iter()
-            .collect::<SimpleListModel<_>>(),
+            .collect::<qmetaobject::SimpleListModel<_>>(),
     );
 
-    let mut engine = QmlEngine::new();
+    let mut engine = qmetaobject::QmlEngine::new();
     qmetaobject::qml_register_singleton_type::<Cracker>(&cracker, 1, 0, &cracker);
     engine.set_object_property("_templates".into(), templates.pinned());
     engine.load_file("qrc:/Main.qml".into());

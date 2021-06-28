@@ -24,7 +24,7 @@ lazy_static = "1"
 md-5 = "0.9"
 num_cpus = "1"
 ocl = "0.19"
-qmetaobject = { version = "0.2.1", optional = true }
+qmetaobject = { version = "0.2.2", optional = true }
 regex = "1"
 sha2 = "0.9"
 
