@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.platform
+import HashHighlighter
 
 // TODO: The manual layout here is a mess.. Can it be done better?
 Column {
@@ -138,6 +139,11 @@ Column {
             hashes.state = 'Display'
             evt.accepted = true
           }
+        }
+
+
+        HashHighlighter {
+          document: textDocument
         }
 
         onEditingFinished: {

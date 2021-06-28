@@ -19,6 +19,29 @@ fn generate_dummys() {
     }
 }
 
+fn build_cpp() {
+    let rust_cpp_include_path = concat!(env!("CARGO_MANIFEST_DIR"), "/include");
+    let qt_include_path = std::env::var("DEP_QT_INCLUDE_PATH").unwrap();
+    let qt_library_path = std::env::var("DEP_QT_LIBRARY_PATH").unwrap();
+
+    let mut config = cpp_build::Config::new();
+
+    if cfg!(target_os = "macos") {
+        config.flag("-F");
+        config.flag(qt_library_path.trim());
+    }
+
+    config
+        .include(rust_cpp_include_path)
+        .include(qt_include_path.trim())
+        .flag_if_supported("-std=c++17")
+        .flag_if_supported("/std:c++17")
+        .build("src/gui/mod.rs");
+}
+
 fn main() {
     generate_dummys();
+
+    #[cfg(feature = "qml")]
+    build_cpp();
 }

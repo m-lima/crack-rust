@@ -50,8 +50,70 @@ impl qmetaobject::QSingletonInit for Cracker {
     fn init(&mut self) {}
 }
 
+pub trait QSyntaxHighlighter: QObject {
+    fn get_object_description() -> &'static qmetaobject::QObjectDescription
+    where
+        Self: Sized,
+    {
+        unsafe {
+            &*cpp::cpp!([]-> *const qmetaobject::QObjectDescription as "RustObjectDescription const*" {
+                return rustObjectDescription<Hasher_QSyntaxHighlighter>();
+            })
+        }
+    }
+
+    fn highlight_block(&mut self, text: String);
+
+    fn set_format(&mut self, start: i32, length: i32, color: qmetaobject::QColor) {
+        let obj = qmetaobject::QObject::get_cpp_object(self);
+        unsafe {
+            cpp::cpp!([obj as "Hasher_QSyntaxHighlighter*", start as "int", length as "int", color as "QColor"] {
+                if (obj) obj->setFormatPublic(start, length, color);
+            })
+        }
+    }
+}
+
+cpp::cpp! {{
+#include <qmetaobject_rust.hpp>
+#include <QtGui/QSyntaxHighlighter>
+
+struct Abstract_Hasher_QSyntaxHighlighter : QSyntaxHighlighter {
+    Abstract_Hasher_QSyntaxHighlighter() : QSyntaxHighlighter(this) {}
+};
+
+struct Hasher_QSyntaxHighlighter : RustObject<Abstract_Hasher_QSyntaxHighlighter> {
+    void highlightBlock(const QString &text) {
+        rust!(Hasher_QSyntaxHighlighter_highlightBlock [rust_object: qmetaobject::QObjectPinned<'_, dyn QSyntaxHighlighter> as "TraitObject", text: qmetaobject::QString as "QString"] {
+            rust_object.borrow_mut().highlight_block(text.clone().into())
+        });
+    }
+
+    void setFormatPublic(int start, int length, QColor color) {
+        setFormat(start, length, color);
+    }
+};
+}}
+
+#[derive(qmetaobject::QObject, Default)]
+struct HashSyntaxHighlighter {
+    base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
+}
+
+impl QSyntaxHighlighter for HashSyntaxHighlighter {
+    #[allow(clippy::cast_possible_trucation)]
+    fn highlight_block(&mut self, text: String) {
+        self.set_format(
+            0,
+            text.len() as i32,
+            qmetaobject::QColor::from_name("green"),
+        )
+    }
+}
+
 pub fn run() {
     let cracker = std::ffi::CString::new("Cracker").unwrap();
+    let hash_highlighter = std::ffi::CString::new("HashHighlighter").unwrap();
 
     qml();
     img();
@@ -64,6 +126,12 @@ pub fn run() {
 
     let mut engine = qmetaobject::QmlEngine::new();
     qmetaobject::qml_register_singleton_type::<Cracker>(&cracker, 1, 0, &cracker);
+    qmetaobject::qml_register_type::<HashSyntaxHighlighter>(
+        &hash_highlighter,
+        1,
+        0,
+        &hash_highlighter,
+    );
     engine.set_object_property("_templates".into(), templates.pinned());
     engine.load_file("qrc:/Main.qml".into());
     engine.exec();
