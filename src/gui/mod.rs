@@ -1,6 +1,8 @@
 // TODO: Remove this once Path is used instead of Ident in qmetaobject_impl
 use qmetaobject::QObject;
 
+mod syntaxhighlighter;
+
 qmetaobject::qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
     "Main.qml",
@@ -49,93 +51,6 @@ struct Cracker {
 impl qmetaobject::QSingletonInit for Cracker {
     fn init(&mut self) {}
 }
-
-pub trait QSyntaxHighlighter: QObject {
-    fn get_object_description() -> &'static qmetaobject::QObjectDescription
-    where
-        Self: Sized,
-    {
-        unsafe {
-            &*cpp::cpp!([]-> *const qmetaobject::QObjectDescription as "RustObjectDescription const*" {
-                return rustObjectDescription<Hasher_QSyntaxHighlighter>();
-            })
-        }
-    }
-
-    fn highlight_block(&mut self, text: String);
-
-    fn set_format(&mut self, start: i32, length: i32, color: qmetaobject::QColor) {
-        let obj = qmetaobject::QObject::get_cpp_object(self);
-        unsafe {
-            cpp::cpp!([obj as "Hasher_QSyntaxHighlighter*", start as "int", length as "int", color as "QColor"] {
-                if (obj) obj->setFormatPublic(start, length, color);
-            })
-        }
-    }
-}
-
-cpp::cpp! {{
-#include <QtGui/QSyntaxHighlighter>
-
-struct Abstract_Hasher_QSyntaxHighlighter : QSyntaxHighlighter {
-    Abstract_Hasher_QSyntaxHighlighter() : QSyntaxHighlighter((QObject*) nullptr) {}
-};
-}}
-
-cpp::cpp! {{
-#include <qmetaobject_rust.hpp>
-#include <QtQuick/QQuickTextDocument>
-#include <QtGui/QTextDocument>
-
-struct Hasher_QSyntaxHighlighter : RustObject<Abstract_Hasher_QSyntaxHighlighter> {
-    void highlightBlock(const QString &text) {
-        rust!(Hasher_QSyntaxHighlighter_highlightBlock [rust_object: qmetaobject::QObjectPinned<'_, dyn QSyntaxHighlighter> as "TraitObject", text: qmetaobject::QString as "QString"] {
-            rust_object.borrow_mut().highlight_block(text.clone().into())
-        });
-    }
-
-    void setFormatPublic(int start, int length, QColor color) {
-        setFormat(start, length, color);
-    }
-
-    QQuickTextDocument * textDocument() {
-        return m_TextDocument;
-    }
-
-    void setTextDocument(QQuickTextDocument * textDocument) {
-        if (textDocument == m_TextDocument) {
-            return;
-        }
-
-        m_TextDocument = textDocument;
-
-        QTextDocument * doc = m_TextDocument->textDocument();
-        setDocument(doc);
-    }
-
-    QQuickTextDocument* m_TextDocument;
-};
-}}
-
-cpp::cpp_class!(unsafe struct QQuickTextDocument as "QQuickTextDocument");
-
-#[derive(qmetaobject::QObject, Default)]
-struct HashSyntaxHighlighter {
-    base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
-    document: qmetaobject::qt_property!(QQuickTextDocument textDocument),
-}
-
-impl QSyntaxHighlighter for HashSyntaxHighlighter {
-    #[allow(clippy::cast_possible_truncation)]
-    fn highlight_block(&mut self, text: String) {
-        self.set_format(
-            0,
-            text.len() as i32,
-            qmetaobject::QColor::from_name("green"),
-        )
-    }
-}
-
 pub fn run() {
     let cracker = std::ffi::CString::new("Cracker").unwrap();
     let hash_highlighter = std::ffi::CString::new("HashHighlighter").unwrap();
