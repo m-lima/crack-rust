@@ -1,5 +1,6 @@
 // TODO: Remove this once Path is used instead of Ident in qmetaobject_impl
 use qmetaobject::QObject;
+use syntaxhighlighter::QSyntaxHighlighter;
 
 mod syntaxhighlighter;
 
@@ -51,6 +52,16 @@ struct Cracker {
 impl qmetaobject::QSingletonInit for Cracker {
     fn init(&mut self) {}
 }
+
+#[derive(qmetaobject::QObject, Default)]
+struct HashHighlighter {
+    base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
+}
+
+impl QSyntaxHighlighter for HashHighlighter {
+    fn highlight_block(&mut self, _text: String) {}
+}
+
 pub fn run() {
     let cracker = std::ffi::CString::new("Cracker").unwrap();
     let hash_highlighter = std::ffi::CString::new("HashHighlighter").unwrap();
@@ -66,12 +77,7 @@ pub fn run() {
 
     let mut engine = qmetaobject::QmlEngine::new();
     qmetaobject::qml_register_singleton_type::<Cracker>(&cracker, 1, 0, &cracker);
-    qmetaobject::qml_register_type::<HashSyntaxHighlighter>(
-        &hash_highlighter,
-        1,
-        0,
-        &hash_highlighter,
-    );
+    qmetaobject::qml_register_type::<HashHighlighter>(&hash_highlighter, 1, 0, &hash_highlighter);
     engine.set_object_property("_templates".into(), templates.pinned());
     engine.load_file("qrc:/Main.qml".into());
     engine.exec();
