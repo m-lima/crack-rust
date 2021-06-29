@@ -143,7 +143,7 @@ Column {
 
 
         HashHighlighter {
-          document: textDocument
+          textDocument: textDocument
         }
 
         onEditingFinished: {

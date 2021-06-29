@@ -75,12 +75,17 @@ pub trait QSyntaxHighlighter: QObject {
 }
 
 cpp::cpp! {{
-#include <qmetaobject_rust.hpp>
 #include <QtGui/QSyntaxHighlighter>
 
 struct Abstract_Hasher_QSyntaxHighlighter : QSyntaxHighlighter {
-    Abstract_Hasher_QSyntaxHighlighter() : QSyntaxHighlighter(this) {}
+    Abstract_Hasher_QSyntaxHighlighter() : QSyntaxHighlighter((QObject*) nullptr) {}
 };
+}}
+
+cpp::cpp! {{
+#include <qmetaobject_rust.hpp>
+#include <QtQuick/QQuickTextDocument>
+#include <QtGui/QTextDocument>
 
 struct Hasher_QSyntaxHighlighter : RustObject<Abstract_Hasher_QSyntaxHighlighter> {
     void highlightBlock(const QString &text) {
@@ -92,16 +97,36 @@ struct Hasher_QSyntaxHighlighter : RustObject<Abstract_Hasher_QSyntaxHighlighter
     void setFormatPublic(int start, int length, QColor color) {
         setFormat(start, length, color);
     }
+
+    QQuickTextDocument * textDocument() {
+        return m_TextDocument;
+    }
+
+    void setTextDocument(QQuickTextDocument * textDocument) {
+        if (textDocument == m_TextDocument) {
+            return;
+        }
+
+        m_TextDocument = textDocument;
+
+        QTextDocument * doc = m_TextDocument->textDocument();
+        setDocument(doc);
+    }
+
+    QQuickTextDocument* m_TextDocument;
 };
 }}
+
+cpp::cpp_class!(unsafe struct QQuickTextDocument as "QQuickTextDocument");
 
 #[derive(qmetaobject::QObject, Default)]
 struct HashSyntaxHighlighter {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
+    document: qmetaobject::qt_property!(QQuickTextDocument textDocument),
 }
 
 impl QSyntaxHighlighter for HashSyntaxHighlighter {
-    #[allow(clippy::cast_possible_trucation)]
+    #[allow(clippy::cast_possible_truncation)]
     fn highlight_block(&mut self, text: String) {
         self.set_format(
             0,
