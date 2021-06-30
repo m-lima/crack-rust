@@ -28,6 +28,10 @@ class QSyntaxHighlighterProxy : public QSyntaxHighlighter {
     emit textDocumentChanged();
   }
 
+  void setColorFormat(int start, int length, QColor color) {
+    setFormat(start, length, color);
+  }
+
   signals:
   void textDocumentChanged();
 

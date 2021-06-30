@@ -129,6 +129,7 @@ Column {
         wrapMode: TextArea.Wrap
         selectByMouse: true
         placeholderText: qsTr('Enter text from which to extract hashes')
+        textFormat: TextEdit.RichText
 
         function handleEnter(evt) {
           if (evt.modifiers & Qt.ShiftModifier) {
@@ -144,6 +145,7 @@ Column {
 
         HashHighlighter {
           textDocument: textDocument
+          onTextDocumentChanged: console.log('Change')
         }
 
         onEditingFinished: {

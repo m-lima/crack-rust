@@ -20,15 +20,15 @@ pub trait QSyntaxHighlighter: QObject {
 
     fn format_text(&self, start: i32, length: i32, color: QColor) {
         let obj = self.get_cpp_object();
-        cpp!([obj as "Rust_QSyntaxHighlighter*", start as "int", length as "int", color as "QColor"] {
-            if (obj) obj->setFormat(start, length, color);
+        cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*", start as "int", length as "int", color as "QColor"] {
+            if (obj) obj->setColorFormat(start, length, color);
         });
     }
 }
 
 cpp! {{
     #include <qmetaobject_rust.hpp>
-    #include <QSyntaxHighligherProxy.cpp>
+    #include <QSyntaxHighlighterProxy.cpp>
 }}
 
 cpp! {{

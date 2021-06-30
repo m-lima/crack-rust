@@ -1,5 +1,5 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'rust.hpp'
+** Meta object code from reading C++ file 'QSyntaxHighlighterProxy.hpp'
 **
 ** Created by: The Qt Meta Object Compiler version 68 (Qt 6.1.0)
 **
@@ -7,7 +7,7 @@
 *****************************************************************************/
 
 #include <memory>
-#include <QSyntaxHighligherProxy.hpp>
+#include <QSyntaxHighlighterProxy.hpp>
 #include <QtGui/qtextcursor.h>
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>

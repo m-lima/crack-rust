@@ -62,10 +62,10 @@ struct HashHighlighter {
 impl QSyntaxHighlighter for HashHighlighter {
     fn highlight_block(&mut self, text: String) {
         let regex = <crate::hash::md5::Hash as crate::hash::Hash>::regex();
-        regex.find_iter(text).for_each(|m| {
+        regex.find_iter(&text).for_each(|m| {
             let start = m.start() as i32;
             let length = m.end() as i32 - start;
-            self.set_format(start, length, qmetaobject::QColor::from_name("green"))
+            self.format_text(start, length, qmetaobject::QColor::from_name("green"))
         });
     }
 }
