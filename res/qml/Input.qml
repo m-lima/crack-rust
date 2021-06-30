@@ -5,6 +5,9 @@ import HashExtractor
 
 // TODO: The manual layout here is a mess.. Can it be done better?
 Column {
+  property alias hashes: hashesList.model
+  property alias files: filesList.model
+
   id: root
 
   anchors {

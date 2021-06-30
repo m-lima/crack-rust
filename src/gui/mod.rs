@@ -59,9 +59,11 @@ struct Cracker {
             useSha256: bool,
             auto_device: bool,
             useGpu: bool,
+            hashes: qmetaobject::QVariantList,
+            files: qmetaobject::QVariantList,
         ) {
             println!(
-                "Prefix: {}, Length: {}, Salt: {}, Algorithm: {}, Device: {}",
+                "Prefix: {}, Length: {}, Salt: {}, Algorithm: {}, Device: {}, Hashes: {}, Files: {}",
                 prefix,
                 length,
                 if custom_salt {
@@ -76,7 +78,9 @@ struct Cracker {
                     "GPU"
                 } else {
                     "CPU"
-                }
+                },
+                hashes.len(),
+                files.len(),
             );
         }
     ),

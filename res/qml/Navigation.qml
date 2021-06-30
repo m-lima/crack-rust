@@ -55,7 +55,16 @@ Item {
       PropertyChanges {
         target: next
         onClicked: {
+          // TODO: Focus probably not needed if new screen will be shown
+          next.focus = true
+
           console.log('Crack')
+
+          let files = []
+          for (let i = 0; i < input.files.count; i++) {
+            files.push(input.files.get(i).path)
+          }
+
           Cracker.crack(
             parameters.prefix,
             parameters.length,
@@ -63,7 +72,9 @@ Item {
             parameters.saltValue,
             parameters.useSha256,
             parameters.deviceAutomatic,
-            parameters.useGpu
+            parameters.useGpu,
+            input.hashes,
+            files
           )
         }
       }
