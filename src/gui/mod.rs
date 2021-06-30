@@ -2,6 +2,8 @@
 use qmetaobject::QObject;
 use syntaxhighlighter::QSyntaxHighlighter;
 
+use crate::hash;
+
 mod syntaxhighlighter;
 
 qmetaobject::qrc!(qml, "res/qml" as "/" {
@@ -55,25 +57,25 @@ impl qmetaobject::QSingletonInit for Cracker {
 
 #[allow(non_snake_case)]
 #[derive(qmetaobject::QObject, Default)]
-struct HashHighlighter {
+struct HashExtractor {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
     color: qmetaobject::qt_property!(qmetaobject::QColor),
 }
 
-impl QSyntaxHighlighter for HashHighlighter {
+impl QSyntaxHighlighter for HashExtractor {
     fn highlight_block(&mut self, text: String) {
-        let regex = <crate::hash::sha256::Hash as crate::hash::Hash>::regex();
+        let regex = <hash::sha256::Hash as hash::Hash>::regex();
         regex.find_iter(&text).for_each(|m| {
-            let start = m.start() as i32;
-            let length = m.end() as i32 - start;
-            self.format_text(start, length, self.color)
+            let start = m.start();
+            let count = m.end() - start;
+            self.format_text(start, count, self.color)
         });
     }
 }
 
 pub fn run() {
     let cracker = std::ffi::CString::new("Cracker").unwrap();
-    let hash_highlighter = std::ffi::CString::new("HashHighlighter").unwrap();
+    let hash_extractor = std::ffi::CString::new("HashExtractor").unwrap();
 
     qml();
     img();
@@ -86,7 +88,7 @@ pub fn run() {
 
     let mut engine = qmetaobject::QmlEngine::new();
     qmetaobject::qml_register_singleton_type::<Cracker>(&cracker, 1, 0, &cracker);
-    qmetaobject::qml_register_type::<HashHighlighter>(&hash_highlighter, 1, 0, &hash_highlighter);
+    qmetaobject::qml_register_type::<HashExtractor>(&hash_extractor, 1, 0, &hash_extractor);
     engine.set_object_property("_templates".into(), templates.pinned());
     engine.load_file("qrc:/Main.qml".into());
     engine.exec();

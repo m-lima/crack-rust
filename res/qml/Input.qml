@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.platform
-import HashHighlighter
+import HashExtractor
 
 // TODO: The manual layout here is a mess.. Can it be done better?
 Column {
@@ -122,7 +122,6 @@ Column {
 
       flickableDirection: Flickable.VerticalFlick
 
-      // TODO: Render the detected hashes (maybe use QSyntaxHighlighter)
       TextArea.flickable: TextArea {
         id: hashesEdit
 
@@ -142,8 +141,7 @@ Column {
           }
         }
 
-
-        HashHighlighter {
+        HashExtractor {
           textDocument: hashesEdit.textDocument
           color: root.palette.text
         }
@@ -153,6 +151,7 @@ Column {
           hashesList.model = [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
           hashes.state = 'Display'
         }
+
         Keys.onReturnPressed: (evt) => handleEnter(evt)
         Keys.onEnterPressed: (evt) => handleEnter(evt)
       }
