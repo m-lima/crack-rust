@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Column {
-  property Item current: null
+  property Item _current: null
 
   id: root
 
@@ -13,7 +13,7 @@ Column {
     right: parent.right
   }
 
-  state: current ? 'Expanded' : ''
+  state: _current ? 'Expanded' : ''
 
   states: State {
     name: 'Expanded'
@@ -33,8 +33,8 @@ Column {
   CollapsibleItem {
     id: format
     title: qsTr('Format')
-    expanded: root.current === this
-    onClicked: root.current = this
+    expanded: root._current === this
+    onClicked: root._current = this
     innerSpacing: 10
 
     // TODO: Select "custom" is the fields were edited
@@ -97,8 +97,8 @@ Column {
   CollapsibleItem {
     // TODO: Add OPET
     title: qsTr('Salt')
-    expanded: root.current === this
-    onClicked: root.current = this
+    expanded: root._current === this
+    onClicked: root._current = this
 
     Switch {
       id: saltCustom
@@ -118,10 +118,11 @@ Column {
 
   CollapsibleItem {
     title: qsTr('Algorithm')
-    expanded: root.current === this
-    onClicked: root.current = this
+    expanded: root._current === this
+    onClicked: root._current = this
 
     Radio {
+      id: algorithmSha256
       text: qsTr('Sha256')
       checked: true
     }
@@ -134,8 +135,8 @@ Column {
   CollapsibleItem {
     title: qsTr('Device')
     showLine: false
-    expanded: root.current === this
-    onClicked: root.current = this
+    expanded: root._current === this
+    onClicked: root._current = this
 
     Switch {
       id: deviceAutomatic
