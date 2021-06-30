@@ -60,6 +60,7 @@ impl qmetaobject::QSingletonInit for Cracker {
 struct HashExtractor {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
     color: qmetaobject::qt_property!(qmetaobject::QColor),
+    hashes: qmetaobject::qt_method!(fn(&self, text: String) -> qmetaobject::QVariantList),
 }
 
 impl QSyntaxHighlighter for HashExtractor {
@@ -70,6 +71,18 @@ impl QSyntaxHighlighter for HashExtractor {
             let count = m.end() - start;
             self.format_text(start, count, self.color)
         });
+    }
+}
+
+impl HashExtractor {
+    #[allow(clippy::unused_self, clippy::needless_pass_by_value)]
+    fn hashes(&self, text: String) -> qmetaobject::QVariantList {
+        let regex = <hash::sha256::Hash as hash::Hash>::regex();
+        let set = regex
+            .find_iter(&text)
+            .map(|m| String::from(m.as_str()))
+            .collect::<std::collections::HashSet<_>>();
+        set.into_iter().map(qmetaobject::QString::from).collect()
     }
 }
 

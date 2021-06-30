@@ -102,8 +102,10 @@ Column {
       }
 
       delegate: Text {
+        width: parent.width
         text: modelData
         color: palette.text
+        elide: Text.ElideMiddle
       }
 
       model: []
@@ -141,14 +143,15 @@ Column {
           }
         }
 
+        // TODO: Regex should be conditioned to hash algorithm selected
         HashExtractor {
+          id: hashesExtractor
           textDocument: hashesEdit.textDocument
           color: root.palette.text
         }
 
         onEditingFinished: {
-          // TODO: Regex should be conditioned to hash algorithm selected
-          hashesList.model = [...new Set(hashesEdit.text.match(/([a-fA-F0-9]{16})/g))]
+          hashesList.model = hashesExtractor.hashes(hashesEdit.text)
           hashes.state = 'Display'
         }
 
