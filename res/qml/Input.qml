@@ -143,11 +143,12 @@ Column {
           }
         }
 
-        // TODO: Regex should be conditioned to hash algorithm selected
+        // TODO: Algorithm is not updated visually in realtime
         HashExtractor {
           id: hashesExtractor
           textDocument: hashesEdit.textDocument
           color: root.palette.text
+          useSha256: parameters.useSha256
         }
 
         onEditingFinished: {

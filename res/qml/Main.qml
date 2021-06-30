@@ -44,7 +44,7 @@ ApplicationWindow {
       name: 'Crack'
 
       PropertyChanges {
-        target: parameters
+        target: parametersSlider
         opacity: 0
         x: -parent.width
       }
@@ -56,7 +56,7 @@ ApplicationWindow {
     }
 
     Item {
-      id: parameters
+      id: parametersSlider
 
       width: parent.width
       height: parent.height
@@ -76,7 +76,9 @@ ApplicationWindow {
         }
       }
 
-      Parameters {}
+      Parameters {
+        id: parameters
+      }
     }
 
     Input {

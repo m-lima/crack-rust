@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Column {
+  property alias useSha256: algorithmSha256.checked
   property Item _current: null
 
   id: root
