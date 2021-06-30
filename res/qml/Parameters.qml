@@ -3,7 +3,13 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Column {
+  property alias prefix: prefix.text
+  property alias length: length.value
+  property alias saltCustom: saltCustom.checked
+  property alias saltValue: saltValue.text
   property alias useSha256: algorithmSha256.checked
+  property alias deviceAutomatic: deviceAutomatic.checked
+  property alias useGpu: gpu.checked
 
   property Item _current: null
 
@@ -147,6 +153,7 @@ Column {
     }
 
     Radio {
+      id: gpu
       text: qsTr('GPU')
       enabled: !deviceAutomatic.checked
       checked: true

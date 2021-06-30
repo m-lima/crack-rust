@@ -56,7 +56,15 @@ Item {
         target: next
         onClicked: {
           console.log('Crack')
-          Cracker.crack('bla', 2)
+          Cracker.crack(
+            parameters.prefix,
+            parameters.length,
+            parameters.saltCustom,
+            parameters.saltValue,
+            parameters.useSha256,
+            parameters.deviceAutomatic,
+            parameters.useGpu
+          )
         }
       }
     }

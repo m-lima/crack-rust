@@ -3,6 +3,7 @@ use qmetaobject::QObject;
 use syntaxhighlighter::QSyntaxHighlighter;
 
 use crate::hash;
+use crate::secrets;
 
 mod syntaxhighlighter;
 
@@ -44,9 +45,39 @@ impl Template {
 struct Cracker {
     base: qmetaobject::qt_base_class!(trait QObject),
     crack: qmetaobject::qt_method!(
-        #[allow(clippy::unused_self, clippy::needless_pass_by_value)]
-        fn crack(&self, prefix: String, length: u8) {
-            println!("Prefix: {}, Length: {}", prefix, length);
+        #[allow(
+            clippy::unused_self,
+            clippy::needless_pass_by_value,
+            clippy::too_many_arguments
+        )]
+        fn crack(
+            &self,
+            prefix: String,
+            length: u8,
+            custom_salt: bool,
+            salt: String,
+            useSha256: bool,
+            auto_device: bool,
+            useGpu: bool,
+        ) {
+            println!(
+                "Prefix: {}, Length: {}, Salt: {}, Algorithm: {}, Device: {}",
+                prefix,
+                length,
+                if custom_salt {
+                    salt.as_str()
+                } else {
+                    secrets::SALT
+                },
+                if useSha256 { "SHA256" } else { "MD5" },
+                if auto_device {
+                    "AUTO"
+                } else if useGpu {
+                    "GPU"
+                } else {
+                    "CPU"
+                }
+            );
         }
     ),
 }
