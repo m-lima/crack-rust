@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <QtQuick/QQuickTextDocument>
 #include <QtGui/QSyntaxHighlighter>
 

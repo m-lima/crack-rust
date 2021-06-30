@@ -57,15 +57,16 @@ impl qmetaobject::QSingletonInit for Cracker {
 #[derive(qmetaobject::QObject, Default)]
 struct HashHighlighter {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
+    color: qmetaobject::qt_property!(qmetaobject::QColor),
 }
 
 impl QSyntaxHighlighter for HashHighlighter {
     fn highlight_block(&mut self, text: String) {
-        let regex = <crate::hash::md5::Hash as crate::hash::Hash>::regex();
+        let regex = <crate::hash::sha256::Hash as crate::hash::Hash>::regex();
         regex.find_iter(&text).for_each(|m| {
             let start = m.start() as i32;
             let length = m.end() as i32 - start;
-            self.format_text(start, length, qmetaobject::QColor::from_name("green"))
+            self.format_text(start, length, self.color)
         });
     }
 }
