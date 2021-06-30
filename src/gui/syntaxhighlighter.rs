@@ -17,27 +17,22 @@ pub trait QSyntaxHighlighter: QObject {
     }
 
     fn highlight_block(&mut self, text: String);
+
+    fn format_text(&self, start: i32, length: i32, color: QColor) {
+        let obj = self.get_cpp_object();
+        cpp!([obj as "Rust_QSyntaxHighlighter*", start as "int", length as "int", color as "QColor"] {
+            if (obj) obj->setFormat(start, length, color);
+        });
+    }
 }
 
 cpp! {{
     #include <qmetaobject_rust.hpp>
-    #include <QtQuick/QQuickTextDocument>
-    #include <QtGui/QSyntaxHighlighter>
+    #include <QSyntaxHighligherProxy.cpp>
 }}
 
 cpp! {{
-    struct Rust_QSyntaxHighlighterProxy : public QSyntaxHighlighter {
-        explicit Rust_QSyntaxHighlighterProxy(QObject *parent = nullptr) : QSyntaxHighlighter(parent) {}
-    };
-
-    class Rust_QSyntaxHighlighter : public RustObject<Rust_QSyntaxHighlighterProxy> {
-        Q_PROPERTY(QQuickTextDocument *textDocument READ textDocument WRITE setTextDocument NOTIFY textDocumentChanged)
-
-        public:
-        Rust_QSyntaxHighlighter() : RustObject<Rust_QSyntaxHighlighterProxy>() {
-            m_TextDocument = nullptr;
-        }
-
+    struct Rust_QSyntaxHighlighter : public RustObject<QSyntaxHighlighterProxy> {
         void highlightBlock(const QString &text) override {
             return rust!(Rust_QSyntaxHighlighter_highlightBlock [
                 rust_object: QObjectPinned<'_, dyn QSyntaxHighlighter> as "TraitObject",
@@ -46,27 +41,5 @@ cpp! {{
                 rust_object.borrow_mut().highlight_block(text.clone().into())
             });
         }
-
-        QQuickTextDocument *textDocument() const {
-            return m_TextDocument;
-        }
-
-        void setTextDocument(QQuickTextDocument *textDocument) {
-            if (m_TextDocument == textDocument) {
-                return;
-            }
-
-            m_TextDocument = textDocument;
-
-            setDocument(m_TextDocument ? m_TextDocument->textDocument() : nullptr);
-
-            emit textDocumentChanged();
-        }
-
-        signals:
-        void textDocumentChanged();
-
-        private:
-        QQuickTextDocument *m_TextDocument;
     };
 }}

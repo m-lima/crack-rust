@@ -53,13 +53,21 @@ impl qmetaobject::QSingletonInit for Cracker {
     fn init(&mut self) {}
 }
 
+#[allow(non_snake_case)]
 #[derive(qmetaobject::QObject, Default)]
 struct HashHighlighter {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
 }
 
 impl QSyntaxHighlighter for HashHighlighter {
-    fn highlight_block(&mut self, _text: String) {}
+    fn highlight_block(&mut self, text: String) {
+        let regex = <crate::hash::md5::Hash as crate::hash::Hash>::regex();
+        regex.find_iter(text).for_each(|m| {
+            let start = m.start() as i32;
+            let length = m.end() as i32 - start;
+            self.set_format(start, length, qmetaobject::QColor::from_name("green"))
+        });
+    }
 }
 
 pub fn run() {

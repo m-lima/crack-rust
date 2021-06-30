@@ -20,7 +20,7 @@ fn generate_dummys() {
 }
 
 fn build_cpp() {
-    let rust_cpp_include_path = concat!(env!("CARGO_MANIFEST_DIR"), "/include");
+    let cpp_include_path = concat!(env!("CARGO_MANIFEST_DIR"), "/cpp");
     let qt_include_path = std::env::var("DEP_QT_INCLUDE_PATH").unwrap();
     let qt_library_path = std::env::var("DEP_QT_LIBRARY_PATH").unwrap();
 
@@ -32,7 +32,7 @@ fn build_cpp() {
     }
 
     config
-        .include(rust_cpp_include_path)
+        .include(cpp_include_path)
         .include(qt_include_path.trim())
         .flag_if_supported("-std=c++17")
         .flag_if_supported("/std:c++17")
