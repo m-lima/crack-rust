@@ -86,6 +86,12 @@ Column {
     }
 
     function edit() {
+      // TODO: This is a hack to force rehighlight from a different thread
+      let text = hashesEdit.text;
+      let cursorPosition = hashesEdit.cursorPosition;
+      hashesEdit.text = ''
+      hashesEdit.text = text
+      hashesEdit.cursorPosition = cursorPosition
       state = 'Edit'
       hashesEdit.forceActiveFocus()
     }
@@ -143,12 +149,17 @@ Column {
           }
         }
 
-        // TODO: Algorithm is not updated visually in realtime
         HashExtractor {
           id: hashesExtractor
+
           textDocument: hashesEdit.textDocument
           color: root.palette.text
           useSha256: parameters.useSha256
+
+          onUseSha256Changed: {
+            this.rehighlight()
+            hashesList.model = this.hashes(hashesEdit.text)
+          }
         }
 
         onEditingFinished: {

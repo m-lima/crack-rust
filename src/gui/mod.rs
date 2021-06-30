@@ -59,7 +59,8 @@ impl qmetaobject::QSingletonInit for Cracker {
 #[derive(qmetaobject::QObject, Default)]
 struct HashExtractor {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
-    useSha256: qmetaobject::qt_property!(bool),
+    useSha256: qmetaobject::qt_property!(bool; NOTIFY onUseSha256Changed),
+    onUseSha256Changed: qmetaobject::qt_signal!(),
     color: qmetaobject::qt_property!(qmetaobject::QColor),
     hashes: qmetaobject::qt_method!(fn(&self, text: String) -> qmetaobject::QVariantList),
 }
