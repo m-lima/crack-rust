@@ -39,6 +39,12 @@ cpp::cpp! {{
     #include <QSyntaxHighlighterProxy.cpp>
 }}
 
+// This piece of code requires cpp/qmetaobject_rust.hpp to be prenset
+// This header is copied from qmetaobject-rs
+//
+// QSyntaxHighlighterProxy instead of QSyntaxHighlighter is needed for two reasons:
+// - RustObject<T> needs a default constructor
+// - Rust_QSyntaxHighlighter needs to have properties set and therefore have a MOC made
 cpp::cpp! {{
     struct Rust_QSyntaxHighlighter : public RustObject<QSyntaxHighlighterProxy> {
         void highlightBlock(const QString &text) override {
