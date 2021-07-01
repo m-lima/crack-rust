@@ -1,20 +1,19 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'QSyntaxHighlighterProxy.hpp'
 **
-** Created by: The Qt Meta Object Compiler version 68 (Qt 6.1.0)
+** Created by: The Qt Meta Object Compiler version 68 (Qt 6.1.1)
 **
-** WARNING! If compiling with a other versions, this MOC should be recreated
+** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
 #include <memory>
-#include <QSyntaxHighlighterProxy.hpp>
-#include <QtGui/qtextcursor.h>
+#include "QSyntaxHighlighterProxy.hpp"
 #include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
 #error "The header file 'QSyntaxHighlighterProxy.hpp' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 68
-#error "This file was generated using the moc from 6.1.0. It"
+#error "This file was generated using the moc from 6.1.1. It"
 #error "cannot be used with the include files from this version of Qt."
 #error "(The moc has changed too much.)"
 #endif
@@ -85,14 +84,7 @@ void QSyntaxHighlighterProxy::qt_static_metacall(QObject *_o, QMetaObject::Call 
                 return;
             }
         }
-    } else if (_c == QMetaObject::RegisterPropertyMetaType) {
-        switch (_id) {
-        default: *reinterpret_cast<int*>(_a[0]) = -1; break;
-        case 0:
-            *reinterpret_cast<int*>(_a[0]) = qRegisterMetaType< QQuickTextDocument* >(); break;
-        }
     }
-
 #ifndef QT_NO_PROPERTIES
     else if (_c == QMetaObject::ReadProperty) {
         auto *_t = static_cast<QSyntaxHighlighterProxy *>(_o);
@@ -114,6 +106,7 @@ void QSyntaxHighlighterProxy::qt_static_metacall(QObject *_o, QMetaObject::Call 
     } else if (_c == QMetaObject::BindableProperty) {
     }
 #endif // QT_NO_PROPERTIES
+    (void)_a;
 }
 
 const QMetaObject QSyntaxHighlighterProxy::staticMetaObject = { {

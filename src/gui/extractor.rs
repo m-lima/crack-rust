@@ -10,7 +10,6 @@ pub struct Extractor {
     base: qmetaobject::qt_base_class!(trait QSyntaxHighlighter),
     useSha256: qmetaobject::qt_property!(bool; NOTIFY onUseSha256Changed),
     onUseSha256Changed: qmetaobject::qt_signal!(),
-    rehighlight: qmetaobject::qt_method!(fn(&self)),
     color: qmetaobject::qt_property!(qmetaobject::QColor),
     hashes: qmetaobject::qt_method!(fn(&self, text: String) -> qmetaobject::QVariantList),
 }

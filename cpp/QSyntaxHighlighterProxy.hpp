@@ -7,8 +7,11 @@
 // This class needs to be passed into QT's MOC. The output of which needs to be copied as
 // QSyntaxHighlighterProxy.cpp in this folder.  Minor fixes are needed to adjust the paths
 //
-// If calling QT's MOC is not straightforward, a QT project with just this hpp can be created
-// and the results of the build process copied over
+// Run `moc` on this file redirecting to "cpp/QSyntaxHighlighter.cpp"
+// On macos, using brew, it is usually under /usr/local/opt/qt/share/qt/libexec/moc
+//
+// Otherwise, if calling QT's MOC is not straightforward, a QT project with just this hpp can
+// be created and the results of the build process copied over
 class QSyntaxHighlighterProxy : public QSyntaxHighlighter {
   Q_OBJECT
   Q_PROPERTY(QQuickTextDocument *textDocument READ textDocument WRITE setTextDocument NOTIFY textDocumentChanged)
