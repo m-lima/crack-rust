@@ -89,12 +89,6 @@ Column {
     }
 
     function edit() {
-      // TODO: This is a hack to force rehighlight from a different thread
-      let text = hashesEdit.text;
-      let cursorPosition = hashesEdit.cursorPosition;
-      hashesEdit.text = ''
-      hashesEdit.text = text
-      hashesEdit.cursorPosition = cursorPosition
       state = 'Edit'
       hashesEdit.forceActiveFocus()
     }

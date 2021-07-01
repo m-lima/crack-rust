@@ -14,6 +14,13 @@ pub trait QSyntaxHighlighter: qmetaobject::QObject {
 
     fn highlight_block(&mut self, text: String);
 
+    fn rehighlight(&self) {
+        let obj = self.get_cpp_object();
+        cpp::cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*"] {
+            if (obj) obj->rehighlight();
+        });
+    }
+
     // Allowed because we check it and i32::MAX is always positive
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn format_text(&self, start: usize, count: usize, color: qmetaobject::QColor) {
