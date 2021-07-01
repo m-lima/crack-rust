@@ -6,7 +6,7 @@ pub trait QSyntaxHighlighter: qmetaobject::QObject {
         Self: Sized,
     {
         unsafe {
-            &*cpp::cpp!([]-> *const qmetaobject::QObjectDescription as "RustObjectDescription const*" {
+            &*cpp!([]-> *const qmetaobject::QObjectDescription as "RustObjectDescription const*" {
                 return rustObjectDescription<Rust_QSyntaxHighlighter>();
             })
         }
@@ -16,7 +16,7 @@ pub trait QSyntaxHighlighter: qmetaobject::QObject {
 
     fn rehighlight(&self) {
         let obj = self.get_cpp_object();
-        cpp::cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*"] {
+        cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*"] {
             if (obj) obj->rehighlight();
         });
     }
@@ -35,13 +35,13 @@ pub trait QSyntaxHighlighter: qmetaobject::QObject {
         } else {
             count as i32
         };
-        cpp::cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*", start as "int", count as "int", color as "QColor"] {
+        cpp!(unsafe [obj as "Rust_QSyntaxHighlighter*", start as "int", count as "int", color as "QColor"] {
             if (obj) obj->setColorFormat(start, count, color);
         });
     }
 }
 
-cpp::cpp! {{
+cpp! {{
     #include <qmetaobject_rust.hpp>
     #include <QSyntaxHighlighterProxy.cpp>
 }}
@@ -52,7 +52,7 @@ cpp::cpp! {{
 // QSyntaxHighlighterProxy instead of QSyntaxHighlighter is needed for two reasons:
 // - RustObject<T> needs a default constructor
 // - Rust_QSyntaxHighlighter needs to have properties set and therefore have a MOC made
-cpp::cpp! {{
+cpp! {{
     struct Rust_QSyntaxHighlighter : public RustObject<QSyntaxHighlighterProxy> {
         void highlightBlock(const QString &text) override {
             return rust!(Rust_QSyntaxHighlighter_highlightBlock [
