@@ -11,6 +11,8 @@ ApplicationWindow {
   property color colorD: '#cc2f14'
   property color colorE: '#801806'
 
+  property int page: 0
+
   id: root
   title: 'Hasher'
   visible: true
@@ -30,14 +32,32 @@ ApplicationWindow {
   palette.highlight: colorCenter
   palette.highlightedText: '#cccccc'
 
+  function nextState() {
+    if (page < 2) {
+      page++
+    }
+  }
+
+  function previousState() {
+    if (page > 0) {
+      page--
+    }
+  }
+
   Item {
     id: content
 
     anchors {
       top: parent.top
-      bottom: footer.top
+      bottom: navigation.top
       left: parent.left
       right: parent.right
+    }
+
+    state: switch (page) {
+      case 0: return ''
+      case 1: return 'Input'
+      case 2: return 'Crack'
     }
 
     states: [
@@ -59,6 +79,17 @@ ApplicationWindow {
           target: crack
           opacity: 0
         }
+
+        PropertyChanges {
+          target: crack
+          opacity: 0
+        }
+
+        PropertyChanges {
+          target: navigation
+          text: qsTr('Crack')
+          backButton: Navigation.BackButton.Small
+        }
       },
       State {
         name: 'Crack'
@@ -78,6 +109,12 @@ ApplicationWindow {
         PropertyChanges {
           target: crack
           opacity: 1
+        }
+
+        PropertyChanges {
+          target: navigation
+          text: ''
+          backButton: Navigation.BackButton.Full
         }
       }
     ]
@@ -132,12 +169,6 @@ ApplicationWindow {
 
       Input {
         id: input
-
-        Behavior on opacity {
-          NumberAnimation {
-            duration: 200
-          }
-        }
       }
     }
 
@@ -159,7 +190,7 @@ ApplicationWindow {
   }
 
   Navigation {
-    id: footer
+    id: navigation
 
     anchors {
       bottom: parent.bottom
@@ -168,6 +199,11 @@ ApplicationWindow {
     }
 
     height: 50
-    content: content
+
+    backButton: Navigation.BackButton.None
+    text: qsTr('Next')
+    backText: qsTr('Cancel')
+    onNext: root.nextState()
+    onPrevious: root.previousState()
   }
 }

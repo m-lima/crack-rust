@@ -2,7 +2,19 @@ import QtQuick
 import QtQuick.Controls
 
 Item {
-  required property Item content
+
+  enum BackButton {
+    None,
+    Small,
+    Full
+  }
+
+  required property string text
+  required property string backText
+  required property int backButton
+
+  signal next
+  signal previous
 
   id: root
 
@@ -16,12 +28,20 @@ Item {
     }
 
     visible: width > 0
-    width: content.state === 'Input' ? 50 : 0
+    width: switch (root.backButton) {
+      case Navigation.BackButton.None: return 0
+      case Navigation.BackButton.Small: return parent.height
+      case Navigation.BackButton.Full: return parent.width
+    }
 
-    icon.source: 'qrc:/img/left.svg'
+    onClicked: root.previous()
+
+    text: root.backButton < Navigation.BackButton.Full ? '' : root.backText
+    icon.source: root.backButton < Navigation.BackButton.Full ? 'qrc:/img/left.svg' : ''
     icon.color: palette.buttonText
-    onClicked: content.state = ''
     palette.button: root.palette.button.lighter(1.3)
+    font.bold: true
+    font.pointSize: 18
 
     Behavior on width {
       NumberAnimation {
@@ -40,104 +60,14 @@ Item {
       left: back.right
     }
 
-    text: qsTr('Next')
-    onClicked: content.state = 'Input'
-    state: content.state
+    visible: width > 0
 
+    onClicked: root.next()
+
+    text: root.text
     palette.button: 'green'
     palette.buttonText: '#252525'
     font.bold: true
     font.pointSize: 18
-
-    states: [
-      State {
-        name: 'Input'
-        PropertyChanges {
-          target: next
-          onClicked: {
-            content.state = 'Crack'
-            crack.crack()
-          }
-        }
-      },
-      State {
-        name: 'Crack'
-        PropertyChanges {
-          target: next
-          palette.button: colorD
-          onClicked: content.state = ''
-        }
-      }
-    ]
-
-    transitions: [
-      Transition {
-        to: ''
-        SequentialAnimation {
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 1
-            property: 'font.pointSize'
-          }
-          PropertyAction {
-            target: next
-            value: qsTr('Next')
-            property: 'text'
-          }
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 18
-            property: 'font.pointSize'
-          }
-        }
-      },
-      Transition {
-        to: 'Input'
-        SequentialAnimation {
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 1
-            property: 'font.pointSize'
-          }
-          PropertyAction {
-            target: next
-            value: qsTr('Crack')
-            property: 'text'
-          }
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 18
-            property: 'font.pointSize'
-          }
-        }
-      },
-      // TODO: Rethink presentation of the cancel button
-      Transition {
-        to: 'Crack'
-        SequentialAnimation {
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 1
-            property: 'font.pointSize'
-          }
-          PropertyAction {
-            target: next
-            value: qsTr('Cancel')
-            property: 'text'
-          }
-          NumberAnimation {
-            target: next
-            duration: 100
-            to: 18
-            property: 'font.pointSize'
-          }
-        }
-      }
-    ]
   }
 }

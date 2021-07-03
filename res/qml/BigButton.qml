@@ -70,4 +70,40 @@ Button {
       cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
   }
+
+  Behavior on text {
+    SequentialAnimation {
+      NumberAnimation {
+        target: contentItem
+        duration: 100
+        to: 0
+        property: 'opacity'
+      }
+      PropertyAction {}
+      NumberAnimation {
+        target: contentItem
+        duration: 100
+        to: 1
+        property: 'opacity'
+      }
+    }
+  }
+
+  Behavior on icon.source {
+    SequentialAnimation {
+      NumberAnimation {
+        target: contentItem
+        duration: 100
+        to: 0
+        property: 'opacity'
+      }
+      PropertyAction {}
+      NumberAnimation {
+        target: contentItem
+        duration: 100
+        to: 1
+        property: 'opacity'
+      }
+    }
+  }
 }
