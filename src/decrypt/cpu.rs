@@ -8,6 +8,9 @@ use crate::options::SharedAccessor;
 
 pub const OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
+// SAFETY:
+// 1: A sender raw pointer may not outlive the thread
+// 2: All threads are joined before the references go out of scope
 #[derive(Clone, Copy)]
 pub struct Sender<T>(*const T);
 
@@ -23,7 +26,7 @@ unsafe impl<T> Send for Sender<T> {}
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    channel: impl channel::Channel,
+    channel: &impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 
@@ -38,6 +41,7 @@ pub fn execute<H: hash::Hash>(
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender(&count);
         let input_sender = Sender(&input);
+        let channel_sender = Sender(channel);
 
         let prefix = String::from(options.prefix());
         let salted_prefix = format!("{}{}", options.salt(), options.prefix());
@@ -48,6 +52,7 @@ pub fn execute<H: hash::Hash>(
         threads.push(std::thread::spawn(move || {
             let count = &count_sender;
             let input = &input_sender;
+            let channel = &channel_sender;
             let mut decrypted = Vec::new();
 
             for n in first..last {

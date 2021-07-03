@@ -50,13 +50,13 @@ fn run_algorithm<H: hash::Hash>((options, printer): (options::Mode<H>, print::Pr
     channel.options(&options);
 
     match &options {
-        options::Mode::Encrypt(options) => encrypt::execute(options, channel),
+        options::Mode::Encrypt(options) => encrypt::execute(options, &channel),
         options::Mode::Decrypt(options) => decrypt(options, channel),
     }
 }
 
 fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Channel) -> bool {
-    let summary = match decrypt::execute(options, channel) {
+    let summary = match decrypt::execute(options, &channel) {
         Ok(summary) => summary,
         Err(err) => {
             print_error(err);

@@ -58,7 +58,7 @@ fn compute_results<'a, H: hash::Hash>(
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    channel: impl channel::Channel,
+    channel: &impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     let time = std::time::Instant::now();
 

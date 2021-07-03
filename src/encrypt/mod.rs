@@ -6,7 +6,7 @@ use crate::options::SharedAccessor;
 
 pub fn execute<H: hash::Hash>(
     options: &options::Encrypt<H>,
-    channel: impl channel::Channel,
+    channel: &impl channel::Channel,
 ) -> bool {
     for input in options.input() {
         if channel.should_terminate() {

@@ -12,7 +12,7 @@ pub use cpu::OPTIMAL_HASHES_PER_THREAD;
 
 pub fn execute<H: hash::Hash>(
     options: &options::Decrypt<H>,
-    channel: impl channel::Channel,
+    channel: &impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     match options.device() {
         options::Device::GPU => gpu::execute(options, channel),
