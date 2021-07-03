@@ -54,77 +54,14 @@ ApplicationWindow {
       right: parent.right
     }
 
-    state: switch (page) {
-      case 0: return ''
-      case 1: return 'Input'
-      case 2: return 'Crack'
-    }
-
-    states: [
-      State {
-        name: 'Input'
-
-        PropertyChanges {
-          target: parametersSlider
-          opacity: 0
-          x: -parent.width
-        }
-
-        PropertyChanges {
-          target: inputSlider
-          opacity: 1
-        }
-
-        PropertyChanges {
-          target: crack
-          opacity: 0
-        }
-
-        PropertyChanges {
-          target: crack
-          opacity: 0
-        }
-
-        PropertyChanges {
-          target: navigation
-          text: qsTr('Crack')
-          backButton: Navigation.BackButton.Small
-        }
-      },
-      State {
-        name: 'Crack'
-
-        PropertyChanges {
-          target: parametersSlider
-          opacity: 0
-          x: -parent.width
-        }
-
-        PropertyChanges {
-          target: inputSlider
-          opacity: 0
-          x: -parent.width
-        }
-
-        PropertyChanges {
-          target: crack
-          opacity: 1
-        }
-
-        PropertyChanges {
-          target: navigation
-          text: ''
-          backButton: Navigation.BackButton.Full
-        }
-      }
-    ]
-
     Item {
       id: parametersSlider
 
+      x: root.page > 0 ? -root.width : 0
       width: parent.width
       height: parent.height
 
+      opacity: root.page === 0 ? 1 : 0
       visible: opacity > 0
       focus: visible
 
@@ -148,10 +85,11 @@ ApplicationWindow {
     Item {
       id: inputSlider
 
+      x: root.page > 1 ? -root.width : 0
       width: parent.width
       height: parent.height
 
-      opacity: 0
+      opacity: root.page === 1 ? 1 : 0
       visible: opacity > 0
       focus: visible
 
@@ -177,7 +115,7 @@ ApplicationWindow {
 
       anchors.fill: parent
 
-      opacity: 0
+      opacity: root.page === 2 ? 1 : 0
       visible: opacity > 0
       focus: visible
 
@@ -200,8 +138,18 @@ ApplicationWindow {
 
     height: 50
 
-    backButton: Navigation.BackButton.None
-    text: qsTr('Next')
+    backButton: switch(root.page) {
+      case 0: return Navigation.BackButton.None
+      case 1: return Navigation.BackButton.Small
+      case 2: return Navigation.BackButton.Full
+    }
+
+    text: switch (root.page) {
+      case 0: return qsTr('Next')
+      case 1: return qsTr('Crack')
+      case 2: return ''
+    }
+
     backText: qsTr('Cancel')
     onNext: root.nextState()
     onPrevious: root.previousState()
