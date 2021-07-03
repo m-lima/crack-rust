@@ -4,7 +4,7 @@ use crate::options;
 
 use crate::options::SharedAccessor;
 
-static MAX_GPU_LENGTH: u8 = 7;
+const MAX_GPU_LENGTH: u8 = 7;
 
 pub(super) fn setup_for<H: hash::Hash>(
     options: &options::Decrypt<H>,
@@ -225,8 +225,8 @@ mod source {
     use crate::error;
     use crate::hash;
 
-    static MD5: &str = include_str!("../../cl/md5.cl");
-    static SHA256: &str = include_str!("../../cl/sha256.cl");
+    const MD5: &str = include_str!("../../cl/md5.cl");
+    const SHA256: &str = include_str!("../../cl/sha256.cl");
 
     pub(super) struct SourceTemplate(&'static str);
     pub(super) struct Source(String);

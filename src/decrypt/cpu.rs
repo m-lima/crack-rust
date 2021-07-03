@@ -6,7 +6,7 @@ use crate::results;
 
 use crate::options::SharedAccessor;
 
-pub static OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
+pub const OPTIMAL_HASHES_PER_THREAD: u64 = 1024 * 16;
 
 #[derive(Clone, Copy)]
 pub struct Sender<T>(*const T);

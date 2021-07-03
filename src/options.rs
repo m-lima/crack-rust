@@ -4,7 +4,7 @@ use crate::hash;
 use crate::secrets;
 use crate::Input;
 
-static SALT_ENV: &str = "HASHER_SALT";
+const SALT_ENV: &str = "HASHER_SALT";
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Device {
