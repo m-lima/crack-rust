@@ -18,6 +18,7 @@
 - [ ] print::io_* is printing colored and out of place (no section and for writes, it comes before Summary on -vv)
 
 ## GUI
+- [ ] Experiment with static build
 
 ## Refactor
 - [ ] Rename encrypt/decrypt to hash/crack (the idea is to open up for rc4 encrypt/decrypt)
