@@ -65,7 +65,7 @@ Column {
           }
         }
 
-        if (idx != currentIndex) {
+        if (idx !== currentIndex) {
           currentIndex = idx
         }
       }

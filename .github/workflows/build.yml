@@ -21,7 +21,8 @@ jobs:
           override: true
       - name: Prepare QT
         uses: jurplel/install-qt-action@v2
-        version: '6.1.1'
+        with:
+          version: '6.1.1'
       - name: Format
         uses: actions-rs/cargo@v1
         with:
