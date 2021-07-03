@@ -1,4 +1,3 @@
-// TODO: Remove this once Path is used instead of Ident in qmetaobject_impl
 use qmetaobject::QObject;
 
 use crate::channel;
