@@ -60,7 +60,9 @@ pub fn execute<H: hash::Hash>(
                         #[allow(clippy::cast_possible_truncation)]
                         channel.progress((n * 100 / last) as u8);
                     }
-                    if channel.should_terminate() {
+                    if channel.should_terminate()
+                        || count.load(std::sync::atomic::Ordering::Relaxed) == 0
+                    {
                         return (n - first, decrypted);
                     }
                 }
