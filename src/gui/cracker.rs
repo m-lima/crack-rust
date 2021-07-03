@@ -107,7 +107,7 @@ impl Cracker {
         use qmetaobject::QMetaType;
 
         println!("Craking in rust");
-        // TODO: Lots of copying happening here
+
         let input = input
             .into_iter()
             .filter_map(|v| qmetaobject::QString::from_qvariant(v.clone()))

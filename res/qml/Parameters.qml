@@ -45,33 +45,35 @@ Column {
     onClicked: root._current = this
     innerSpacing: 10
 
-    // TODO: Select "custom" is the fields were edited
     ComboBox {
       id: templates
       width: parent.width
       textRole: 'name'
 
-      model: if (typeof _templates !== 'undefined') {
-        _templates
-      } else {
-        [
-          { name: 'One', prefix: '1', length: 11 },
-          { name: 'Two', prefix: '2', length: 12 },
-          { name: 'Three', prefix: '3', length: 13 },
-          { name: 'Custom', prefix: '', length: 14 }
-        ]
+      function updateFields() {
+        let idx = model.index(currentIndex, 0)
+        prefix.text = model.data(idx, Qt.UserRole + 1)
+        length.value = model.data(idx, Qt.UserRole + 2)
       }
 
-      onCurrentIndexChanged: {
-        if (Array.isArray(model)) {
-          prefix.text = model[currentIndex].prefix
-          length.value = model[currentIndex].length
-        } else {
-          let idx = model.index(currentIndex, 0)
-          prefix.text = model.data(idx, Qt.UserRole + 1)
-          length.value = model.data(idx, Qt.UserRole + 2)
+      function selectMatching() {
+        let idx = 0
+        for (; idx < model.rowCount() - 1; idx++) {
+          let index = model.index(idx, 0)
+          if (model.data(index, Qt.UserRole + 2) === length.value && model.data(index, Qt.UserRole + 1) == prefix.text) {
+            break
+          }
+        }
+
+        if (idx != currentIndex) {
+          currentIndex = idx
         }
       }
+
+      model: _templates
+
+      onActivated: updateFields()
+      Component.onCompleted: updateFields()
     }
 
     TextField {
@@ -82,6 +84,7 @@ Column {
       validator: RegularExpressionValidator {
         regularExpression: /[0-9]{0,25}/
       }
+      onTextEdited: templates.selectMatching()
     }
 
     RowLayout {
@@ -94,10 +97,11 @@ Column {
 
       SpinBox {
         id: length
+        Layout.fillWidth: true
         value: 12
         from: Math.max(prefix.text.length, 3)
         to: 25
-        Layout.fillWidth: true
+        onValueModified: templates.selectMatching()
       }
     }
   }
