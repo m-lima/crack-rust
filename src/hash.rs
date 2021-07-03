@@ -34,6 +34,10 @@ macro_rules! hash {
             impl $crate::Input for Hash {}
 
             impl $crate::hash::Hash for Hash {
+                fn algorithm() -> super::Algorithm {
+                    super::Algorithm::$name
+                }
+
                 fn digest(salted_prefix: &str, number: &str) -> Self {
                     use digest::Digest;
                     let mut digest = <$algorithm>::new();
@@ -271,6 +275,7 @@ pub trait Hash: ocl::OclPrm + std::fmt::LowerHex + std::fmt::Binary + crate::Inp
     fn regex() -> &'static regex::Regex;
     fn name() -> &'static str;
     fn bytes() -> u64;
+    fn algorithm() -> Algorithm;
 }
 
 hash!(md5: 128 from md5::Md5, sha256: 256 from sha2::Sha256);

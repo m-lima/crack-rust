@@ -28,7 +28,7 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub(super) fn make_program(&self) -> Result<ocl::Program, error::Error> {
         let salted_prefix = format!("{}{}", &self.options.salt(), &self.options.prefix());
-        let source = source::template::<H>()?.with_prefix(&salted_prefix);
+        let source = source::template::<H>().with_prefix(&salted_prefix);
 
         ocl::Program::builder()
             .source(source.to_string())
@@ -222,7 +222,6 @@ impl Output {
 }
 
 mod source {
-    use crate::error;
     use crate::hash;
 
     const MD5: &str = include_str!("../../cl/md5.cl");
@@ -231,14 +230,10 @@ mod source {
     pub(super) struct SourceTemplate(&'static str);
     pub(super) struct Source(String);
 
-    pub(super) fn template<H: hash::Hash>() -> Result<SourceTemplate, error::Error> {
-        // TODO: Update with type specialization when available
-        if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::md5::Hash>() {
-            Ok(SourceTemplate(MD5))
-        } else if std::any::TypeId::of::<H>() == std::any::TypeId::of::<hash::sha256::Hash>() {
-            Ok(SourceTemplate(SHA256))
-        } else {
-            Err(error!("Algorithm not supported for GPU execution"))
+    pub(super) fn template<H: hash::Hash>() -> SourceTemplate {
+        match H::algorithm() {
+            hash::Algorithm::md5 => SourceTemplate(MD5),
+            hash::Algorithm::sha256 => SourceTemplate(SHA256),
         }
     }
 
