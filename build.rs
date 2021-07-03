@@ -19,6 +19,7 @@ fn generate_dummys() {
     }
 }
 
+#[cfg(feature = "qml")]
 fn build_cpp() {
     let cpp_include_path = concat!(env!("CARGO_MANIFEST_DIR"), "/cpp");
     let qt_include_path = std::env::var("DEP_QT_INCLUDE_PATH").unwrap();
