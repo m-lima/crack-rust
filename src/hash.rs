@@ -49,9 +49,7 @@ macro_rules! hash {
                     let mut data = unsafe {
                         std::mem::MaybeUninit::<[u8; byte_size_of!($size)]>::uninit().assume_init()
                     };
-                    for i in 0..byte_size_of!($size) {
-                        data[i] = bytes[i];
-                    }
+                    data.copy_from_slice(bytes.as_slice());
                     Self(data)
                 }
 
