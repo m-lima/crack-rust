@@ -40,20 +40,47 @@ ApplicationWindow {
       right: parent.right
     }
 
-    states: State {
-      name: 'Crack'
+    states: [
+      State {
+        name: 'Input'
 
-      PropertyChanges {
-        target: parametersSlider
-        opacity: 0
-        x: -parent.width
-      }
+        PropertyChanges {
+          target: parametersSlider
+          opacity: 0
+          x: -parent.width
+        }
 
-      PropertyChanges {
-        target: input
-        opacity: 1
+        PropertyChanges {
+          target: inputSlider
+          opacity: 1
+        }
+
+        PropertyChanges {
+          target: crack
+          opacity: 0
+        }
+      },
+      State {
+        name: 'Crack'
+
+        PropertyChanges {
+          target: parametersSlider
+          opacity: 0
+          x: -parent.width
+        }
+
+        PropertyChanges {
+          target: inputSlider
+          opacity: 0
+          x: -parent.width
+        }
+
+        PropertyChanges {
+          target: crack
+          opacity: 1
+        }
       }
-    }
+    ]
 
     Item {
       id: parametersSlider
@@ -81,8 +108,43 @@ ApplicationWindow {
       }
     }
 
-    Input {
-      id: input
+    Item {
+      id: inputSlider
+
+      width: parent.width
+      height: parent.height
+
+      opacity: 0
+      visible: opacity > 0
+      focus: visible
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 200
+        }
+      }
+
+      Behavior on x {
+        NumberAnimation {
+          duration: 200
+        }
+      }
+
+      Input {
+        id: input
+
+        Behavior on opacity {
+          NumberAnimation {
+            duration: 200
+          }
+        }
+      }
+    }
+
+    Crack {
+      id: crack
+
+      anchors.fill: parent
 
       opacity: 0
       visible: opacity > 0

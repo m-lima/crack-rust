@@ -5,10 +5,11 @@ mod template;
 
 qmetaobject::qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
-    "Main.qml",
     "BigButton.qml",
     "CollapsibleItem.qml",
+    "Crack.qml",
     "Input.qml",
+    "Main.qml",
     "Navigation.qml",
     "Parameters.qml",
     "Radio.qml",
@@ -30,7 +31,7 @@ pub fn run() {
     let templates = qmetaobject::QObjectBox::new(template::build());
 
     let mut engine = qmetaobject::QmlEngine::new();
-    qmetaobject::qml_register_singleton_type::<cracker::Cracker>(&cracker, 1, 0, &cracker);
+    qmetaobject::qml_register_type::<cracker::Cracker>(&cracker, 1, 0, &cracker);
     qmetaobject::qml_register_type::<extractor::Extractor>(&extractor, 1, 0, &extractor);
 
     engine.set_object_property("_templates".into(), templates.pinned());
