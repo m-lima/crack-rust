@@ -169,6 +169,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(execute(&options, Channel).unwrap().results, expected);
+        assert_eq!(execute(&options, &Channel).unwrap().results, expected);
     }
 }

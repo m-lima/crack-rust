@@ -10,7 +10,30 @@ Column {
     right: parent.right
   }
 
+  function crack() {
+    console.log('Cracking')
+
+    let files = []
+    for (let i = 0; i < input.files.count; i++) {
+      files.push(input.files.get(i).path)
+    }
+
+    cracker.crack(
+      parameters.prefix,
+      parameters.length,
+      parameters.saltCustom,
+      parameters.saltValue,
+      parameters.useSha256,
+      parameters.deviceAutomatic,
+      parameters.useGpu,
+      input.hashes,
+      files
+    )
+  }
+
   Cracker {
+    id: cracker
+
     onFound: count.value++
     onProgressed: (progress) => percentage.value = progress
   }
@@ -29,25 +52,3 @@ Column {
     value: 0
   }
 }
-
-// // TODO: Focus probably not needed if new screen will be shown
-// next.focus = true
-
-// console.log('Crack')
-
-// let files = []
-// for (let i = 0; i < input.files.count; i++) {
-//   files.push(input.files.get(i).path)
-// }
-
-// Cracker.crack(
-//   parameters.prefix,
-//   parameters.length,
-//   parameters.saltCustom,
-//   parameters.saltValue,
-//   parameters.useSha256,
-//   parameters.deviceAutomatic,
-//   parameters.useGpu,
-//   input.hashes,
-//   files
-// )

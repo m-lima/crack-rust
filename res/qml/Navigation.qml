@@ -54,7 +54,10 @@ Item {
         name: 'Input'
         PropertyChanges {
           target: next
-          onClicked: content.state = 'Crack'
+          onClicked: {
+            content.state = 'Crack'
+            crack.crack()
+          }
         }
       },
       State {
