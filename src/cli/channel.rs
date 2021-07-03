@@ -2,6 +2,12 @@ use super::print;
 
 use crate::channel;
 
+// SAFETY:
+// 1: A transient state at the time of reading can only be true or false, no invalid data.
+// 2: A transition in this value only occurs from false to true, so only a false negative can
+//    happen
+// 3: The impact of a false negative only means that the process will run for slightly longer
+//    until next check.
 static mut SHOULD_TERMINATE: bool = false;
 
 #[derive(Copy, Clone)]
