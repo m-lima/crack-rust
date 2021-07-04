@@ -34,10 +34,18 @@ Item {
     onError: (error) => message.text = error
   }
 
-  SpinBox {
-    id: count
+  Button {
+    id: button
 
-    value: 0
+    anchors.centerIn: parent.center
+    width: parent.width / 4
+    height: parent.width / 4
+
+    background: Rectangle {
+      anchors.fill: button
+      radius: button.width / 2
+      color: 'red'
+    }
   }
 
   // TODO: Make a thin custom progress bar

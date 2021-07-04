@@ -14,20 +14,18 @@ Button {
     id: background
 
     anchors.fill: parent
-    state: !button.enabled ? 'Disabled' : button.down ? 'Down' : button.hovered ? 'Hovered' : ''
+    state: button.down ? 'Down' : button.hovered ? 'Hovered' : ''
     gradient: gradient
 
     Gradient {
       id: gradient
 
       GradientStop {
-        id: gradientTop
         position: 0
         color: background.baseColor.lighter(1.2)
       }
 
       GradientStop {
-        id: gradientBottom
         position: 1
         color: background.baseColor.darker(1.2)
       }
@@ -46,14 +44,6 @@ Button {
         PropertyChanges {
           target: background
           baseColor: button.palette.button.lighter(1.1)
-        }
-      },
-      // TODO: Not to sure about the rendering of disabled button
-      State {
-        name: 'Disabled'
-        PropertyChanges {
-          target: contentItem
-          opacity: 0.5
         }
       }
     ]

@@ -14,9 +14,7 @@ Item {
       }
       PropertyChanges {
         target: navigation
-        enabled: input.hashes.length > 0 || input.files.count > 0
         backButton: Navigation.BackButton.Small
-        text: qsTr('Crack')
         onNext: root.state = 'Crack'
         onBack: root.state = ''
       }
@@ -80,7 +78,7 @@ Item {
 
     text: qsTr('Next')
     backButton: Navigation.BackButton.None
-    backText: qsTr('Cancel')
+    backText: qsTr('Back')
     onNext: root.state = 'Input'
   }
 }

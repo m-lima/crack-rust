@@ -8,7 +8,6 @@ Item {
     Full
   }
 
-  property alias enabled: next.enabled
   property alias text: next.text
   required property string backText
   required property int backButton
@@ -25,13 +24,15 @@ Item {
       top: parent.top
       bottom: parent.bottom
       left: parent.left
+      right: root.backButton === Navigation.BackButton.Full ? parent.right : undefined
     }
 
+    // TODO: When FULL, if window gets resized, there will be a lag
     visible: width > 0
     width: switch (root.backButton) {
       case Navigation.BackButton.None: return 0
       case Navigation.BackButton.Small: return parent.height
-      case Navigation.BackButton.Full: return parent.width
+      case Navigation.BackButton.Full: undefined
     }
 
     onClicked: root.back()
