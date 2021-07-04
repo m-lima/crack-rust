@@ -5,65 +5,78 @@ import Cracker
 Item {
   anchors.fill: parent
 
-  function crack() {
-    console.log('Cracking')
-
-    let files = []
-    for (let i = 0; i < input.files.count; i++) {
-      files.push(input.files.get(i).path)
-    }
-
-    cracker.crack(
-      parameters.prefix,
-      parameters.length,
-      parameters.saltCustom,
-      parameters.saltValue,
-      parameters.useSha256,
-      parameters.deviceAutomatic,
-      parameters.useGpu,
-      input.hashes,
-      files
-    )
-  }
-
   Cracker {
     id: cracker
 
-    onFound: count.value++
-    onProgressed: (progress) => percentage.value = progress
+    function start() {
+      console.log('Cracking')
+
+      let files = []
+      for (let i = 0; i < input.files.count; i++) {
+        files.push(input.files.get(i).path)
+      }
+
+      cracker.crack(
+        parameters.prefix,
+        parameters.length,
+        parameters.saltCustom,
+        parameters.saltValue,
+        parameters.useSha256,
+        parameters.deviceAutomatic,
+        parameters.useGpu,
+        input.hashes,
+        files
+      )
+    }
+
+    // onFound: count.value++
+    onProgressed: (progress) => button.update(progress)
     onError: (error) => message.text = error
   }
 
   Button {
+    property int progress: 0
+
     id: button
 
-    anchors.centerIn: parent.center
+    function update(progress) {
+      this.progress = progress
+      background.requestPaint()
+    }
+
+    anchors.centerIn: parent
     width: parent.width / 4
     height: parent.width / 4
 
-    background: Rectangle {
-      anchors.fill: button
-      radius: button.width / 2
-      color: 'red'
+    text: progress + '%'
+    font.pixelSize: width / 4
+
+    background: Canvas {
+      id: background
+
+      anchors.fill: parent
+      onPaint: {
+        let ctx = getContext('2d')
+
+        ctx.beginPath()
+        ctx.strokeStyle = palette.base
+        ctx.lineWidth = 2
+        ctx.ellipse(2, 2, width - 4, width - 4)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.arc(width / 2, width / 2, width / 2 - 2, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * button.progress / 100)
+        ctx.strokeStyle = palette.highlight
+        ctx.lineCap = 'round'
+        ctx.lineWidth = 2
+        ctx.stroke()
+      }
     }
+
+    onClicked: cracker.start()
   }
 
   // TODO: Make a thin custom progress bar
-  ProgressBar {
-    id: percentage
-
-    anchors {
-      bottom: parent.bottom
-      left: parent.left
-      right: parent.right
-      margins: 20
-    }
-
-    from: 0
-    to: 100
-    value: 0
-  }
-
   Rectangle {
     anchors {
       top: parent.top
