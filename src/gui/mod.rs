@@ -13,6 +13,7 @@ qmetaobject::qrc!(qml, "res/qml" as "/" {
     "Navigation.qml",
     "Parameters.qml",
     "Radio.qml",
+    "SlidingView.qml",
     "TitleButton.qml",
 });
 

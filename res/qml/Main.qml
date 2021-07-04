@@ -54,76 +54,22 @@ ApplicationWindow {
       right: parent.right
     }
 
-    Item {
-      id: parametersSlider
-
-      x: root.page > 0 ? -root.width : 0
-      width: parent.width
-      height: parent.height
-
-      opacity: root.page === 0 ? 1 : 0
-      visible: opacity > 0
-      focus: visible
-
-      Behavior on opacity {
-        NumberAnimation {
-          duration: 200
-        }
-      }
-
-      Behavior on x {
-        NumberAnimation {
-          duration: 200
-        }
-      }
-
-      Parameters {
-        id: parameters
-      }
+    SlidingView {
+      index: 0
+      page: root.page
+      Parameters { id: parameters }
     }
 
-    Item {
-      id: inputSlider
-
-      x: root.page > 1 ? -root.width : 0
-      width: parent.width
-      height: parent.height
-
-      opacity: root.page === 1 ? 1 : 0
-      visible: opacity > 0
-      focus: visible
-
-      Behavior on opacity {
-        NumberAnimation {
-          duration: 200
-        }
-      }
-
-      Behavior on x {
-        NumberAnimation {
-          duration: 200
-        }
-      }
-
-      Input {
-        id: input
-      }
+    SlidingView {
+      index: 1
+      page: root.page
+      Input { id: input }
     }
 
-    Crack {
-      id: crack
-
-      anchors.fill: parent
-
-      opacity: root.page === 2 ? 1 : 0
-      visible: opacity > 0
-      focus: visible
-
-      Behavior on opacity {
-        NumberAnimation {
-          duration: 200
-        }
-      }
+    SlidingView {
+      index: 2
+      page: root.page
+      Crack {}
     }
   }
 

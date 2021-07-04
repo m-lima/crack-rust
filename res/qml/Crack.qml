@@ -31,12 +31,12 @@ Column {
     )
   }
 
-  Cracker {
-    id: cracker
+  // Cracker {
+  //   id: cracker
 
-    onFound: count.value++
-    onProgressed: (progress) => percentage.value = progress
-  }
+  //   onFound: count.value++
+  //   onProgressed: (progress) => percentage.value = progress
+  // }
 
   SpinBox {
     id: count
@@ -46,6 +46,8 @@ Column {
 
   ProgressBar {
     id: percentage
+
+    width: parent.width
 
     from: 0
     to: 100
