@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 
 Item {
   required property int index;
