@@ -5,6 +5,7 @@ mod template;
 
 qmetaobject::qrc!(qml, "res/qml" as "/" {
     "qtquickcontrols2.conf",
+    "App.qml",
     "BigButton.qml",
     "CollapsibleItem.qml",
     "Crack.qml",
@@ -36,6 +37,6 @@ pub fn run() {
     qmetaobject::qml_register_type::<extractor::Extractor>(&extractor, 1, 0, &extractor);
 
     engine.set_object_property("_templates".into(), templates.pinned());
-    engine.load_file("qrc:/Main.qml".into());
+    engine.load_file("qrc:/App.qml".into());
     engine.exec();
 }

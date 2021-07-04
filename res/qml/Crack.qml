@@ -2,13 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import Cracker
 
-Column {
-
-  anchors {
-    verticalCenter: parent.verticalCenter
-    left: parent.left
-    right: parent.right
-  }
+Item {
+  anchors.fill: parent
 
   function crack() {
     console.log('Cracking')
@@ -31,12 +26,13 @@ Column {
     )
   }
 
-  // Cracker {
-  //   id: cracker
+  Cracker {
+    id: cracker
 
-  //   onFound: count.value++
-  //   onProgressed: (progress) => percentage.value = progress
-  // }
+    onFound: count.value++
+    onProgressed: (progress) => percentage.value = progress
+    onError: (error) => message.text = error
+  }
 
   SpinBox {
     id: count
@@ -44,13 +40,52 @@ Column {
     value: 0
   }
 
+  // TODO: Make a thin custom progress bar
   ProgressBar {
     id: percentage
 
-    width: parent.width
+    anchors {
+      bottom: parent.bottom
+      left: parent.left
+      right: parent.right
+      margins: 20
+    }
 
     from: 0
     to: 100
     value: 0
+  }
+
+  Rectangle {
+    anchors {
+      top: parent.top
+      left: parent.left
+      right: parent.right
+    }
+
+    height: message.implicitHeight + 20
+    color: app.colorB
+
+    opacity: message.text ? 1: 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 200
+      }
+    }
+
+    Text {
+      id: message
+
+      anchors {
+        fill: parent
+        margins: 10
+      }
+
+      text: ''
+      color: root.palette.buttonText
+      font.pointSize: 18
+    }
   }
 }

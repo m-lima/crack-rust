@@ -2,7 +2,11 @@ import QtQuick
 import QtQuick.Controls
 
 Button {
+  property int fontSize: 18
+
   id: button
+
+  font.pointSize: fontSize
 
   background: Rectangle {
     property color baseColor: button.palette.button
@@ -10,7 +14,7 @@ Button {
     id: background
 
     anchors.fill: parent
-    state: button.down ? 'Down' : button.hovered ? 'Hovered' : ''
+    state: !button.enabled ? 'Disabled' : button.down ? 'Down' : button.hovered ? 'Hovered' : ''
     gradient: gradient
 
     Gradient {
@@ -42,6 +46,14 @@ Button {
         PropertyChanges {
           target: background
           baseColor: button.palette.button.lighter(1.1)
+        }
+      },
+      // TODO: Not to sure about the rendering of disabled button
+      State {
+        name: 'Disabled'
+        PropertyChanges {
+          target: contentItem
+          opacity: 0.5
         }
       }
     ]
@@ -76,15 +88,15 @@ Button {
       NumberAnimation {
         target: contentItem
         duration: 100
-        to: 0
-        property: 'opacity'
+        to: 1
+        property: 'font.pointSize'
       }
       PropertyAction {}
       NumberAnimation {
         target: contentItem
         duration: 100
-        to: 1
-        property: 'opacity'
+        to: fontSize
+        property: 'font.pointSize'
       }
     }
   }

@@ -8,12 +8,13 @@ Item {
     Full
   }
 
-  required property string text
+  property alias enabled: next.enabled
+  property alias text: next.text
   required property string backText
   required property int backButton
 
   signal next
-  signal previous
+  signal back
 
   id: root
 
@@ -33,17 +34,13 @@ Item {
       case Navigation.BackButton.Full: return parent.width
     }
 
-    onClicked: {
-      back.focus = true
-      root.previous()
-    }
+    onClicked: root.back()
 
     text: root.backButton < Navigation.BackButton.Full ? '' : root.backText
     icon.source: root.backButton < Navigation.BackButton.Full ? 'qrc:/img/left.svg' : ''
     icon.color: palette.buttonText
     palette.button: root.palette.button.lighter(1.3)
     font.bold: true
-    font.pointSize: 18
 
     Behavior on width {
       NumberAnimation {
@@ -64,15 +61,10 @@ Item {
 
     visible: width > 0
 
-    onClicked: {
-      next.focus = true
-      root.next()
-    }
+    onClicked: root.next()
 
-    text: root.text
     palette.button: 'green'
     palette.buttonText: '#252525'
     font.bold: true
-    font.pointSize: 18
   }
 }

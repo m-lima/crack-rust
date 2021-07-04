@@ -69,7 +69,7 @@ impl Cracker {
         );
 
         if use_sha256 {
-            self.crack_inner::<hash::sha256::Hash>(
+            self.crack_algorithm::<hash::sha256::Hash>(
                 prefix,
                 length,
                 custom_salt,
@@ -80,7 +80,7 @@ impl Cracker {
                 files,
             );
         } else {
-            self.crack_inner::<hash::md5::Hash>(
+            self.crack_algorithm::<hash::md5::Hash>(
                 prefix,
                 length,
                 custom_salt,
@@ -93,7 +93,7 @@ impl Cracker {
         }
     }
 
-    fn crack_inner<H: hash::Hash>(
+    fn crack_algorithm<H: hash::Hash>(
         &self,
         prefix: String,
         length: u8,
@@ -105,8 +105,6 @@ impl Cracker {
         files: qmetaobject::QVariantList,
     ) {
         use qmetaobject::QMetaType;
-
-        println!("Craking in rust");
 
         let input = input
             .into_iter()
@@ -128,37 +126,69 @@ impl Cracker {
         } else {
             Some(options::Device::CPU)
         };
-        println!("Parameters built");
 
-        // TODO: Need to release the calling thread. Must not block
-        if let Err(err) =
-            options::Decrypt::new(input, files, maybe_salt, length, prefix, None, maybe_device)
-                .and_then(|ref options| decrypt::execute(options, self))
-        {
-            println!("Failure: {}", err);
-            self.error(err.to_string())
+        let options = match options::Decrypt::new(
+            input,
+            files,
+            maybe_salt,
+            length,
+            prefix,
+            None,
+            maybe_device,
+        ) {
+            Ok(options) => options,
+            Err(err) => {
+                self.error(err.to_string());
+                return;
+            }
+        };
+
+        let channel = Channel::new(self);
+
+        std::thread::spawn(move || {
+            // TODO: Need to communicate failure
+            // TODO: Need to communicate Summary?
+            let _ignored = decrypt::execute(&options, &channel);
+        });
+    }
+}
+
+struct Channel {
+    progress_callback: Box<dyn Fn(u8) + Send + Sync>,
+    result_callback: Box<dyn Fn((String, String)) + Send + Sync>,
+}
+
+impl Channel {
+    fn new(cracker: &Cracker) -> Self {
+        let ptr = qmetaobject::QPointer::from(&*cracker);
+        let progress = qmetaobject::queued_callback(move |progress| {
+            if let Some(this) = ptr.as_pinned() {
+                this.borrow().progressed(progress);
+            }
+        });
+        let ptr = qmetaobject::QPointer::from(&*cracker);
+        let result = qmetaobject::queued_callback(move |(input, output)| {
+            if let Some(this) = ptr.as_pinned() {
+                this.borrow().found(input, output)
+            }
+        });
+        Self {
+            progress_callback: Box::new(progress),
+            result_callback: Box::new(result),
         }
     }
 }
 
-impl qmetaobject::QSingletonInit for Cracker {
-    fn init(&mut self) {
-        self.running = true;
-    }
-}
-
-unsafe impl Sync for Cracker {}
-
-impl channel::Channel for Cracker {
+impl channel::Channel for Channel {
     fn progress(&self, progress: u8) {
-        self.progressed(progress)
+        (self.progress_callback)(progress)
     }
 
     fn result(&self, input: &str, output: &str) {
-        self.found(input.into(), output.into())
+        (self.result_callback)((String::from(input), String::from(output)))
     }
 
     fn should_terminate(&self) -> bool {
-        self.running
+        false
     }
 }
