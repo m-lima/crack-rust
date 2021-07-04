@@ -33,7 +33,10 @@ Item {
       case Navigation.BackButton.Full: return parent.width
     }
 
-    onClicked: root.previous()
+    onClicked: {
+      back.focus = true
+      root.previous()
+    }
 
     text: root.backButton < Navigation.BackButton.Full ? '' : root.backText
     icon.source: root.backButton < Navigation.BackButton.Full ? 'qrc:/img/left.svg' : ''
@@ -61,7 +64,10 @@ Item {
 
     visible: width > 0
 
-    onClicked: root.next()
+    onClicked: {
+      next.focus = true
+      root.next()
+    }
 
     text: root.text
     palette.button: 'green'
