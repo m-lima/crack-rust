@@ -2,6 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import Cracker
 
+// TODO: This is a WIP
+// TODO: Keep already cracked values visible
+// TODO: Have different states for the main button: [Start, Stop, Done]
 Item {
   anchors.fill: parent
 
@@ -34,44 +37,12 @@ Item {
     onError: (error) => message.text = error
   }
 
-  Button {
-    property int progress: 0
-
+  Progress {
     id: button
-
-    function update(progress) {
-      this.progress = progress
-      background.requestPaint()
-    }
 
     anchors.centerIn: parent
     width: Math.min(parent.height, parent.width / 4)
     height: Math.min(parent.height, parent.width / 4)
-
-    text: progress + '%'
-    font.pixelSize: width / 4
-
-    background: Canvas {
-      id: background
-
-      anchors.fill: parent
-      onPaint: {
-        let ctx = getContext('2d')
-
-        ctx.beginPath()
-        ctx.strokeStyle = palette.base
-        ctx.lineWidth = 2
-        ctx.ellipse(2, 2, width - 4, width - 4)
-        ctx.stroke()
-
-        ctx.beginPath()
-        ctx.arc(width / 2, width / 2, width / 2 - 2, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * button.progress / 100)
-        ctx.strokeStyle = palette.highlight
-        ctx.lineCap = 'round'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
-    }
 
     onClicked: cracker.start()
   }
