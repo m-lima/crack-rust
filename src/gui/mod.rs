@@ -20,6 +20,7 @@ qmetaobject::qrc!(qml, "res/qml" as "/" {
 });
 
 qmetaobject::qrc!(img, "res/img" as "/img" {
+    "cog.svg",
     "left.svg",
     "trash.svg",
 });

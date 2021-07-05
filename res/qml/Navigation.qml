@@ -53,6 +53,7 @@ Item {
         name: 'Full'
         PropertyChanges {
           target: back
+          text: root.backText
           width: undefined
         }
         AnchorChanges {
@@ -67,9 +68,6 @@ Item {
         NumberAnimation {
           duration: 200
           property: 'width'
-        }
-        AnchorAnimation {
-          duration: 200
         }
       }
     ]

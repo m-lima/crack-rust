@@ -47,7 +47,6 @@ Item {
     onClicked: cracker.start()
   }
 
-  // TODO: Make a thin custom progress bar
   Rectangle {
     anchors {
       top: parent.top
@@ -77,7 +76,11 @@ Item {
 
       text: ''
       color: root.palette.buttonText
-      font.pointSize: 18
+      font.pointSize: 16
+    }
+
+    TapHandler {
+      onTapped: message.text = ''
     }
   }
 }
