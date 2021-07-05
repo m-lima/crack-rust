@@ -45,8 +45,8 @@ Item {
     }
 
     anchors.centerIn: parent
-    width: parent.width / 4
-    height: parent.width / 4
+    width: Math.min(parent.height, parent.width / 4)
+    height: Math.min(parent.height, parent.width / 4)
 
     text: progress + '%'
     font.pixelSize: width / 4
