@@ -113,9 +113,8 @@ Column {
 
       model: []
 
-      MouseArea {
-        anchors.fill: parent
-        onClicked: hashes.edit()
+      TapHandler {
+        onTapped: hashes.edit()
       }
     }
 
@@ -292,11 +291,12 @@ Column {
             icon.source: 'qrc:/img/trash.svg'
             icon.color: colorD
 
-            MouseArea {
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: containsMouse ? Qt.PointingHandCursor : Qt.ArrowCursor
-              onClicked: filesList.model.remove(index)
+            HoverHandler {
+              cursorShape: Qt.PointingHandCursor
+            }
+
+            TapHandler {
+              onTapped: filesList.model.remove(index)
             }
           }
 
