@@ -1,3 +1,11 @@
+## General
+- [ ] Make OpenGL optional
+- [ ] Update readme
+  - [ ] CPP compiler requirement
+  - [ ] QT requirement
+    - [ ] QtDeploy
+  - [ ] Command line arguments
+
 ## UI
 - [X] Show progress (based on atomic for CPU and on queue for GPU) (use stderr)
 - [X] Time taken
@@ -13,9 +21,9 @@
 - [X] ~~Share GLSL code between algorithms (structs, prepare, search)~~
 
 ## Design
-- [X] Make options/args self-contained
-- [ ] **Now that the algorithm is typed, go over the code and reduce the runtime dispatching**
 - [ ] print::io_* is printing colored and out of place (no section and for writes, it comes before Summary on -vv)
+- [X] **Now that the algorithm is typed, go over the code and reduce the runtime dispatching**
+- [X] Make options/args self-contained
 
 ## GUI
 - [ ] Experiment with static build
