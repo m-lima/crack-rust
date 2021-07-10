@@ -2,10 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import Cracker
 
-// TODO: This is a WIP
-// TODO: Keep already cracked values visible
-// TODO: Have different states for the main button: [Start, Stop, Done]
-// TODO: Allow clearing results
 Item {
   anchors.fill: parent
 
@@ -38,12 +34,12 @@ Item {
     }
   }
 
+  // TODO: Allow ergonomic copy
   ListView {
     id: results
 
     clip: true
 
-    // TODO: Fit between error and totalProgress
     anchors {
       top: error.bottom
       bottom: totalProgress.top
@@ -90,7 +86,10 @@ Item {
       for (let i = 0; i < input.files.count; i++) {
         files.push(input.files.get(i).path);
       }
-      totalProgress.total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
+      let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
+      if (total > 0) {
+        totalProgress.total = total
+      }
     }
     states: [
       State {
@@ -110,15 +109,13 @@ Item {
     ]
   }
 
-  // TODO: Disappears if crack if clicked again with invalid input
   Canvas {
     id: totalProgress
 
     property int total: 0
     property int cracked: 0
 
-    visible: total > 0
-    height: 3
+    height: total > 0 ? 3 : 0
     onPaint: {
       let ctx = getContext('2d');
       // Base line
