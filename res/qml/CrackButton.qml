@@ -25,12 +25,14 @@ Button {
     function onProgressChanged() {
       background.requestPaint();
     }
+
   }
 
   // TODO: Mask it to match the rounded shape
   HoverHandler {
     id: hover
 
+    target: button.contentItem
     cursorShape: Qt.PointingHandCursor
   }
 
@@ -42,7 +44,6 @@ Button {
     height: width
     onPaint: {
       let ctx = getContext('2d');
-
       // Base circle
       ctx.beginPath();
       ctx.strokeStyle = palette.base;
@@ -50,7 +51,6 @@ Button {
       ctx.ellipse(2, 2, width - 4, width - 4);
       ctx.stroke();
       // Progress circle
-
       if (progress > 0) {
         ctx.beginPath();
         ctx.strokeStyle = palette.highlight;

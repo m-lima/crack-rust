@@ -41,6 +41,8 @@ Item {
   ListView {
     id: results
 
+    clip: true
+
     // TODO: Fit between error and totalProgress
     anchors {
       top: error.bottom
@@ -108,6 +110,7 @@ Item {
     ]
   }
 
+  // TODO: Disappears if crack if clicked again with invalid input
   Canvas {
     id: totalProgress
 
@@ -118,7 +121,6 @@ Item {
     height: 3
     onPaint: {
       let ctx = getContext('2d');
-
       // Base line
       ctx.beginPath();
       ctx.strokeStyle = palette.base;
@@ -127,7 +129,6 @@ Item {
       ctx.moveTo(1, 1);
       ctx.lineTo(width - 1, 1);
       ctx.stroke();
-
       // Progress line
       if (cracked > 0) {
         ctx.beginPath();
