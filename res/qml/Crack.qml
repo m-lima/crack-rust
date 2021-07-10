@@ -43,11 +43,11 @@ Item {
 
     // TODO: Fit between error and totalProgress
     anchors {
-      fill: parent
-      topMargin: 6
-      bottomMargin: 6
-      leftMargin: 10
-      rightMargin: 10
+      top: error.bottom
+      bottom: totalProgress.top
+      left: parent.left
+      right: parent.right
+      margins: 10
     }
 
     model: ListModel {
@@ -79,7 +79,7 @@ Item {
 
     caption: 'Crack'
     image: 'qrc:/img/cog.svg'
-    hoverColor: palette.highlight
+    hoverColor: root.palette.highlight
     anchors.centerIn: parent
     width: Math.min(parent.height, parent.width) / 2
     height: Math.min(parent.height, parent.width) / 2
@@ -152,7 +152,7 @@ Item {
   Rectangle {
     id: error
 
-    height: message.implicitHeight + 20
+    height: message.text ? message.implicitHeight + 20 : 0
     color: app.colorB
     opacity: message.text ? 1 : 0
     visible: opacity > 0

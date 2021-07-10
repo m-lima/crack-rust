@@ -38,7 +38,6 @@ pub struct Cracker {
 )]
 impl Cracker {
     fn is_running(&self) -> bool {
-        println!("Expensive");
         self.running_arc.load(std::sync::atomic::Ordering::Relaxed)
     }
 
@@ -150,12 +149,8 @@ impl Cracker {
         self.set_running(true);
 
         std::thread::spawn(move || {
-            use channel::Channel;
-
-            // TODO: No need to send 100% here. Simply handle the non-running case in QML
-            match decrypt::execute(&options, &channel) {
-                Ok(_) => channel.progress(100),
-                Err(err) => channel.error(err.to_string()),
+            if let Err(err) = decrypt::execute(&options, &channel) {
+                channel.error(err.to_string());
             }
 
             set_running(false);
