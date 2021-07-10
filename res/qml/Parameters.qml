@@ -43,6 +43,7 @@ Column {
         let idx = 0;
         for (; idx < model.rowCount() - 1; idx++) {
           let index = model.index(idx, 0);
+          // Implicit conversion for comparison desired
           if (model.data(index, Qt.UserRole + 2) === length.value && model.data(index, Qt.UserRole + 1) == prefix.text)
             break;
 

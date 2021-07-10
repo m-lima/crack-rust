@@ -13,8 +13,12 @@ Item {
     id: cracker
 
     onFound: (input, output) => {
-      totalProgress.visible = true
-      // TODO: Use Set and only increment based on set size
+      for (let i = 0; i < results.model.count; i++) {
+        // Implicit conversion for comparison desired
+        if (results.model.get(i).hash == input)
+          return ;
+
+      }
       totalProgress.cracked++;
       totalProgress.requestPaint();
       results.model.append({
@@ -22,13 +26,22 @@ Item {
         "plain": output.toString()
       });
     }
-    onProgressed: (progress) => button.update(progress)
+    onProgressed: (progress) => crackButton.progress = progress
     onError: (error) => message.text = error
+    onRunningChanged: (running) => {
+      if (running) {
+        crackButton.state = 'Running';
+      } else {
+        crackButton.state = '';
+        crackButton.progress = 0;
+      }
+    }
   }
 
   ListView {
     id: results
 
+    // TODO: Fit between error and totalProgress
     anchors {
       fill: parent
       topMargin: 6
@@ -61,12 +74,15 @@ Item {
 
   }
 
-  Progress {
-    id: button
+  CrackButton {
+    id: crackButton
 
+    caption: 'Crack'
+    image: 'qrc:/img/cog.svg'
+    hoverColor: palette.highlight
     anchors.centerIn: parent
-    width: Math.min(parent.height, parent.width / 4)
-    height: Math.min(parent.height, parent.width / 4)
+    width: Math.min(parent.height, parent.width) / 2
+    height: Math.min(parent.height, parent.width) / 2
     onClicked: {
       let files = [];
       for (let i = 0; i < input.files.count; i++) {
@@ -74,15 +90,31 @@ Item {
       }
       totalProgress.total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
     }
+    states: [
+      State {
+        name: 'Running'
+
+        PropertyChanges {
+          target: crackButton
+          caption: ''
+          captionHover: 'Stop'
+          image: ''
+          imageHover: 'qrc:/img/cancel.svg'
+          hoverColor: colorD.lighter(1.5)
+          onClicked: cracker.running = false
+        }
+
+      }
+    ]
   }
 
   Canvas {
     id: totalProgress
 
-    property int total
-    property int cracked
+    property int total: 0
+    property int cracked: 0
 
-    visible: false
+    visible: total > 0
     height: 3
     onPaint: {
       let ctx = getContext('2d');
@@ -97,13 +129,15 @@ Item {
       ctx.stroke();
 
       // Progress line
-      ctx.beginPath();
-      ctx.strokeStyle = palette.highlight;
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 3;
-      ctx.moveTo(1, 1);
-      ctx.lineTo((width - 1) * cracked / total, 1);
-      ctx.stroke();
+      if (cracked > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = palette.highlight;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 3;
+        ctx.moveTo(1, 1);
+        ctx.lineTo((width - 1) * cracked / total, 1);
+        ctx.stroke();
+      }
     }
 
     anchors {
@@ -116,6 +150,8 @@ Item {
   }
 
   Rectangle {
+    id: error
+
     height: message.implicitHeight + 20
     color: app.colorB
     opacity: message.text ? 1 : 0

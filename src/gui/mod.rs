@@ -9,17 +9,18 @@ qmetaobject::qrc!(qml, "res/qml" as "/" {
     "BigButton.qml",
     "CollapsibleItem.qml",
     "Crack.qml",
+    "CrackButton.qml",
     "Input.qml",
     "Main.qml",
     "Navigation.qml",
     "Parameters.qml",
-    "Progress.qml",
     "Radio.qml",
     "SlidingView.qml",
     "TitleButton.qml",
 });
 
 qmetaobject::qrc!(img, "res/img" as "/img" {
+    "cancel.svg",
     "cog.svg",
     "left.svg",
     "trash.svg",

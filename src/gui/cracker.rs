@@ -5,18 +5,15 @@ use crate::decrypt;
 use crate::hash;
 use crate::options;
 
+#[allow(non_snake_case, dead_code)]
 #[derive(QObject, Default)]
 pub struct Cracker {
     base: qmetaobject::qt_base_class!(trait QObject),
+    running: qmetaobject::qt_property!(bool; READ is_running WRITE set_running NOTIFY runningChanged),
+    runningChanged: qmetaobject::qt_signal!(running: bool),
     progressed: qmetaobject::qt_signal!(progress: u8),
     found: qmetaobject::qt_signal!(input: String, output: String),
     error: qmetaobject::qt_signal!(message: String),
-    cancel: qmetaobject::qt_method!(
-        fn cancel(&mut self) {
-            self.running
-                .swap(false, std::sync::atomic::Ordering::Relaxed);
-        }
-    ),
     crack: qmetaobject::qt_method!(
         fn(
             &mut self,
@@ -31,7 +28,7 @@ pub struct Cracker {
             files: qmetaobject::QVariantList,
         ) -> usize
     ),
-    running: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    running_arc: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 #[allow(
@@ -40,6 +37,20 @@ pub struct Cracker {
     clippy::fn_params_excessive_bools
 )]
 impl Cracker {
+    fn is_running(&self) -> bool {
+        println!("Expensive");
+        self.running_arc.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn set_running(&mut self, running: bool) {
+        let previous = self
+            .running_arc
+            .swap(running, std::sync::atomic::Ordering::Relaxed);
+        if previous != running {
+            self.runningChanged(running);
+        }
+    }
+
     fn crack(
         &mut self,
         prefix: String,
@@ -128,12 +139,18 @@ impl Cracker {
 
     fn launch<H: hash::Hash>(&mut self, options: options::Decrypt<H>) {
         let channel = Channel::new(self);
-        let running = self.running.clone();
+
+        let ptr = qmetaobject::QPointer::from(&*self);
+        let set_running = qmetaobject::queued_callback(move |running| {
+            if let Some(pin) = ptr.as_pinned() {
+                pin.borrow_mut().set_running(running);
+            }
+        });
+
+        self.set_running(true);
 
         std::thread::spawn(move || {
             use channel::Channel;
-
-            running.swap(true, std::sync::atomic::Ordering::Relaxed);
 
             // TODO: No need to send 100% here. Simply handle the non-running case in QML
             match decrypt::execute(&options, &channel) {
@@ -141,7 +158,7 @@ impl Cracker {
                 Err(err) => channel.error(err.to_string()),
             }
 
-            running.swap(false, std::sync::atomic::Ordering::Relaxed);
+            set_running(false);
         });
     }
 }
@@ -177,7 +194,7 @@ impl Channel {
             progress: Box::new(progress),
             result: Box::new(result),
             error: Box::new(error),
-            running: cracker.running.clone(),
+            running: cracker.running_arc.clone(),
         }
     }
 
