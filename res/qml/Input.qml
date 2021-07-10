@@ -7,7 +7,8 @@ import HashExtractor
 Column {
   id: root
 
-  property alias hashes: hashesList.model
+  // TODO: Decide if it makes more sense to send full text or parsed hashesList
+  property alias hashes: hashesEdit.text
   property alias files: filesList.model
 
   spacing: 10
@@ -194,7 +195,7 @@ Column {
     function add(urls) {
       let count = filesList.model.count;
       urls.map(toURL).filter(localFile).filter(unique).forEach((u) => filesList.model.append({
-        'path': u.pathname
+        "path": u.pathname
       }));
       return filesList.model.count > count;
     }

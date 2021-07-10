@@ -94,7 +94,6 @@ Item {
       PropertyChanges {
         target: navigation
         backButton: Navigation.BackButton.Full
-        onNext: console.log('Crack!')
         onBack: root.state = 'Input'
       }
 
