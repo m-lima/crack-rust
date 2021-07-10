@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Controls
 
 RadioButton {
-  property bool paintDisabled: true
   id: radio
+
+  property bool paintDisabled: true
+
   opacity: enabled ? 1 : 0.5
 
   indicator: Rectangle {
@@ -24,5 +26,7 @@ RadioButton {
       color: radio.down ? palette.highlight.darker() : palette.highlight
       visible: radio.checked && (radio.paintDisabled || radio.enabled)
     }
+
   }
+
 }

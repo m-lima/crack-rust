@@ -2,16 +2,16 @@ import QtQuick
 import QtQuick.Controls
 
 Button {
-  property int fontSize: 18
-
   id: button
+
+  property int fontSize: 18
 
   font.pointSize: fontSize
 
   background: Rectangle {
-    property color baseColor: button.palette.button
-
     id: background
+
+    property color baseColor: button.palette.button
 
     anchors.fill: parent
     state: button.down ? 'Down' : button.hovered ? 'Hovered' : ''
@@ -29,46 +29,54 @@ Button {
         position: 1
         color: background.baseColor.darker(1.2)
       }
+
+    }
+
+    HoverHandler {
+      cursorShape: Qt.PointingHandCursor
     }
 
     states: [
       State {
         name: 'Hovered'
+
         PropertyChanges {
           target: background
           baseColor: button.palette.button.darker(1.1)
         }
+
       },
       State {
         name: 'Down'
+
         PropertyChanges {
           target: background
           baseColor: button.palette.button.lighter(1.1)
         }
+
       }
     ]
-
     transitions: [
       Transition {
         to: ''
+
         ColorAnimation {
           duration: 200
           property: 'baseColor'
         }
+
       },
       Transition {
         from: 'Down'
         to: 'Hovered'
+
         ColorAnimation {
           duration: 200
           property: 'baseColor'
         }
+
       }
     ]
-
-    HoverHandler {
-      cursorShape: Qt.PointingHandCursor
-    }
   }
 
   Behavior on text {
@@ -79,14 +87,19 @@ Button {
         to: 1
         property: 'font.pointSize'
       }
-      PropertyAction {}
+
+      PropertyAction {
+      }
+
       NumberAnimation {
         target: contentItem
         duration: 100
         to: fontSize
         property: 'font.pointSize'
       }
+
     }
+
   }
 
   Behavior on icon.source {
@@ -97,13 +110,19 @@ Button {
         to: 0
         property: 'opacity'
       }
-      PropertyAction {}
+
+      PropertyAction {
+      }
+
       NumberAnimation {
         target: contentItem
         duration: 100
         to: 1
         property: 'opacity'
       }
+
     }
+
   }
+
 }

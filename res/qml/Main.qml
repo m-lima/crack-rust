@@ -5,39 +5,10 @@ import QtQuick.Window
 Item {
   id: root
 
-  states: [
-    State {
-      name: 'Input'
-      PropertyChanges {
-        target: content
-        page: 1
-      }
-      PropertyChanges {
-        target: navigation
-        backButton: Navigation.BackButton.Small
-        onNext: root.state = 'Crack'
-        onBack: root.state = ''
-      }
-    },
-    State {
-      name: 'Crack'
-      PropertyChanges {
-        target: content
-        page: 2
-      }
-      PropertyChanges {
-        target: navigation
-        backButton: Navigation.BackButton.Full
-        onNext: console.log('Crack!')
-        onBack: root.state = 'Input'
-      }
-    }
-  ]
-
   Item {
-    property int page: 0
-
     id: content
+
+    property int page: 0
 
     anchors {
       top: parent.top
@@ -49,24 +20,43 @@ Item {
     SlidingView {
       index: 0
       page: content.page
-      Parameters { id: parameters }
+
+      Parameters {
+        id: parameters
+      }
+
     }
 
     SlidingView {
       index: 1
       page: content.page
-      Input { id: input }
+
+      Input {
+        id: input
+      }
+
     }
 
     SlidingView {
       index: 2
       page: content.page
-      Crack { id: crack }
+
+      Crack {
+        id: crack
+      }
+
     }
+
   }
 
   Navigation {
     id: navigation
+
+    height: 50
+    text: qsTr('Next')
+    backButton: Navigation.BackButton.None
+    backText: qsTr('Back')
+    onNext: root.state = 'Input'
 
     anchors {
       bottom: parent.bottom
@@ -74,11 +64,40 @@ Item {
       right: parent.right
     }
 
-    height: 50
-
-    text: qsTr('Next')
-    backButton: Navigation.BackButton.None
-    backText: qsTr('Back')
-    onNext: root.state = 'Input'
   }
+
+  states: [
+    State {
+      name: 'Input'
+
+      PropertyChanges {
+        target: content
+        page: 1
+      }
+
+      PropertyChanges {
+        target: navigation
+        backButton: Navigation.BackButton.Small
+        onNext: root.state = 'Crack'
+        onBack: root.state = ''
+      }
+
+    },
+    State {
+      name: 'Crack'
+
+      PropertyChanges {
+        target: content
+        page: 2
+      }
+
+      PropertyChanges {
+        target: navigation
+        backButton: Navigation.BackButton.Full
+        onNext: console.log('Crack!')
+        onBack: root.state = 'Input'
+      }
+
+    }
+  ]
 }

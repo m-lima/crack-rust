@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Column {
+  id: root
+
   property alias prefix: prefix.text
   property alias length: length.value
   property alias saltCustom: saltCustom.checked
@@ -10,10 +12,9 @@ Column {
   property alias useSha256: algorithmSha256.checked
   property alias deviceAutomatic: deviceAutomatic.checked
   property alias useGpu: gpu.checked
-
   property Item _current: null
 
-  id: root
+  state: _current ? 'Expanded' : ''
 
   anchors {
     verticalCenter: parent.verticalCenter
@@ -21,25 +22,9 @@ Column {
     right: parent.right
   }
 
-  state: _current ? 'Expanded' : ''
-
-  states: State {
-    name: 'Expanded'
-    AnchorChanges {
-      target: root
-      anchors.verticalCenter: undefined
-      anchors.top: parent.top
-    }
-  }
-
-  transitions: Transition {
-    AnchorAnimation {
-      duration: 200
-    }
-  }
-
   CollapsibleItem {
     id: format
+
     title: qsTr('Format')
     expanded: root._current === this
     onClicked: root._current = this
@@ -47,44 +32,45 @@ Column {
 
     ComboBox {
       id: templates
-      width: parent.width
-      textRole: 'name'
 
       function updateFields() {
-        let idx = model.index(currentIndex, 0)
-        prefix.text = model.data(idx, Qt.UserRole + 1)
-        length.value = model.data(idx, Qt.UserRole + 2)
+        let idx = model.index(currentIndex, 0);
+        prefix.text = model.data(idx, Qt.UserRole + 1);
+        length.value = model.data(idx, Qt.UserRole + 2);
       }
 
       function selectMatching() {
-        let idx = 0
+        let idx = 0;
         for (; idx < model.rowCount() - 1; idx++) {
-          let index = model.index(idx, 0)
-          if (model.data(index, Qt.UserRole + 2) === length.value && model.data(index, Qt.UserRole + 1) == prefix.text) {
-            break
-          }
-        }
+          let index = model.index(idx, 0);
+          if (model.data(index, Qt.UserRole + 2) === length.value && model.data(index, Qt.UserRole + 1) == prefix.text)
+            break;
 
-        if (idx !== currentIndex) {
-          currentIndex = idx
         }
+        if (idx !== currentIndex)
+          currentIndex = idx;
+
       }
 
+      width: parent.width
+      textRole: 'name'
       model: _templates
-
       onActivated: updateFields()
       Component.onCompleted: updateFields()
     }
 
     TextField {
       id: prefix
+
       width: parent.width
       placeholderText: qsTr('Prefix')
       maximumLength: 25
+      onTextEdited: templates.selectMatching()
+
       validator: RegularExpressionValidator {
         regularExpression: /[0-9]{0,25}/
       }
-      onTextEdited: templates.selectMatching()
+
     }
 
     RowLayout {
@@ -97,13 +83,16 @@ Column {
 
       SpinBox {
         id: length
+
         Layout.fillWidth: true
         value: 12
         from: Math.max(prefix.text.length, 3)
         to: 25
         onValueModified: templates.selectMatching()
       }
+
     }
+
   }
 
   CollapsibleItem {
@@ -114,6 +103,7 @@ Column {
 
     Switch {
       id: saltCustom
+
       text: qsTr('Custom')
       checked: false
       onCheckedChanged: saltCustom.checked && saltValue.forceActiveFocus()
@@ -121,11 +111,13 @@ Column {
 
     TextField {
       id: saltValue
+
       width: parent.width
       enabled: saltCustom.checked
       placeholderText: qsTr('Salt')
       opacity: saltCustom.checked ? 1 : 0.5
     }
+
   }
 
   CollapsibleItem {
@@ -135,6 +127,7 @@ Column {
 
     Radio {
       id: algorithmSha256
+
       text: qsTr('Sha256')
       checked: true
     }
@@ -142,6 +135,7 @@ Column {
     Radio {
       text: qsTr('Md5')
     }
+
   }
 
   CollapsibleItem {
@@ -152,12 +146,14 @@ Column {
 
     Switch {
       id: deviceAutomatic
+
       text: qsTr('Automatic')
       checked: true
     }
 
     Radio {
       id: gpu
+
       text: qsTr('GPU')
       enabled: !deviceAutomatic.checked
       checked: true
@@ -169,5 +165,25 @@ Column {
       enabled: !deviceAutomatic.checked
       paintDisabled: false
     }
+
   }
+
+  states: State {
+    name: 'Expanded'
+
+    AnchorChanges {
+      target: root
+      anchors.verticalCenter: undefined
+      anchors.top: parent.top
+    }
+
+  }
+
+  transitions: Transition {
+    AnchorAnimation {
+      duration: 200
+    }
+
+  }
+
 }
