@@ -1,10 +1,9 @@
 ## General
-- [ ] Make OpenGL optional
-- [ ] Update readme
-  - [ ] CPP compiler requirement
-  - [ ] QT requirement
-    - [ ] QtDeploy
-  - [ ] Command line arguments
+- [X] Update readme
+  - [X] CPP compiler requirement
+  - [X] Command line arguments
+  - [X] QT requirement
+    - [X] QtDeploy
 
 ## UI
 - [X] Show progress (based on atomic for CPU and on queue for GPU) (use stderr)

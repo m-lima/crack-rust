@@ -16,6 +16,21 @@ $ cd <this repository>
 $ cargo build --release
 ```
 
+### Creating bundles
+This project can be bundled using [cargo bundle](https://github.com/burtonageo/cargo-bundle)
+```bash
+$ cargo install cargo-bundle
+$ cd <this repository>
+$ cargo bundle --release
+```
+
+Furthermore, if using feature `qml`, it is also possible to create a deployment
+
+**Example on Mac**
+```bash
+$ macdeployqt ./target/release/bundle/Hasher.app -qmldir=./res/qml
+```
+
 ### Features
 |Name |Dependencies|
 |-----|------------|
