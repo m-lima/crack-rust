@@ -1,11 +1,9 @@
 /target
 **/*.rs.bk
-preview.sh
 
 # IDE
 .idea
 .vscode
-Hasher.qmlproject.user
 
 # Hidden
 hidden/

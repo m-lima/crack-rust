@@ -3,7 +3,7 @@ mod extractor;
 mod syntaxhighlighter;
 mod template;
 
-qmetaobject::qrc!(qml, "res/qml" as "/" {
+qmetaobject::qrc!(qml, "qml" as "/" {
     "qtquickcontrols2.conf",
     "App.qml",
     "BigButton.qml",
