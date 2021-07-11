@@ -5,11 +5,13 @@ import Qt.labs.platform
 Rectangle {
   id: root
 
-  required property url actionIcon
+  property url actionIcon
+  property color actionColor
   property alias model: list.model
 
-  implicitHeight: list.model.count > 0 ? list.contentHeight + 12 : 0
+  signal action(int index)
 
+  implicitHeight: list.model.count > 0 ? list.contentHeight + 12 : 0
   radius: 2
   clip: true
   color: palette.base
@@ -69,7 +71,7 @@ Rectangle {
         height: 16
         anchors.right: parent.right
         visible: hover.hovered
-        icon.color: colorD
+        icon.color: actionColor
         icon.source: actionIcon
 
         HoverHandler {
@@ -77,7 +79,7 @@ Rectangle {
         }
 
         TapHandler {
-          onTapped: list.model.remove(index)
+          onTapped: root.action(index)
         }
 
       }

@@ -2,8 +2,10 @@ use qmetaobject::QObject;
 
 use crate::channel;
 use crate::decrypt;
+use crate::files;
 use crate::hash;
 use crate::options;
+use crate::results;
 
 #[allow(non_snake_case, dead_code)]
 #[derive(QObject, Default)]
@@ -14,6 +16,9 @@ pub struct Cracker {
     progressed: qmetaobject::qt_signal!(progress: u8),
     found: qmetaobject::qt_signal!(input: String, output: String),
     error: qmetaobject::qt_signal!(message: String),
+    save: qmetaobject::qt_method!(
+        fn(&self, input: String, output: String, results: qmetaobject::QVariantList)
+    ),
     crack: qmetaobject::qt_method!(
         fn(
             &mut self,
@@ -29,6 +34,7 @@ pub struct Cracker {
         ) -> usize
     ),
     running_arc: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    last_regex: Option<&'static regex::Regex>,
 }
 
 #[allow(
@@ -47,6 +53,48 @@ impl Cracker {
             .swap(running, std::sync::atomic::Ordering::Relaxed);
         if previous != running {
             self.runningChanged(running);
+        }
+    }
+
+    fn save(&self, input: String, output: String, results: qmetaobject::QVariantList) {
+        use qmetaobject::QMetaType;
+
+        let pairs = {
+            let mut pairs = Vec::with_capacity(results.len() >> 1);
+            let mut iter = results.into_iter();
+            while let Some(hash) = iter.next() {
+                let hash = match qmetaobject::QString::from_qvariant(hash.clone()) {
+                    Some(hash) => hash,
+                    None => continue,
+                };
+                println!("Hash: {}", hash);
+                let plain = match iter
+                    .next()
+                    .and_then(|plain| qmetaobject::QString::from_qvariant(plain.clone()))
+                {
+                    Some(plain) => plain,
+                    None => continue,
+                };
+                println!("Plain: {}", plain);
+                pairs.push(results::Pair::new(hash.to_string(), plain.to_string()));
+            }
+            pairs
+        };
+
+        println!("Len: {}", pairs.len());
+        println!("Pairs: {:?}", pairs);
+
+        if let Some(regex) = self.last_regex {
+            if let Err(err) = files::write(
+                regex,
+                &std::path::PathBuf::from(input),
+                Some(std::path::PathBuf::from(output)),
+                &pairs,
+            ) {
+                self.error(err.to_string());
+            }
+        } else {
+            self.error(String::from("No results yet"));
         }
     }
 
@@ -100,7 +148,7 @@ impl Cracker {
     ) -> usize {
         use qmetaobject::QMetaType;
 
-        let input = input
+        let mut input = input
             .into_iter()
             .filter_map(|v| qmetaobject::QString::from_qvariant(v.clone()))
             .filter_map(|s| H::from_str(&s.to_string()).ok())
@@ -109,7 +157,13 @@ impl Cracker {
         let files = files
             .into_iter()
             .filter_map(|v| qmetaobject::QString::from_qvariant(v.clone()))
-            .map(|s| std::path::PathBuf::from(&s.to_string()))
+            .filter_map(|s| {
+                let path = std::path::PathBuf::from(&s.to_string());
+                files::read(&mut input, &path)
+                    .map(|_| path)
+                    .map_err(|err| self.error(err.to_string()))
+                    .ok()
+            })
             .collect();
 
         let maybe_salt = if custom_salt { Some(salt) } else { None };
@@ -138,7 +192,10 @@ impl Cracker {
     }
 
     fn launch<H: hash::Hash>(&mut self, options: options::Decrypt<H>) {
+        self.set_running(true);
+
         let channel = Channel::new(self);
+        self.last_regex = Some(H::regex());
 
         let ptr = qmetaobject::QPointer::from(&*self);
         let set_running = qmetaobject::queued_callback(move |running| {
@@ -146,8 +203,6 @@ impl Cracker {
                 pin.borrow_mut().set_running(running);
             }
         });
-
-        self.set_running(true);
 
         std::thread::spawn(move || {
             // Allow the GUI to have breathing room to render

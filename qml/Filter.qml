@@ -43,6 +43,7 @@ Canvas {
     placeholderText: qsTr('Filter')
     background.visible: false
     onActiveFocusChanged: parent.requestPaint()
+    onAccepted: filter.focus = false
 
     anchors {
       left: icon.right
@@ -53,8 +54,6 @@ Canvas {
     validator: RegularExpressionValidator {
       regularExpression: /[a-fA-F0-9]*/
     }
-
-    onAccepted: filter.focus = false
 
   }
 

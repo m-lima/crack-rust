@@ -46,7 +46,7 @@ pub fn write(
     regex: &regex::Regex,
     path: &std::path::Path,
     output: Option<std::path::PathBuf>,
-    summary: &results::Summary,
+    results: &[results::Pair],
 ) -> Result<(), error::Error> {
     let input = std::fs::File::open(path)
         .map_err(|e| error!(e; "Could not open '{}' for translating", path.display()))?;
@@ -64,7 +64,7 @@ pub fn write(
         )
     })?;
 
-    write_output_file(regex, summary, &input, &output, output_path)
+    write_output_file(regex, results, &input, &output, output_path)
 }
 
 fn derive_output_file(input: &std::path::Path) -> Result<std::path::PathBuf, error::Error> {
@@ -94,14 +94,14 @@ fn derive_output_file(input: &std::path::Path) -> Result<std::path::PathBuf, err
 
 fn write_output_file(
     regex: &regex::Regex,
-    summary: &results::Summary,
+    results: &[results::Pair],
     input: &std::fs::File,
     output: &std::fs::File,
     output_path: std::path::PathBuf,
 ) -> Result<(), error::Error> {
     fn inner(
         regex: &regex::Regex,
-        summary: &results::Summary,
+        results: &[results::Pair],
         input: &std::fs::File,
         output: &std::fs::File,
     ) -> Result<(), error::Error> {
@@ -110,6 +110,11 @@ fn write_output_file(
         let mut buffer = String::new();
         let mut reader = std::io::BufReader::new(input);
         let mut writer = std::io::BufWriter::new(output);
+
+        let table = results
+            .iter()
+            .map(|pair| (pair.hash.as_str(), pair.plain.as_str()))
+            .collect::<std::collections::HashMap<_, _>>();
 
         loop {
             buffer.clear();
@@ -121,16 +126,12 @@ fn write_output_file(
 
                     let matches = regex
                         .captures_iter(&buffer)
-                        .filter_map(|capture| capture.get(1).map(|group| group.as_str().to_owned()))
+                        .filter_map(|capture| capture.get(0).map(|group| group.as_str().to_owned()))
                         .collect::<Vec<_>>();
 
                     for matched in &matches {
-                        if let Some(decrypted) = summary
-                            .results
-                            .iter()
-                            .find(|decrypted| decrypted.hash == matched.as_str())
-                        {
-                            buffer = buffer.replace(&decrypted.hash, &decrypted.plain);
+                        if let Some(decrypted) = table.get(matched.as_str()) {
+                            buffer = buffer.replace(matched.as_str(), decrypted);
                         }
                     }
 
@@ -145,7 +146,7 @@ fn write_output_file(
         }
     }
 
-    inner(regex, summary, input, output).map_err(|e| {
+    inner(regex, results, input, output).map_err(|e| {
         let _ignored = std::fs::remove_file(output_path);
         e
     })

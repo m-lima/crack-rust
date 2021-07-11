@@ -229,6 +229,8 @@ Column {
       height: Math.min(root.parent.height / 4, filesList.implicitHeight)
       border.color: files.containsDrag ? palette.highlight : palette.base
       actionIcon: 'qrc:/img/trash.svg'
+      actionColor: colorD
+      onAction: (index) => filesList.model.remove(index)
 
       Behavior on height {
         NumberAnimation {

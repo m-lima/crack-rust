@@ -1,4 +1,5 @@
 import QtQuick
+import Qt.labs.platform
 import Cracker
 
 Item {
@@ -132,7 +133,7 @@ Item {
 
     anchors {
       top: progress.bottom
-      bottom: files.top
+      bottom: divider.top
       left: parent.left
       right: parent.right
     }
@@ -164,8 +165,49 @@ Item {
 
   }
 
+  Rectangle {
+    id: divider
+
+    visible: files.visible
+    height: 1
+    color: palette.window
+
+    anchors {
+      bottom: files.top
+      left: parent.left
+      right: parent.right
+    }
+
+  }
+
   FileList {
     id: files
+
+    property string current
+
+    visible: results.model.count > 0
+    height: visible ? Math.min(parent.height / 4, implicitHeight) : 0
+    model: input.files
+    actionIcon: 'qrc:/img/save.svg'
+    actionColor: palette.highlight
+    onAction: (index) => {
+      files.current = files.model.get(index).path;
+      saveDialog.file = 'file://' + files.current + '.cracked';
+      saveDialog.open();
+    }
+
+    FileDialog {
+      id: saveDialog
+
+      fileMode: FileDialog.SaveFile
+      onAccepted: {
+        let resultList = [];
+        for (let i = 0; i < results.model.count; i++) {
+          resultList.push(results.model.get(i).value);
+        }
+        cracker.save(files.current, new URL(saveDialog.file).pathname, resultList);
+      }
+    }
 
     anchors {
       bottom: parent.bottom
@@ -173,7 +215,6 @@ Item {
       right: parent.right
     }
 
-    actionIcon: 'qrc:/img/save.svg'
   }
 
 }
