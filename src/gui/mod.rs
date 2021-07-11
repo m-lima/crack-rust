@@ -23,6 +23,7 @@ qmetaobject::qrc!(img, "res/img" as "/img" {
     "cancel.svg",
     "cog.svg",
     "left.svg",
+    "search.svg",
     "trash.svg",
 });
 

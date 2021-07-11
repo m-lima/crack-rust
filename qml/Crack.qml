@@ -93,16 +93,39 @@ Item {
 
   }
 
-  TextField {
-    id: filter
+  Item {
+    id: filterBox
 
-    placeholderText: qsTr('Filter')
+    height: filter.height
 
     anchors {
       top: error.bottom
       left: parent.left
       right: parent.right
       margins: 10
+    }
+
+    Button {
+      width: parent.width
+      visible: !filter.visible
+      text: filter.text ? filter.text : qsTr('Filter')
+      icon.source: 'qrc:/img/search.svg'
+      icon.color: palette.buttonText
+      background.visible: false
+      onClicked: filter.forceActiveFocus()
+
+      HoverHandler {
+        cursorShape: Qt.PointingHandCursor
+      }
+
+    }
+
+    TextField {
+      id: filter
+
+      width: parent.width
+      visible: focus
+      placeholderText: qsTr('Filter')
     }
 
   }
@@ -113,7 +136,7 @@ Item {
     total: 0
 
     anchors {
-      top: filter.bottom
+      top: filterBox.bottom
       left: parent.left
       right: parent.right
       topMargin: 10
