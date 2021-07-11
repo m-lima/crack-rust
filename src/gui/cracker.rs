@@ -150,6 +150,11 @@ impl Cracker {
         self.set_running(true);
 
         std::thread::spawn(move || {
+            // Allow the GUI to have breathing room to render
+            if options.device() == options::Device::GPU {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+
             if let Err(err) = decrypt::execute(&options, &channel) {
                 channel.error(err.to_string());
             }

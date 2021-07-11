@@ -12,7 +12,7 @@ Item {
 
     anchors {
       top: parent.top
-      bottom: navigation.top
+      bottom: progressBar.top
       left: parent.left
       right: parent.right
     }
@@ -43,14 +43,46 @@ Item {
 
       Crack {
         id: crack
+
+        onRunningChanged: (running) => {
+          navigation.running = running
+          progressBar.opacity = running ? 1 : 0
+          if (running) {
+            progressBar.progress = 0
+          }
+        }
+
+        onProgressed: (progress) => progressBar.progress = progress
       }
 
     }
 
   }
 
+  ProgressLine {
+    id: progressBar
+
+    opacity: 0
+
+    anchors {
+      bottom: navigation.top
+      left: parent.left
+      right: parent.right
+    }
+
+    highlight: app.colorA
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 200
+      }
+    }
+  }
+
   Navigation {
     id: navigation
+
+    property bool running: false
 
     height: 50
     text: qsTr('Next')
@@ -92,7 +124,8 @@ Item {
       PropertyChanges {
         target: navigation
         backButton: true
-        text: qsTr('Crack')
+        text: running ? qsTr('Cancel') : qsTr('Crack')
+        onNext: running ? crack.stop() : crack.start()
         onBack: root.state = 'Input'
       }
 

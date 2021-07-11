@@ -4,10 +4,6 @@ import QtQuick.Controls
 Button {
   id: button
 
-  property string hoverCaption
-  property string caption
-
-  text: caption
   font.pointSize: 18
   font.bold: true
 
@@ -47,10 +43,6 @@ Button {
           target: background
           baseColor: button.palette.button.darker(1.1)
         }
-        PropertyChanges {
-          target: button
-          text: hoverCaption ? hoverCaption : caption
-        }
 
       },
       State {
@@ -71,9 +63,6 @@ Button {
           duration: 200
           property: 'baseColor'
         }
-        PropertyAction {
-          property: 'text'
-        }
 
       },
       Transition {
@@ -83,9 +72,6 @@ Button {
         ColorAnimation {
           duration: 200
           property: 'baseColor'
-        }
-        PropertyAction {
-          property: 'text'
         }
 
       }

@@ -3,7 +3,26 @@ import QtQuick.Controls
 import Cracker
 
 Item {
-  required property Item footer
+  id: root
+
+  signal runningChanged(bool running)
+  signal progressed(int progress)
+
+    function start() {
+      let files = [];
+      for (let i = 0; i < input.files.count; i++) {
+        files.push(input.files.get(i).path);
+      }
+      let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
+      if (total > 0)
+        crackedProgress.total = total;
+
+    }
+
+    function stop() {
+      cracker.running = false
+    }
+
   anchors.fill: parent
 
   Cracker {
@@ -16,27 +35,20 @@ Item {
           return ;
 
       }
-      totalProgress.cracked++;
-      totalProgress.requestPaint();
+      crackedProgress.progress++;
+      crackedProgress.requestPaint();
       results.model.append({
         "hash": input.toString(),
         "plain": output.toString()
       });
     }
-    onProgressed: (progress) => crackButton.progress = progress
+    onProgressed: (progress) => root.progressed(progress)
     onError: (error) => message.text = error
-    onRunningChanged: (running) => {
-      if (running) {
-        crackButton.state = 'Running';
-      } else {
-        crackButton.state = '';
-        crackButton.progress = 0;
-      }
-      footer.cancelButton = running
-    }
+    onRunningChanged: (running) => root.runningChanged(running)
   }
 
   // TODO: Allow ergonomic copy
+  // TODO: Allow searching
   ListView {
     id: results
 
@@ -44,7 +56,7 @@ Item {
 
     anchors {
       top: error.bottom
-      bottom: totalProgress.top
+      bottom: crackedProgress.top
       left: parent.left
       right: parent.right
       margins: 10
@@ -74,71 +86,10 @@ Item {
 
   }
 
-  CrackButton {
-    id: crackButton
+  ProgressLine {
+    id: crackedProgress
 
-    caption: 'Crack'
-    image: 'qrc:/img/cog.svg'
-    hoverColor: root.palette.highlight
-    anchors.centerIn: parent
-    width: Math.min(parent.height, parent.width) / 2
-    height: Math.min(parent.height, parent.width) / 2
-    onClicked: {
-      let files = [];
-      for (let i = 0; i < input.files.count; i++) {
-        files.push(input.files.get(i).path);
-      }
-      let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
-      if (total > 0)
-        totalProgress.total = total;
-
-    }
-    states: [
-      State {
-        name: 'Running'
-
-        PropertyChanges {
-          target: crackButton
-          caption: ''
-          captionHover: 'Stop'
-          image: ''
-          imageHover: 'qrc:/img/cancel.svg'
-          hoverColor: colorD.lighter(1.5)
-          onClicked: cracker.running = false
-        }
-
-      }
-    ]
-  }
-
-  Canvas {
-    id: totalProgress
-
-    property int total: 0
-    property int cracked: 0
-
-    height: total > 0 ? 3 : 0
-    onPaint: {
-      let ctx = getContext('2d');
-      // Base line
-      ctx.beginPath();
-      ctx.strokeStyle = palette.base;
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 3;
-      ctx.moveTo(1, 1);
-      ctx.lineTo(width - 1, 1);
-      ctx.stroke();
-      // Progress line
-      if (cracked > 0) {
-        ctx.beginPath();
-        ctx.strokeStyle = palette.highlight;
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 3;
-        ctx.moveTo(1, 1);
-        ctx.lineTo((width - 1) * cracked / total, 1);
-        ctx.stroke();
-      }
-    }
+    total: 0
 
     anchors {
       bottom: parent.bottom

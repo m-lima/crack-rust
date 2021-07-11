@@ -3,9 +3,8 @@ import QtQuick
 Item {
   id: root
 
-  property alias text: next.caption
+  property alias text: next.text
   property bool backButton: false
-  property bool cancelButton: false
 
   signal next()
   signal back()
@@ -44,7 +43,7 @@ Item {
     anchors {
       top: parent.top
       bottom: parent.bottom
-      right: cancel.left
+      right: parent.right
       left: back.right
     }
 
@@ -67,29 +66,6 @@ Item {
           property: 'font.pointSize'
         }
 
-      }
-
-    }
-
-  }
-
-  BigButton {
-    id: cancel
-
-    onClicked: console.log('Cancel')
-    hoverCaption: qsTr('Cancel')
-    palette.button: colorE
-    width: root.cancelButton ? root.height * 2 : 0
-
-    anchors {
-      top: parent.top
-      bottom: parent.bottom
-      right: parent.right
-    }
-
-    Behavior on width {
-      NumberAnimation {
-        duration: 200
       }
 
     }
