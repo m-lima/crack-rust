@@ -87,9 +87,9 @@ Item {
         files.push(input.files.get(i).path);
       }
       let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
-      if (total > 0) {
-        totalProgress.total = total
-      }
+      if (total > 0)
+        totalProgress.total = total;
+
     }
     states: [
       State {

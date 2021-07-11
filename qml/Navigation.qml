@@ -19,6 +19,12 @@ Item {
   BigButton {
     id: back
 
+    width: 0
+    onClicked: root.back()
+    icon.source: 'qrc:/img/left.svg'
+    icon.color: palette.buttonText
+    palette.button: root.palette.button.lighter(1.3)
+    font.bold: true
     state: {
       switch (root.backButton) {
       case Navigation.BackButton.None:
@@ -29,12 +35,6 @@ Item {
         return 'Full';
       }
     }
-    width: 0
-    onClicked: root.back()
-    icon.source: 'qrc:/img/left.svg'
-    icon.color: palette.buttonText
-    palette.button: root.palette.button.lighter(1.3)
-    font.bold: true
 
     anchors {
       top: parent.top
