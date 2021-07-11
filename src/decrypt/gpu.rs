@@ -111,12 +111,12 @@ pub fn execute<H: hash::Hash>(
         // If we enqueue too many, OpenCL will abort
         // Send every 7th iteration
         if i & 0b111 == 0b111 {
-            // Allowed because it will always be <= 100
-            #[allow(clippy::cast_possible_truncation)]
-            channel.progress((i * 100 / environment.cpu_iterations()) as u8);
             if channel.should_terminate() {
                 break;
             }
+            // Allowed because it will always be <= 100
+            #[allow(clippy::cast_possible_truncation)]
+            channel.progress((i * 100 / environment.cpu_iterations()) as u8);
             environment
                 .queue()
                 .finish()

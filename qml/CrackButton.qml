@@ -18,10 +18,10 @@ Button {
   text: hover.hovered && background.hovered && captionHover ? captionHover : caption ? caption : progress + '%'
   icon.source: hover.hovered && background.hovered && imageHover ? imageHover : image
   icon.color: palette.buttonText
-  icon.width: width / 3
-  icon.height: width / 3
+  icon.width: background.width / 3
+  icon.height: background.width / 3
   display: AbstractButton.TextUnderIcon
-  font.pixelSize: width / 4
+  font.pixelSize: background.width / 4
 
   Connections {
     function onProgressChanged() {

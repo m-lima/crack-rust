@@ -59,16 +59,16 @@ pub fn execute<H: hash::Hash>(
                 use eytzinger::SliceExt;
 
                 if n & (OPTIMAL_HASHES_PER_THREAD - 1) == OPTIMAL_HASHES_PER_THREAD - 1 {
+                    if channel.should_terminate()
+                        || count.load(std::sync::atomic::Ordering::Relaxed) == 0
+                    {
+                        return (n - first, decrypted);
+                    }
                     if t == 0 {
                         // Allowed because of division; value will stay in bound
                         // `n` is less than `last`
                         #[allow(clippy::cast_possible_truncation)]
                         channel.progress((n * 100 / last) as u8);
-                    }
-                    if channel.should_terminate()
-                        || count.load(std::sync::atomic::Ordering::Relaxed) == 0
-                    {
-                        return (n - first, decrypted);
                     }
                 }
 
