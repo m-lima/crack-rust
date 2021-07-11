@@ -38,12 +38,18 @@ Item {
       progress.progress++;
       results.model.append({
         "hash": input.toString(),
-        "plain": output.toString()
+        "plain": output.toString(),
+        "selection": 0
       });
     }
     onProgressed: (progress) => root.progressed(progress)
     onError: (error) => message.text = error
     onRunningChanged: (running) => root.runningChanged(running)
+  }
+
+  Shortcut {
+    sequence: StandardKey.Find
+    onActivated: filter.forceActiveFocus()
   }
 
   Rectangle {
@@ -88,9 +94,9 @@ Item {
   }
 
   TextField {
-    id: search
+    id: filter
 
-    placeholderText: qsTr('Search')
+    placeholderText: qsTr('Filter')
 
     anchors {
       top: error.bottom
@@ -107,7 +113,7 @@ Item {
     total: 0
 
     anchors {
-      top: search.bottom
+      top: filter.bottom
       left: parent.left
       right: parent.right
       topMargin: 10
@@ -136,6 +142,7 @@ Item {
 
     }
 
+    // TODO: Handle files (prompt for opening? prompt for saving?)
     // TODO: Allow ergonomic copy
     // TODO: Allow searching
     ListView {
@@ -147,8 +154,6 @@ Item {
         fill: parent
         topMargin: 6
         bottomMargin: 6
-        leftMargin: 10
-        rightMargin: 10
       }
 
       model: ListModel {
@@ -156,19 +161,61 @@ Item {
 
       delegate: Column {
         width: parent.width
+        visible: hash.includes(filter.text) || plain.includes(filter.text)
+        height: visible ? implicitHeight : 0
 
-        Text {
+        Rectangle {
           width: parent.width
-          color: palette.text
-          elide: Text.ElideMiddle
-          text: hash
+          height: textHash.implicitHeight
+          color: selection & 1 ? palette.highlight.darker() : 'transparent'
+
+          TapHandler {
+            onTapped: selection ^= 1
+          }
+
+          Text {
+            id: textHash
+
+            color: palette.text
+            elide: Text.ElideMiddle
+            text: hash
+
+            anchors {
+              left: parent.left
+              right: parent.right
+              leftMargin: 10
+              rightMargin: 10
+            }
+
+          }
+
         }
 
-        Text {
+        Rectangle {
           width: parent.width
-          color: palette.highlight
-          horizontalAlignment: Text.AlignRight
-          text: plain
+          height: textPlain.implicitHeight
+          color: selection & 2 ? palette.highlight.darker() : 'transparent'
+
+          TapHandler {
+            onTapped: selection ^= 2
+          }
+
+          Text {
+            id: textPlain
+
+            color: palette.highlight
+            horizontalAlignment: Text.AlignRight
+            text: plain
+
+            anchors {
+              left: parent.left
+              right: parent.right
+              leftMargin: 10
+              rightMargin: 10
+            }
+
+          }
+
         }
 
       }
