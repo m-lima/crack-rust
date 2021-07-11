@@ -71,7 +71,7 @@ fn decrypt<H: hash::Hash>(options: &options::Decrypt<H>, channel: channel::Chann
         channel.files();
         for file in options.files() {
             channel.write_start(file.display().to_string());
-            channel.write_done(files::write(H::regex(), file, &summary));
+            channel.write_done(files::write(H::regex(), file, None, &summary));
         }
     }
 

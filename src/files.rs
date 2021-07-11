@@ -45,17 +45,29 @@ pub fn read_from_stream<H: hash::Hash>(
 pub fn write(
     regex: &regex::Regex,
     path: &std::path::Path,
+    output: Option<std::path::PathBuf>,
     summary: &results::Summary,
 ) -> Result<(), error::Error> {
-    create_file(path).and_then(|(i, o, p)| write_output_file(regex, &summary, &i, &o, p))
+    let input = std::fs::File::open(path)
+        .map_err(|e| error!(e; "Could not open '{}' for translating", path.display()))?;
+
+    let output_path = match output {
+        Some(output) => output,
+        None => derive_output_file(path)?,
+    };
+
+    let output = std::fs::File::create(&output_path).map_err(|e| {
+        error!(
+            e;
+            "Could not open output file for '{}'",
+            output_path.display(),
+        )
+    })?;
+
+    write_output_file(regex, summary, &input, &output, output_path)
 }
 
-fn create_file(
-    input: &std::path::Path,
-) -> Result<(std::fs::File, std::fs::File, std::path::PathBuf), error::Error> {
-    let input_file = std::fs::File::open(input)
-        .map_err(|e| error!(e; "Could not open '{}' for translating", input.display()))?;
-
+fn derive_output_file(input: &std::path::Path) -> Result<std::path::PathBuf, error::Error> {
     let file_name = input
         .file_name()
         .and_then(std::ffi::OsStr::to_str)
@@ -77,15 +89,7 @@ fn create_file(
         )
     }
 
-    std::fs::File::create(&output)
-        .map(|file| (input_file, file, output))
-        .map_err(|e| {
-            error!(
-                e;
-                "Could not open output file for '{}'",
-                file_name,
-            )
-        })
+    Ok(output)
 }
 
 fn write_output_file(
