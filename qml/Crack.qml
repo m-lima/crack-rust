@@ -33,15 +33,21 @@ Item {
     onFound: (input, output) => {
       for (let i = 0; i < results.model.count; i++) {
         // Implicit conversion for comparison desired
-        if (results.model.get(i).hash == input)
+        let current = results.model.get(i);
+        if (!current.plain && current.text == input)
           return ;
 
       }
       progress.progress++;
       results.model.append({
-        "hash": input.toString(),
-        "plain": output.toString(),
-        "selection": 0
+        "value": input.toString(),
+        "plain": false,
+        "selected": false
+      });
+      results.model.append({
+        "value": output.toString(),
+        "plain": true,
+        "selected": false
       });
     }
     onProgressed: (progress) => root.progressed(progress)
@@ -134,7 +140,6 @@ Item {
 
     }
 
-    // TODO: Must lose focus
     TextField {
       id: filter
 
@@ -192,7 +197,6 @@ Item {
     }
 
     // TODO: Handle files (prompt for opening? prompt for saving?)
-    // TODO: Can searching be done better
     ListView {
       id: results
 
@@ -205,9 +209,9 @@ Item {
         sequence: StandardKey.SelectAll
         onActivated: {
           for (let i = 0; i < results.model.count; i++) {
-            results.model.get(i).selection = 3;
+            results.model.get(i).selected = true;
           }
-          results.lastSelected = (results.model.count - 1) * 2;
+          results.lastSelected = results.model.count - 1;
         }
       }
 
@@ -218,16 +222,16 @@ Item {
           let items = [];
           for (let i = 0; i < results.model.count; i++) {
             let current = results.model.get(i);
-            switch (current.selection) {
-            case 1:
-              items.push(current.hash);
-              break;
-            case 2:
-              items.push(current.plain);
-              break;
-            case 3:
-              items.push(current.hash + ':' + current.plain);
-              break;
+            if (current.selected) {
+              if (current.plain) {
+                items.push(current.value);
+              } else {
+                let next = results.model.get(++i);
+                if (next.selected)
+                  items.push(current.value + ':' + next.value);
+                else
+                  items.push(current.value);
+              }
             }
           }
           clipboard.text = items.join('\n');
@@ -250,106 +254,70 @@ Item {
         bottomMargin: 6
       }
 
+      TapHandler {
+        onTapped: results.focus = true
+      }
+
       model: ListModel {
       }
 
-      delegate: Column {
+      delegate: Rectangle {
         width: parent.width
-        visible: hash.includes(filter.text) || plain.includes(filter.text)
-        height: visible ? implicitHeight : 0
+        visible: value.includes(filter.text) || (plain ? results.model.get(index - 1).value.includes(filter.text) : results.model.get(index + 1).value.includes(filter.text))
+        height: visible ? textLabel.implicitHeight : 0
+        color: selected ? palette.highlight.darker() : 'transparent'
 
-        Rectangle {
-          width: parent.width
-          height: textHash.implicitHeight
-          color: selection & 1 ? palette.highlight.darker() : 'transparent'
-
-          TapHandler {
-            acceptedModifiers: Qt.NoModifier
-            onTapped: {
-              results.focus = true;
-              for (let i = 0; i < results.model.count; i++) {
-                results.model.get(i).selection = 0;
-              }
-              selection = 1;
-              if (selection & 1)
-                results.lastSelected = index * 2;
-
+        TapHandler {
+          acceptedModifiers: Qt.NoModifier
+          onTapped: {
+            for (let i = 0; i < results.model.count; i++) {
+              results.model.get(i).selected = false;
+            }
+            if (selected) {
+              selected = false;
+            } else {
+              selected = true;
+              results.lastSelected = index;
             }
           }
-
-          TapHandler {
-            acceptedModifiers: Qt.ControlModifier
-            onTapped: {
-              results.focus = true;
-              selection ^= 1;
-              if (selection & 1)
-                results.lastSelected = index * 2;
-
-            }
-          }
-
-          Text {
-            id: textHash
-
-            color: palette.text
-            elide: Text.ElideMiddle
-            text: hash
-
-            anchors {
-              left: parent.left
-              right: parent.right
-              leftMargin: 10
-              rightMargin: 10
-            }
-
-          }
-
         }
 
-        Rectangle {
+        TapHandler {
+          acceptedModifiers: Qt.ControlModifier
+          onTapped: {
+            if (selected) {
+              selected = false;
+            } else {
+              selected = true;
+              results.lastSelected = index;
+            }
+          }
+        }
+
+        TapHandler {
+          acceptedModifiers: Qt.ShiftModifier
+          onTapped: {
+            let step = results.lastSelected < index ? -1 : 1
+            for (let i = index; i !== results.lastSelected; i += step) {
+              results.model.get(i).selected = true
+            }
+          }
+        }
+
+        Text {
+          id: textLabel
+
           width: parent.width
-          height: textPlain.implicitHeight
-          color: selection & 2 ? palette.highlight.darker() : 'transparent'
+          color: plain ? palette.highlight : palette.text
+          elide: plain ? Text.ElideNone : Text.ElideMiddle
+          horizontalAlignment: plain ? Text.AlignRight : Text.AlignLeft
+          text: value
 
-          TapHandler {
-            acceptedModifiers: Qt.NoModifier
-            onTapped: {
-              results.focus = true;
-              for (let i = 0; i < results.model.count; i++) {
-                results.model.get(i).selection = 0;
-              }
-              selection ^= 2;
-              if (selection & 2)
-                results.lastSelected = index * 2 + 1;
-
-            }
-          }
-
-          TapHandler {
-            acceptedModifiers: Qt.ControlModifier
-            onTapped: {
-              results.focus = true;
-              selection ^= 2;
-              if (selection & 2)
-                results.lastSelected = index * 2 + 1;
-
-            }
-          }
-
-          Text {
-            id: textPlain
-
-            color: palette.highlight
-            horizontalAlignment: Text.AlignRight
-            text: plain
-
-            anchors {
-              left: parent.left
-              right: parent.right
-              leftMargin: 10
-              rightMargin: 10
-            }
-
+          anchors {
+            left: parent.left
+            right: parent.right
+            leftMargin: 10
+            rightMargin: 10
           }
 
         }

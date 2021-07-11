@@ -3,7 +3,6 @@ import QtQuick.Controls
 import Qt.labs.platform
 import HashExtractor
 
-// TODO: The manual layout here is a mess.. Can it be done better?
 Column {
   id: root
 
