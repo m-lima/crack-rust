@@ -45,13 +45,14 @@ Item {
         id: crack
 
         onRunningChanged: (running) => {
-          navigation.running = running
-          progressBar.opacity = running ? 1 : 0
+          navigation.running = running;
           if (running) {
-            progressBar.progress = 0
+            progressBar.opacity = 1;
+            progressBar.progress = 0;
+          } else {
+            progressBar.opacity = 0;
           }
         }
-
         onProgressed: (progress) => progressBar.progress = progress
       }
 
@@ -63,6 +64,7 @@ Item {
     id: progressBar
 
     opacity: 0
+    highlight: app.colorA
 
     anchors {
       bottom: navigation.top
@@ -70,13 +72,13 @@ Item {
       right: parent.right
     }
 
-    highlight: app.colorA
-
     Behavior on opacity {
       NumberAnimation {
         duration: 200
       }
+
     }
+
   }
 
   Navigation {

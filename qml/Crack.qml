@@ -8,20 +8,20 @@ Item {
   signal runningChanged(bool running)
   signal progressed(int progress)
 
-    function start() {
-      let files = [];
-      for (let i = 0; i < input.files.count; i++) {
-        files.push(input.files.get(i).path);
-      }
-      let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
-      if (total > 0)
-        crackedProgress.total = total;
-
+  function start() {
+    let files = [];
+    for (let i = 0; i < input.files.count; i++) {
+      files.push(input.files.get(i).path);
     }
+    let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
+    if (total > 0)
+      crackedProgress.total = total;
 
-    function stop() {
-      cracker.running = false
-    }
+  }
+
+  function stop() {
+    cracker.running = false;
+  }
 
   anchors.fill: parent
 
@@ -36,7 +36,6 @@ Item {
 
       }
       crackedProgress.progress++;
-      crackedProgress.requestPaint();
       results.model.append({
         "hash": input.toString(),
         "plain": output.toString()
