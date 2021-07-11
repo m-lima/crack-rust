@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import Cracker
 
 Item {
@@ -102,61 +101,14 @@ Item {
 
   }
 
-  Canvas {
-    id: filterBox
-
-    height: filter.height
-    onPaint: {
-      let ctx = getContext('2d');
-      if (filter.activeFocus) {
-        ctx.strokeStyle = palette.highlight;
-        ctx.moveTo(0, height - 1);
-        ctx.lineTo(width, height - 1);
-        ctx.stroke();
-      } else {
-        ctx.clearRect(0, height - 2, width, 2);
-      }
-    }
+  Filter {
+    id: filter
 
     anchors {
       top: error.bottom
       left: parent.left
       right: parent.right
       margins: 10
-    }
-
-    Button {
-      id: filterIcon
-
-      width: height
-      icon.source: 'qrc:/img/search.svg'
-      icon.color: palette.buttonText
-      background.visible: false
-      onClicked: filter.forceActiveFocus()
-
-      HoverHandler {
-        cursorShape: Qt.PointingHandCursor
-      }
-
-    }
-
-    TextField {
-      id: filter
-
-      placeholderText: qsTr('Filter')
-      background.visible: false
-      onActiveFocusChanged: filterBox.requestPaint()
-
-      anchors {
-        left: filterIcon.right
-        right: parent.right
-        leftMargin: 2
-      }
-
-      validator: RegularExpressionValidator {
-        regularExpression: /[a-fA-F0-9]*/
-      }
-
     }
 
   }
@@ -167,7 +119,7 @@ Item {
     total: 0
 
     anchors {
-      top: filterBox.bottom
+      top: filter.bottom
       left: parent.left
       right: parent.right
       topMargin: 10
@@ -180,7 +132,7 @@ Item {
 
     anchors {
       top: progress.bottom
-      bottom: parent.bottom
+      bottom: files.top
       left: parent.left
       right: parent.right
     }
@@ -196,57 +148,11 @@ Item {
 
     }
 
-    // TODO: Handle files (prompt for opening? prompt for saving?)
-    ListView {
+    Results {
       id: results
 
-      property int lastSelected: 0
-
+      filter: filter.text
       clip: true
-
-      Shortcut {
-        enabled: results.activeFocus
-        sequence: StandardKey.SelectAll
-        onActivated: {
-          for (let i = 0; i < results.model.count; i++) {
-            results.model.get(i).selected = true;
-          }
-          results.lastSelected = results.model.count - 1;
-        }
-      }
-
-      Shortcut {
-        enabled: results.activeFocus
-        sequence: StandardKey.Copy
-        onActivated: {
-          let items = [];
-          for (let i = 0; i < results.model.count; i++) {
-            let current = results.model.get(i);
-            if (current.selected) {
-              if (current.plain) {
-                items.push(current.value);
-              } else {
-                let next = results.model.get(++i);
-                if (next.selected)
-                  items.push(current.value + ':' + next.value);
-                else
-                  items.push(current.value);
-              }
-            }
-          }
-          clipboard.text = items.join('\n');
-          clipboard.selectAll();
-          clipboard.copy();
-          clipboard.text = '';
-        }
-      }
-
-      TextEdit {
-        id: clipboard
-
-        visible: false
-        focus: false
-      }
 
       anchors {
         fill: parent
@@ -254,78 +160,20 @@ Item {
         bottomMargin: 6
       }
 
-      TapHandler {
-        onTapped: results.focus = true
-      }
-
-      model: ListModel {
-      }
-
-      delegate: Rectangle {
-        width: parent.width
-        visible: value.includes(filter.text) || (plain ? results.model.get(index - 1).value.includes(filter.text) : results.model.get(index + 1).value.includes(filter.text))
-        height: visible ? textLabel.implicitHeight : 0
-        color: selected ? palette.highlight.darker() : 'transparent'
-
-        TapHandler {
-          acceptedModifiers: Qt.NoModifier
-          onTapped: {
-            for (let i = 0; i < results.model.count; i++) {
-              results.model.get(i).selected = false;
-            }
-            if (selected) {
-              selected = false;
-            } else {
-              selected = true;
-              results.lastSelected = index;
-            }
-          }
-        }
-
-        TapHandler {
-          acceptedModifiers: Qt.ControlModifier
-          onTapped: {
-            if (selected) {
-              selected = false;
-            } else {
-              selected = true;
-              results.lastSelected = index;
-            }
-          }
-        }
-
-        TapHandler {
-          acceptedModifiers: Qt.ShiftModifier
-          onTapped: {
-            let step = results.lastSelected < index ? -1 : 1
-            for (let i = index; i !== results.lastSelected; i += step) {
-              results.model.get(i).selected = true
-            }
-          }
-        }
-
-        Text {
-          id: textLabel
-
-          width: parent.width
-          color: plain ? palette.highlight : palette.text
-          elide: plain ? Text.ElideNone : Text.ElideMiddle
-          horizontalAlignment: plain ? Text.AlignRight : Text.AlignLeft
-          text: value
-
-          anchors {
-            left: parent.left
-            right: parent.right
-            leftMargin: 10
-            rightMargin: 10
-          }
-
-        }
-
-      }
-
     }
 
+  }
+
+  FileList {
+    id: files
+
+    anchors {
+      bottom: parent.bottom
+      left: parent.left
+      right: parent.right
+    }
+
+    actionIcon: 'qrc:/img/save.svg'
   }
 
 }

@@ -199,7 +199,7 @@ Column {
     }
 
     width: parent.width
-    height: filesButton.height + 10 + filesBorder.height + 10
+    height: filesButton.height + 10 + filesList.height + 10
     keys: ['text/uri-list']
     onEntered: (evt) => evt.accepted = evt.urls.map(toURL).filter(localFile).length > 0
     onDropped: (evt) => add(evt.urls) && evt.accept()
@@ -220,88 +220,15 @@ Column {
       active: files.containsDrag
     }
 
-    Rectangle {
-      id: filesBorder
+    FileList {
+      id: filesList
 
       x: 20
       y: filesButton.height + 10
       width: parent.width - 40
-      height: filesList.model.count > 0 ? Math.min(root.parent.height / 4, filesList.contentHeight + 12) : 0
-      radius: 2
-      clip: true
-      color: palette.base
+      height: Math.min(root.parent.height / 4, filesList.implicitHeight)
       border.color: files.containsDrag ? palette.highlight : palette.base
-
-      ListView {
-        id: filesList
-
-        readonly property string home: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0].toString().substr(7)
-
-        anchors {
-          fill: parent
-          topMargin: 6
-          bottomMargin: 6
-          leftMargin: 10
-          rightMargin: 10
-        }
-
-        model: ListModel {
-        }
-
-        displaced: Transition {
-          NumberAnimation {
-            property: 'y'
-            duration: 200
-          }
-
-        }
-
-        delegate: Item {
-          property real gonePaint: 0
-
-          width: filesBorder.width - 20
-          height: 16
-
-          Text {
-            text: path.startsWith(filesList.home) ? path.replace(filesList.home, '~') : path
-            elide: Text.ElideLeft
-            color: palette.text
-
-            anchors {
-              left: parent.left
-              right: filesDelete.left
-              rightMargin: 10
-            }
-
-          }
-
-          IconLabel {
-            id: filesDelete
-
-            width: 16
-            height: 16
-            anchors.right: parent.right
-            visible: filesHover.hovered
-            icon.source: 'qrc:/img/trash.svg'
-            icon.color: colorD
-
-            HoverHandler {
-              cursorShape: Qt.PointingHandCursor
-            }
-
-            TapHandler {
-              onTapped: filesList.model.remove(index)
-            }
-
-          }
-
-          HoverHandler {
-            id: filesHover
-          }
-
-        }
-
-      }
+      actionIcon: 'qrc:/img/trash.svg'
 
       Behavior on height {
         NumberAnimation {
