@@ -12,6 +12,8 @@ Button {
   property string imageHover
   property color hoverColor
 
+  signal clicked()
+
   palette.buttonText: hover.hovered && background.hovered && hoverColor ? hoverColor : root.palette.buttonText
   text: hover.hovered && background.hovered && captionHover ? captionHover : caption ? caption : progress + '%'
   icon.source: hover.hovered && background.hovered && imageHover ? imageHover : image
@@ -26,6 +28,10 @@ Button {
       background.requestPaint();
     }
 
+  }
+
+  TapHandler {
+    onTapped: background.hovered && button.clicked()
   }
 
   background: Canvas {
