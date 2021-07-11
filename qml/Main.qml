@@ -44,6 +44,7 @@ Item {
       Crack {
         id: crack
 
+        current: content.page === 2
         onRunningChanged: (running) => {
           navigation.running = running;
           if (running) {

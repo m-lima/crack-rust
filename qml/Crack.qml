@@ -5,6 +5,8 @@ import Cracker
 Item {
   id: root
 
+  required property bool current
+
   signal runningChanged(bool running)
   signal progressed(int progress)
 
@@ -48,6 +50,7 @@ Item {
   }
 
   Shortcut {
+    enabled: current
     sequence: StandardKey.Find
     onActivated: filter.forceActiveFocus()
   }
@@ -131,6 +134,7 @@ Item {
 
     }
 
+    // TODO: Must lose focus
     TextField {
       id: filter
 
@@ -142,6 +146,10 @@ Item {
         left: filterIcon.right
         right: parent.right
         leftMargin: 2
+      }
+
+      validator: RegularExpressionValidator {
+        regularExpression: /[a-fA-F0-9]*/
       }
 
     }
@@ -184,12 +192,57 @@ Item {
     }
 
     // TODO: Handle files (prompt for opening? prompt for saving?)
-    // TODO: Allow ergonomic copy
-    // TODO: Allow searching
+    // TODO: Can searching be done better
     ListView {
       id: results
 
+      property int lastSelected: 0
+
       clip: true
+
+      Shortcut {
+        enabled: results.activeFocus
+        sequence: StandardKey.SelectAll
+        onActivated: {
+          for (let i = 0; i < results.model.count; i++) {
+            results.model.get(i).selection = 3;
+          }
+          results.lastSelected = (results.model.count - 1) * 2;
+        }
+      }
+
+      Shortcut {
+        enabled: results.activeFocus
+        sequence: StandardKey.Copy
+        onActivated: {
+          let items = [];
+          for (let i = 0; i < results.model.count; i++) {
+            let current = results.model.get(i);
+            switch (current.selection) {
+            case 1:
+              items.push(current.hash);
+              break;
+            case 2:
+              items.push(current.plain);
+              break;
+            case 3:
+              items.push(current.hash + ':' + current.plain);
+              break;
+            }
+          }
+          clipboard.text = items.join('\n');
+          clipboard.selectAll();
+          clipboard.copy();
+          clipboard.text = '';
+        }
+      }
+
+      TextEdit {
+        id: clipboard
+
+        visible: false
+        focus: false
+      }
 
       anchors {
         fill: parent
@@ -211,9 +264,27 @@ Item {
           color: selection & 1 ? palette.highlight.darker() : 'transparent'
 
           TapHandler {
+            acceptedModifiers: Qt.NoModifier
             onTapped: {
+              results.focus = true;
+              for (let i = 0; i < results.model.count; i++) {
+                results.model.get(i).selection = 0;
+              }
+              selection = 1;
+              if (selection & 1)
+                results.lastSelected = index * 2;
+
+            }
+          }
+
+          TapHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onTapped: {
+              results.focus = true;
               selection ^= 1;
-              parent.focus = true;
+              if (selection & 1)
+                results.lastSelected = index * 2;
+
             }
           }
 
@@ -241,9 +312,27 @@ Item {
           color: selection & 2 ? palette.highlight.darker() : 'transparent'
 
           TapHandler {
+            acceptedModifiers: Qt.NoModifier
             onTapped: {
+              results.focus = true;
+              for (let i = 0; i < results.model.count; i++) {
+                results.model.get(i).selection = 0;
+              }
               selection ^= 2;
-              parent.focus = true;
+              if (selection & 2)
+                results.lastSelected = index * 2 + 1;
+
+            }
+          }
+
+          TapHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onTapped: {
+              results.focus = true;
+              selection ^= 2;
+              if (selection & 2)
+                results.lastSelected = index * 2 + 1;
+
             }
           }
 
