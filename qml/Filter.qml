@@ -17,17 +17,22 @@ Canvas {
     }
   }
 
-  Button {
-    id: filterIcon
+  IconLabel {
+    id: icon
 
-    width: height
+    x: 4
+    y: 4
+    width: 16
+    height: 16
     icon.source: 'qrc:/img/search.svg'
     icon.color: palette.buttonText
-    background.visible: false
-    onClicked: filter.forceActiveFocus()
 
     HoverHandler {
       cursorShape: Qt.PointingHandCursor
+    }
+
+    TapHandler {
+      onTapped: filter.forceActiveFocus()
     }
 
   }
@@ -40,14 +45,16 @@ Canvas {
     onActiveFocusChanged: parent.requestPaint()
 
     anchors {
-      left: filterIcon.right
+      left: icon.right
       right: parent.right
-      leftMargin: 2
+      leftMargin: 6
     }
 
     validator: RegularExpressionValidator {
       regularExpression: /[a-fA-F0-9]*/
     }
+
+    onAccepted: filter.focus = false
 
   }
 
