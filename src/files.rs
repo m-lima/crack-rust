@@ -2,6 +2,8 @@ use crate::error;
 use crate::hash;
 use crate::results;
 
+const LINEAR_SEARCH_THRESHOLD: usize = 64;
+
 pub fn read<H: hash::Hash>(
     input: &mut std::collections::HashSet<H>,
     path: &std::path::Path,
@@ -92,6 +94,29 @@ fn derive_output_file(input: &std::path::Path) -> Result<std::path::PathBuf, err
     Ok(output)
 }
 
+trait Lookup {
+    fn find(&self, hash: &str) -> Option<&str>;
+}
+
+struct MapLookup<'a>(std::collections::HashMap<&'a str, &'a str>);
+
+impl Lookup for MapLookup<'_> {
+    fn find(&self, hash: &str) -> Option<&str> {
+        self.0.get(hash).map(Clone::clone)
+    }
+}
+
+struct ListLookup<'a>(&'a [results::Pair]);
+
+impl Lookup for ListLookup<'_> {
+    fn find(&self, hash: &str) -> Option<&str> {
+        self.0
+            .iter()
+            .find(|pair| pair.hash == hash)
+            .map(|pair| pair.plain.as_str())
+    }
+}
+
 fn write_output_file(
     regex: &regex::Regex,
     results: &[results::Pair],
@@ -99,55 +124,62 @@ fn write_output_file(
     output: &std::fs::File,
     output_path: std::path::PathBuf,
 ) -> Result<(), error::Error> {
-    fn inner(
-        regex: &regex::Regex,
-        results: &[results::Pair],
-        input: &std::fs::File,
-        output: &std::fs::File,
-    ) -> Result<(), error::Error> {
-        use std::io::{BufRead, Write};
-
-        let mut buffer = String::new();
-        let mut reader = std::io::BufReader::new(input);
-        let mut writer = std::io::BufWriter::new(output);
-
-        let table = results
-            .iter()
-            .map(|pair| (pair.hash.as_str(), pair.plain.as_str()))
-            .collect::<std::collections::HashMap<_, _>>();
-
-        loop {
-            buffer.clear();
-            match reader.read_line(&mut buffer) {
-                Ok(bytes) => {
-                    if bytes == 0 {
-                        return Ok(());
-                    }
-
-                    let matches = regex
-                        .captures_iter(&buffer)
-                        .filter_map(|capture| capture.get(0).map(|group| group.as_str().to_owned()))
-                        .collect::<Vec<_>>();
-
-                    for matched in &matches {
-                        if let Some(decrypted) = table.get(matched.as_str()) {
-                            buffer = buffer.replace(matched.as_str(), decrypted);
-                        }
-                    }
-
-                    if let Err(e) = writer.write_all(buffer.as_bytes()) {
-                        bail!(e;  "Failed to write to file");
-                    }
-                }
-                Err(e) => {
-                    bail!(e;  "Failed to read input file");
-                }
-            }
-        }
+    if results.len() > LINEAR_SEARCH_THRESHOLD {
+        let lookup = MapLookup(
+            results
+                .iter()
+                .map(|pair| (pair.hash.as_str(), pair.plain.as_str()))
+                .collect(),
+        );
+        write_output_file_e(regex, &lookup, input, output)
+    } else {
+        let lookup = ListLookup(results);
+        write_output_file_e(regex, &lookup, input, output)
     }
-
-    inner(regex, results, input, output).map_err(|e| {
+    .map_err(|e| {
         let _ignored = std::fs::remove_file(output_path);
         e
     })
+}
+
+fn write_output_file_e(
+    regex: &regex::Regex,
+    lookup: &impl Lookup,
+    input: &std::fs::File,
+    output: &std::fs::File,
+) -> Result<(), error::Error> {
+    use std::io::{BufRead, Write};
+
+    let mut buffer = String::new();
+    let mut reader = std::io::BufReader::new(input);
+    let mut writer = std::io::BufWriter::new(output);
+
+    loop {
+        buffer.clear();
+        match reader.read_line(&mut buffer) {
+            Ok(bytes) => {
+                if bytes == 0 {
+                    return Ok(());
+                }
+
+                let matches = regex
+                    .captures_iter(&buffer)
+                    .filter_map(|capture| capture.get(0).map(|group| group.as_str().to_owned()))
+                    .collect::<Vec<_>>();
+
+                for matched in &matches {
+                    if let Some(plain) = lookup.find(matched.as_str()) {
+                        buffer = buffer.replace(matched.as_str(), plain);
+                    }
+                }
+
+                if let Err(e) = writer.write_all(buffer.as_bytes()) {
+                    bail!(e;  "Failed to write to file");
+                }
+            }
+            Err(e) => {
+                bail!(e;  "Failed to read input file");
+            }
+        }
+    }
 }

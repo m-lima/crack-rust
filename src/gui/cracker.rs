@@ -67,7 +67,6 @@ impl Cracker {
                     Some(hash) => hash,
                     None => continue,
                 };
-                println!("Hash: {}", hash);
                 let plain = match iter
                     .next()
                     .and_then(|plain| qmetaobject::QString::from_qvariant(plain.clone()))
@@ -75,14 +74,10 @@ impl Cracker {
                     Some(plain) => plain,
                     None => continue,
                 };
-                println!("Plain: {}", plain);
                 pairs.push(results::Pair::new(hash.to_string(), plain.to_string()));
             }
             pairs
         };
-
-        println!("Len: {}", pairs.len());
-        println!("Pairs: {:?}", pairs);
 
         if let Some(regex) = self.last_regex {
             if let Err(err) = files::write(
