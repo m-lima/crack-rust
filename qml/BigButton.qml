@@ -4,9 +4,12 @@ import QtQuick.Controls
 Button {
   id: button
 
-  property int fontSize: 18
+  property string hoverCaption
+  property string caption
 
-  font.pointSize: fontSize
+  text: caption
+  font.pointSize: 18
+  font.bold: true
 
   background: Rectangle {
     id: background
@@ -44,6 +47,10 @@ Button {
           target: background
           baseColor: button.palette.button.darker(1.1)
         }
+        PropertyChanges {
+          target: button
+          text: hoverCaption ? hoverCaption : caption
+        }
 
       },
       State {
@@ -64,6 +71,9 @@ Button {
           duration: 200
           property: 'baseColor'
         }
+        PropertyAction {
+          property: 'text'
+        }
 
       },
       Transition {
@@ -74,55 +84,12 @@ Button {
           duration: 200
           property: 'baseColor'
         }
+        PropertyAction {
+          property: 'text'
+        }
 
       }
     ]
-  }
-
-  Behavior on text {
-    SequentialAnimation {
-      NumberAnimation {
-        target: contentItem
-        duration: 100
-        to: 1
-        property: 'font.pointSize'
-      }
-
-      PropertyAction {
-      }
-
-      NumberAnimation {
-        target: contentItem
-        duration: 100
-        to: fontSize
-        property: 'font.pointSize'
-      }
-
-    }
-
-  }
-
-  Behavior on icon.source {
-    SequentialAnimation {
-      NumberAnimation {
-        target: contentItem
-        duration: 100
-        to: 0
-        property: 'opacity'
-      }
-
-      PropertyAction {
-      }
-
-      NumberAnimation {
-        target: contentItem
-        duration: 100
-        to: 1
-        property: 'opacity'
-      }
-
-    }
-
   }
 
 }

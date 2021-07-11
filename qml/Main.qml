@@ -54,8 +54,6 @@ Item {
 
     height: 50
     text: qsTr('Next')
-    backButton: Navigation.BackButton.None
-    backText: qsTr('Back')
     onNext: root.state = 'Input'
 
     anchors {
@@ -77,7 +75,7 @@ Item {
 
       PropertyChanges {
         target: navigation
-        backButton: Navigation.BackButton.Small
+        backButton: true
         onNext: root.state = 'Crack'
         onBack: root.state = ''
       }
@@ -93,7 +91,8 @@ Item {
 
       PropertyChanges {
         target: navigation
-        backButton: Navigation.BackButton.Full
+        backButton: true
+        text: qsTr('Crack')
         onBack: root.state = 'Input'
       }
 

@@ -3,15 +3,9 @@ import QtQuick
 Item {
   id: root
 
-  enum BackButton {
-    None,
-    Small,
-    Full
-  }
-
-  property alias text: next.text
-  required property string backText
-  required property int backButton
+  property alias text: next.caption
+  property bool backButton: false
+  property bool cancelButton: false
 
   signal next()
   signal back()
@@ -19,22 +13,11 @@ Item {
   BigButton {
     id: back
 
-    width: 0
     onClicked: root.back()
     icon.source: 'qrc:/img/left.svg'
     icon.color: palette.buttonText
     palette.button: root.palette.button.lighter(1.3)
-    font.bold: true
-    state: {
-      switch (root.backButton) {
-      case Navigation.BackButton.None:
-        return '';
-      case Navigation.BackButton.Small:
-        return 'Small';
-      case Navigation.BackButton.Full:
-        return 'Full';
-      }
-    }
+    width: root.backButton ? root.height : 0
 
     anchors {
       top: parent.top
@@ -42,41 +25,13 @@ Item {
       left: parent.left
     }
 
-    states: [
-      State {
-        name: 'Small'
-
-        PropertyChanges {
-          target: back
-          width: root.height
-        }
-
-      },
-      State {
-        name: 'Full'
-
-        PropertyChanges {
-          target: back
-          text: root.backText
-          width: undefined
-        }
-
-        AnchorChanges {
-          target: back
-          anchors.right: root.right
-        }
-
+    Behavior on width {
+      NumberAnimation {
+        duration: 200
       }
-    ]
-    transitions: [
-      Transition {
-        NumberAnimation {
-          duration: 200
-          property: 'width'
-        }
 
-      }
-    ]
+    }
+
   }
 
   BigButton {
@@ -85,13 +40,58 @@ Item {
     onClicked: root.next()
     palette.button: 'green'
     palette.buttonText: '#252525'
-    font.bold: true
+
+    anchors {
+      top: parent.top
+      bottom: parent.bottom
+      right: cancel.left
+      left: back.right
+    }
+
+    Behavior on text {
+      SequentialAnimation {
+        NumberAnimation {
+          target: next
+          duration: 100
+          to: 1
+          property: 'font.pointSize'
+        }
+
+        PropertyAction {
+        }
+
+        NumberAnimation {
+          target: next
+          duration: 100
+          to: 18
+          property: 'font.pointSize'
+        }
+
+      }
+
+    }
+
+  }
+
+  BigButton {
+    id: cancel
+
+    onClicked: console.log('Cancel')
+    hoverCaption: qsTr('Cancel')
+    palette.button: colorE
+    width: root.cancelButton ? root.height * 2 : 0
 
     anchors {
       top: parent.top
       bottom: parent.bottom
       right: parent.right
-      left: back.right
+    }
+
+    Behavior on width {
+      NumberAnimation {
+        duration: 200
+      }
+
     }
 
   }

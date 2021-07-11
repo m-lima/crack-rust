@@ -3,6 +3,7 @@ import QtQuick.Controls
 import Cracker
 
 Item {
+  required property Item footer
   anchors.fill: parent
 
   Cracker {
@@ -31,6 +32,7 @@ Item {
         crackButton.state = '';
         crackButton.progress = 0;
       }
+      footer.cancelButton = running
     }
   }
 
