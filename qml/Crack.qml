@@ -93,10 +93,21 @@ Item {
 
   }
 
-  Item {
+  Canvas {
     id: filterBox
 
     height: filter.height
+    onPaint: {
+      let ctx = getContext('2d');
+      if (filter.activeFocus) {
+        ctx.strokeStyle = palette.highlight;
+        ctx.moveTo(0, height - 1);
+        ctx.lineTo(width, height - 1);
+        ctx.stroke();
+      } else {
+        ctx.clearRect(0, height - 2, width, 2);
+      }
+    }
 
     anchors {
       top: error.bottom
@@ -106,9 +117,9 @@ Item {
     }
 
     Button {
-      width: parent.width
-      visible: !filter.visible
-      text: filter.text ? filter.text : qsTr('Filter')
+      id: filterIcon
+
+      width: height
       icon.source: 'qrc:/img/search.svg'
       icon.color: palette.buttonText
       background.visible: false
@@ -123,9 +134,16 @@ Item {
     TextField {
       id: filter
 
-      width: parent.width
-      visible: focus
       placeholderText: qsTr('Filter')
+      background.visible: false
+      onActiveFocusChanged: filterBox.requestPaint()
+
+      anchors {
+        left: filterIcon.right
+        right: parent.right
+        leftMargin: 2
+      }
+
     }
 
   }
@@ -193,7 +211,10 @@ Item {
           color: selection & 1 ? palette.highlight.darker() : 'transparent'
 
           TapHandler {
-            onTapped: selection ^= 1
+            onTapped: {
+              selection ^= 1;
+              parent.focus = true;
+            }
           }
 
           Text {
@@ -220,7 +241,10 @@ Item {
           color: selection & 2 ? palette.highlight.darker() : 'transparent'
 
           TapHandler {
-            onTapped: selection ^= 2
+            onTapped: {
+              selection ^= 2;
+              parent.focus = true;
+            }
           }
 
           Text {
