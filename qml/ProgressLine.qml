@@ -12,21 +12,13 @@ Canvas {
     let ctx = getContext('2d');
     // Base line
     ctx.beginPath();
-    ctx.strokeStyle = palette.base;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 3;
-    ctx.moveTo(1, 1);
-    ctx.lineTo(width - 1, 1);
-    ctx.stroke();
+    ctx.fillStyle = palette.base;
+    ctx.fillRect(0, 0, width, height);
     // Progress line
     if (progress > 0) {
       ctx.beginPath();
-      ctx.strokeStyle = root.highlight;
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 3;
-      ctx.moveTo(1, 1);
-      ctx.lineTo((width - 1) * progress / total, 1);
-      ctx.stroke();
+      ctx.fillStyle = root.highlight;
+      ctx.fillRect(0, 0, (width - 1) * progress / total, height);
     }
   }
 

@@ -15,7 +15,7 @@ Item {
     }
     let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
     if (total > 0)
-      crackedProgress.total = total;
+      progress.total = total;
 
   }
 
@@ -35,7 +35,7 @@ Item {
           return ;
 
       }
-      crackedProgress.progress++;
+      progress.progress++;
       results.model.append({
         "hash": input.toString(),
         "plain": output.toString()
@@ -44,59 +44,6 @@ Item {
     onProgressed: (progress) => root.progressed(progress)
     onError: (error) => message.text = error
     onRunningChanged: (running) => root.runningChanged(running)
-  }
-
-  // TODO: Allow ergonomic copy
-  // TODO: Allow searching
-  ListView {
-    id: results
-
-    clip: true
-
-    anchors {
-      top: error.bottom
-      bottom: crackedProgress.top
-      left: parent.left
-      right: parent.right
-      margins: 10
-    }
-
-    model: ListModel {
-    }
-
-    delegate: Column {
-      width: parent.width
-
-      Text {
-        width: parent.width
-        color: palette.text
-        elide: Text.ElideMiddle
-        text: hash
-      }
-
-      Text {
-        width: parent.width
-        color: palette.highlight
-        horizontalAlignment: Text.AlignRight
-        text: plain
-      }
-
-    }
-
-  }
-
-  ProgressLine {
-    id: crackedProgress
-
-    total: 0
-
-    anchors {
-      bottom: parent.bottom
-      left: parent.left
-      right: parent.right
-      margins: 10
-    }
-
   }
 
   Rectangle {
@@ -134,6 +81,96 @@ Item {
     Behavior on opacity {
       NumberAnimation {
         duration: 200
+      }
+
+    }
+
+  }
+
+  TextField {
+    id: search
+
+    placeholderText: qsTr('Search')
+
+    anchors {
+      top: error.bottom
+      left: parent.left
+      right: parent.right
+      margins: 10
+    }
+
+  }
+
+  ProgressLine {
+    id: progress
+
+    total: 0
+
+    anchors {
+      top: search.bottom
+      left: parent.left
+      right: parent.right
+      topMargin: 10
+    }
+
+  }
+
+  Rectangle {
+    color: palette.base
+
+    anchors {
+      top: progress.bottom
+      bottom: parent.bottom
+      left: parent.left
+      right: parent.right
+    }
+
+    Text {
+      text: qsTr('No results yet')
+      visible: results.model.count < 1
+      color: palette.buttonText
+
+      anchors {
+        centerIn: parent
+      }
+
+    }
+
+    // TODO: Allow ergonomic copy
+    // TODO: Allow searching
+    ListView {
+      id: results
+
+      clip: true
+
+      anchors {
+        fill: parent
+        topMargin: 6
+        bottomMargin: 6
+        leftMargin: 10
+        rightMargin: 10
+      }
+
+      model: ListModel {
+      }
+
+      delegate: Column {
+        width: parent.width
+
+        Text {
+          width: parent.width
+          color: palette.text
+          elide: Text.ElideMiddle
+          text: hash
+        }
+
+        Text {
+          width: parent.width
+          color: palette.highlight
+          horizontalAlignment: Text.AlignRight
+          text: plain
+        }
+
       }
 
     }

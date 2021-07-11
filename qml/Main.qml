@@ -12,7 +12,7 @@ Item {
 
     anchors {
       top: parent.top
-      bottom: progressBar.top
+      bottom: navigation.top
       left: parent.left
       right: parent.right
     }
