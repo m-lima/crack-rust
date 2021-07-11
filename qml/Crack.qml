@@ -72,6 +72,7 @@ Item {
 
   }
 
+  // TODO: On cancel, a progress() may still arrive, rendering a green circle
   CrackButton {
     id: crackButton
 

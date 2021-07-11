@@ -24,7 +24,7 @@ pub struct Cracker {
             useSha256: bool,
             autoDevice: bool,
             useGpu: bool,
-            input: String,
+            input: qmetaobject::QVariantList,
             files: qmetaobject::QVariantList,
         ) -> usize
     ),
@@ -59,7 +59,7 @@ impl Cracker {
         use_sha256: bool,
         auto_device: bool,
         use_gpu: bool,
-        input: String,
+        input: qmetaobject::QVariantList,
         files: qmetaobject::QVariantList,
     ) -> usize {
         if use_sha256 {
@@ -95,15 +95,16 @@ impl Cracker {
         salt: String,
         auto_device: bool,
         use_gpu: bool,
-        input: String,
+        input: qmetaobject::QVariantList,
         files: qmetaobject::QVariantList,
     ) -> usize {
         use qmetaobject::QMetaType;
 
-        let input = H::regex()
-            .find_iter(&input)
-            .filter_map(|m| H::from_str(m.as_str()).ok())
-            .collect::<std::collections::HashSet<_>>();
+        let input = input
+            .into_iter()
+            .filter_map(|v| qmetaobject::QString::from_qvariant(v.clone()))
+            .filter_map(|s| H::from_str(&s.to_string()).ok())
+            .collect();
 
         let files = files
             .into_iter()

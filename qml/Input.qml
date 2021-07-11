@@ -7,8 +7,7 @@ import HashExtractor
 Column {
   id: root
 
-  // TODO: Decide if it makes more sense to send full text or parsed hashesList
-  property alias hashes: hashesEdit.text
+  property alias hashes: hashesList.model
   property alias files: filesList.model
 
   spacing: 10
