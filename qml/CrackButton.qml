@@ -12,9 +12,9 @@ Button {
   property string imageHover
   property color hoverColor
 
-  palette.buttonText: hover.hovered && hoverColor ? hoverColor : root.palette.buttonText
-  text: hover.hovered && captionHover ? captionHover : caption ? caption : progress + '%'
-  icon.source: hover.hovered && imageHover ? imageHover : image
+  palette.buttonText: hover.hovered && background.hovered && hoverColor ? hoverColor : root.palette.buttonText
+  text: hover.hovered && background.hovered && captionHover ? captionHover : caption ? caption : progress + '%'
+  icon.source: hover.hovered && background.hovered && imageHover ? imageHover : image
   icon.color: palette.buttonText
   icon.width: width / 3
   icon.height: width / 3
@@ -28,16 +28,17 @@ Button {
 
   }
 
-  // TODO: Mask it to match the rounded shape
-  HoverHandler {
-    id: hover
-
-    target: button.contentItem
-    cursorShape: Qt.PointingHandCursor
-  }
-
   background: Canvas {
     id: background
+
+    property bool hovered: {
+      let radius = background.width / 2;
+      let x = radius - hover.point.position.x;
+      let y = radius - hover.point.position.y;
+      let distance = x * x + y * y;
+      radius *= radius;
+      distance < radius;
+    }
 
     anchors.centerIn: parent
     width: Math.max(4, Math.min(parent.height, parent.width))
@@ -60,6 +61,14 @@ Button {
         ctx.stroke();
       }
     }
+
+    HoverHandler {
+      id: hover
+
+      target: button.contentItem
+      cursorShape: background.hovered ? Qt.PointingHandCursor : undefined
+    }
+
   }
 
 }
