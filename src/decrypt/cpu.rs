@@ -45,7 +45,12 @@ pub fn execute<H: hash::Hash>(
         let channel_sender = Sender(channel);
 
         let prefix = String::from(options.prefix());
-        let salted_prefix = format!("{}{}", options.salt(), options.prefix());
+        let salt = if options.xor().is_some() {
+            options.salt().to_string()
+        } else {
+            // If no xor, optimize by precalculating the salted prefix
+            format!("{}{}", options.salt(), options.prefix())
+        };
         let length = options.length() as usize;
         let first = t * thread_space;
         let last = std::cmp::min(first + thread_space, options.number_space());
@@ -74,21 +79,21 @@ pub fn execute<H: hash::Hash>(
                     }
                 }
 
-                let mut number = format!("{:01$}", n, length);
-                if let Some(xor) = xor.as_ref() {
-                    number = base64::encode(
-                        number
-                            .into_bytes()
-                            .iter()
-                            .zip(xor.iter())
-                            .map(|(b, x)| b ^ x)
-                            .collect::<Vec<_>>(),
-                    );
-                }
-                let hash = H::digest(&salted_prefix, &number);
+                let number = if let Some(xor) = xor.as_ref() {
+                    let mut number = format!("{}{:02$}", prefix, n, length).into_bytes();
+                    number.iter_mut().zip(xor.iter()).for_each(|(b, x)| *b ^= x);
+                    base64::encode(number)
+                } else {
+                    format!("{:01$}", n, length)
+                };
+                let hash = H::digest(&salt, &number);
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
-                    let result = format!("{}{:02$}", &prefix, n, length);
+                    let result = if xor.is_some() {
+                        number
+                    } else {
+                        format!("{}{:02$}", &prefix, n, length)
+                    };
                     decrypted.push(results::Pair::new(hash.to_string(), result.clone()));
 
                     channel.result(&format!("{:x}", hash), &result);
@@ -167,19 +172,18 @@ mod test {
             },
         ];
 
-        let options = options::Decrypt::<hash::sha256::Hash>::new(
+        let options = options::DecryptBuilder::<hash::sha256::Hash>::new(
             expected
                 .iter()
                 .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
                 .collect(),
-            Some(salt),
-            Some(options::Device::CPU),
-            std::collections::HashSet::new(),
             3,
-            prefix,
-            Some(4),
-            None,
         )
+        .device(options::Device::CPU)
+        .prefix(prefix)
+        .salt(salt)
+        .threads(4)
+        .build()
         .unwrap();
 
         assert_eq!(execute(&options, &Channel).unwrap().results, expected);

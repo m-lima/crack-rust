@@ -87,10 +87,12 @@ pub struct RawCrackShared {
     #[clap(short, long, parse(try_from_str = to_path))]
     files: Vec<std::path::PathBuf>,
 
+    // TODO: Allow using the default xor. Similar to `salt`
     /// XOR mask to apply to plain values prior to hashing
     ///
     /// The mask is expected to be given as a base64 encoded representation
     #[clap(short, long, parse(try_from_str = to_xor))]
+    #[allow(clippy::option_option)]
     xor: Option<XorMask>,
 
     /// Known prefix of cracked values
