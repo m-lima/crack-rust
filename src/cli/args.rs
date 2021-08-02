@@ -11,6 +11,8 @@ use super::print;
 const SALT_ENV: &str = "HASHER_SALT";
 const XOR_ENV: &str = "HASHER_XOR";
 
+type Result<T> = std::result::Result<T, error::Error>;
+
 /// SHA256 hasher/cracker
 #[derive(Clap, Debug)]
 #[clap(
@@ -143,7 +145,7 @@ pub struct RawCrackMd5 {
     input: Vec<hash::md5::Hash>,
 }
 
-fn to_algorithm(value: &str) -> Result<hash::Algorithm, error::Error> {
+fn to_algorithm(value: &str) -> Result<hash::Algorithm> {
     match value.to_uppercase().as_str() {
         "SHA256" => Ok(hash::Algorithm::sha256),
         "MD5" => Ok(hash::Algorithm::md5),
@@ -151,7 +153,7 @@ fn to_algorithm(value: &str) -> Result<hash::Algorithm, error::Error> {
     }
 }
 
-fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
+fn to_path(value: &str) -> Result<std::path::PathBuf> {
     let path = std::path::PathBuf::from(value);
     if !path.exists() {
         bail!("{} does not exist", value)
@@ -163,7 +165,7 @@ fn to_path(value: &str) -> Result<std::path::PathBuf, error::Error> {
     Ok(path)
 }
 
-fn to_device(value: &str) -> Result<options::Device, error::Error> {
+fn to_device(value: &str) -> Result<options::Device> {
     match value.to_uppercase().as_str() {
         "CPU" => Ok(options::Device::CPU),
         "GPU" => Ok(options::Device::GPU),
@@ -190,56 +192,52 @@ pub fn algorithm() -> hash::Algorithm {
         .unwrap_or(hash::Algorithm::sha256)
 }
 
-pub fn parse_sha256() -> (options::Mode<hash::sha256::Hash>, print::Printer) {
+pub fn parse_sha256() -> Result<(options::Mode<hash::sha256::Hash>, print::Printer)> {
     use hash::sha256::Hash as H;
 
     let (mode, mut printer) = match RawModeSha256::parse() {
         RawModeSha256::Hash(encrypt) => compose_hash::<H>(encrypt),
         RawModeSha256::Crack(decrypt) => compose_crack::<H>(decrypt.shared, decrypt.input),
-    };
+    }?;
 
     if mode.input_len() == 1 {
         printer.set_single_input_mode();
     }
 
-    (mode, printer)
+    Ok((mode, printer))
 }
 
-pub fn parse_md5() -> (options::Mode<hash::md5::Hash>, print::Printer) {
+pub fn parse_md5() -> Result<(options::Mode<hash::md5::Hash>, print::Printer)> {
     use hash::md5::Hash as H;
 
     let (mode, mut printer) = match RawModeMd5::parse() {
         RawModeMd5::Hash(encrypt) => compose_hash::<H>(encrypt),
         RawModeMd5::Crack(decrypt) => compose_crack::<H>(decrypt.shared, decrypt.input),
-    };
+    }?;
 
     if mode.input_len() == 1 {
         printer.set_single_input_mode();
     }
 
-    (mode, printer)
+    Ok((mode, printer))
 }
 
-fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> (options::Mode<H>, print::Printer) {
+fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> Result<(options::Mode<H>, print::Printer)> {
     let printer = print::new(encrypt.shared.verbose, encrypt.shared.colored);
 
-    (
-        options::Mode::Encrypt(
-            options::Encrypt::<H>::new(
-                read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-                salt(encrypt.shared.salt.map(Option::unwrap_or_default)),
-            )
-            .map_err(|e| panic!("{}", e))
-            .unwrap(),
-        ),
+    Ok((
+        options::Mode::Encrypt(options::Encrypt::<H>::new(
+            read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
+            salt(encrypt.shared.salt.map(Option::unwrap_or_default)),
+        )?),
         printer,
-    )
+    ))
 }
 
 fn compose_crack<H: hash::Hash>(
     shared: RawCrackShared,
     input: Vec<H>,
-) -> (options::Mode<H>, print::Printer) {
+) -> Result<(options::Mode<H>, print::Printer)> {
     let printer = print::new(shared.shared.verbose, shared.shared.colored);
 
     let prefix = shared.prefix.unwrap_or_default();
@@ -260,7 +258,7 @@ fn compose_crack<H: hash::Hash>(
         printer.read_done(files::read_from_stream(&mut input, std::io::stdin().lock()));
     }
 
-    (
+    Ok((
         options::Mode::Decrypt(
             options::DecryptBuilder::new(input, shared.length)
                 .device(shared.device)
@@ -268,13 +266,11 @@ fn compose_crack<H: hash::Hash>(
                 .prefix(prefix)
                 .salt(salt(shared.shared.salt.map(Option::unwrap_or_default)))
                 .threads(shared.threads)
-                .xor(xor(shared.xor).map_err(|e| panic!("{}", e)).unwrap())
-                .build()
-                .map_err(|e| panic!("{}", e))
-                .unwrap(),
+                .xor(xor(shared.xor)?)
+                .build()?,
         ),
         printer,
-    )
+    ))
 }
 
 fn read_string_from_stdin(
@@ -302,7 +298,7 @@ fn salt(maybe_salt: Option<String>) -> String {
 }
 
 #[allow(clippy::option_option)]
-fn xor(maybe_xor: Option<Option<String>>) -> Result<Option<Vec<u8>>, error::Error> {
+fn xor(maybe_xor: Option<Option<String>>) -> Result<Option<Vec<u8>>> {
     maybe_xor.map_or(Ok(None), |maybe_xor| {
         let xor = maybe_xor.unwrap_or_else(|| {
             std::env::var(XOR_ENV).unwrap_or_else(|_| String::from(secrets::XOR))

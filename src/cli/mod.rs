@@ -1,5 +1,6 @@
 use crate::decrypt;
 use crate::encrypt;
+use crate::error;
 use crate::files;
 use crate::hash;
 use crate::options;
@@ -11,12 +12,18 @@ mod print;
 pub fn run() {
     setup_panic();
 
-    if !match args::algorithm() {
-        hash::Algorithm::sha256 => run_algorithm(args::parse_sha256()),
-        hash::Algorithm::md5 => run_algorithm(args::parse_md5()),
-    } {
+    if !run_wrapped().map_err(print_error).unwrap_or(false) {
         std::process::exit(-1);
     }
+}
+
+pub fn run_wrapped() -> Result<bool, error::Error> {
+    setup_panic();
+
+    Ok(match args::algorithm() {
+        hash::Algorithm::sha256 => run_algorithm(args::parse_sha256()?),
+        hash::Algorithm::md5 => run_algorithm(args::parse_md5()?),
+    })
 }
 
 fn setup_panic() {
