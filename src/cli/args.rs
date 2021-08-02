@@ -4,8 +4,12 @@ use crate::error;
 use crate::files;
 use crate::hash;
 use crate::options;
+use crate::secrets;
 
 use super::print;
+
+const SALT_ENV: &str = "HASHER_SALT";
+const XOR_ENV: &str = "HASHER_XOR";
 
 /// SHA256 hasher/cracker
 #[derive(Clap, Debug)]
@@ -87,13 +91,12 @@ pub struct RawCrackShared {
     #[clap(short, long, parse(try_from_str = to_path))]
     files: Vec<std::path::PathBuf>,
 
-    // TODO: Allow using the default xor. Similar to `salt`
-    /// XOR mask to apply to plain values prior to hashing
+    /// XOR mask to apply to plain values prior to hashing [env: HASHER_XOR]
     ///
     /// The mask is expected to be given as a base64 encoded representation
-    #[clap(short, long, parse(try_from_str = to_xor))]
+    #[clap(short, long)]
     #[allow(clippy::option_option)]
-    xor: Option<XorMask>,
+    xor: Option<Option<String>>,
 
     /// Known prefix of cracked values
     #[clap(short, long)]
@@ -140,9 +143,6 @@ pub struct RawCrackMd5 {
     input: Vec<hash::md5::Hash>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct XorMask(Vec<u8>);
-
 fn to_algorithm(value: &str) -> Result<hash::Algorithm, error::Error> {
     match value.to_uppercase().as_str() {
         "SHA256" => Ok(hash::Algorithm::sha256),
@@ -177,12 +177,6 @@ fn to_verboseness(value: u64) -> print::Verboseness {
         1 => print::Verboseness::Low,
         _ => print::Verboseness::High,
     }
-}
-
-fn to_xor(value: &str) -> Result<XorMask, error::Error> {
-    base64::decode(value)
-        .map(XorMask)
-        .map_err(|err| error!(err; "Failed to decode XOR mask"))
 }
 
 pub fn algorithm() -> hash::Algorithm {
@@ -233,7 +227,7 @@ fn compose_hash<H: hash::Hash>(encrypt: RawHash) -> (options::Mode<H>, print::Pr
         options::Mode::Encrypt(
             options::Encrypt::<H>::new(
                 read_string_from_stdin(encrypt.input.into_iter().collect(), printer),
-                encrypt.shared.salt.map(Option::unwrap_or_default),
+                salt(encrypt.shared.salt.map(Option::unwrap_or_default)),
             )
             .map_err(|e| panic!("{}", e))
             .unwrap(),
@@ -272,9 +266,9 @@ fn compose_crack<H: hash::Hash>(
                 .device(shared.device)
                 .files(files)
                 .prefix(prefix)
-                .salt(shared.shared.salt.map(Option::unwrap_or_default))
+                .salt(salt(shared.shared.salt.map(Option::unwrap_or_default)))
                 .threads(shared.threads)
-                .xor(shared.xor.map(|x| x.0))
+                .xor(xor(shared.xor).map_err(|e| panic!("{}", e)).unwrap())
                 .build()
                 .map_err(|e| panic!("{}", e))
                 .unwrap(),
@@ -300,4 +294,21 @@ fn read_string_from_stdin(
     }
     printer.read_done(Ok(()));
     input
+}
+
+fn salt(maybe_salt: Option<String>) -> String {
+    maybe_salt
+        .unwrap_or_else(|| std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(secrets::SALT)))
+}
+
+#[allow(clippy::option_option)]
+fn xor(maybe_xor: Option<Option<String>>) -> Result<Option<Vec<u8>>, error::Error> {
+    maybe_xor.map_or(Ok(None), |maybe_xor| {
+        let xor = maybe_xor.unwrap_or_else(|| {
+            std::env::var(XOR_ENV).unwrap_or_else(|_| String::from(secrets::XOR))
+        });
+        base64::decode(xor)
+            .map(Option::Some)
+            .map_err(|err| error!(err; "Failed to decode XOR mask"))
+    })
 }

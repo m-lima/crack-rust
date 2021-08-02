@@ -1,10 +1,7 @@
 use crate::decrypt;
 use crate::error;
 use crate::hash;
-use crate::secrets;
 use crate::Input;
-
-const SALT_ENV: &str = "HASHER_SALT";
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Device {
@@ -33,17 +30,11 @@ pub struct Shared<T: Input> {
 }
 
 impl<T: Input> Shared<T> {
-    fn new(
-        input: std::collections::HashSet<T>,
-        maybe_salt: Option<String>,
-    ) -> Result<Self, error::Error> {
+    fn new(input: std::collections::HashSet<T>, salt: String) -> Result<Self, error::Error> {
         if input.is_empty() {
             Err(error!("No valid input provided"))
         } else {
-            Ok(Self {
-                input,
-                salt: salt(maybe_salt),
-            })
+            Ok(Self { input, salt })
         }
     }
 }
@@ -68,10 +59,10 @@ pub struct Encrypt<H: hash::Hash> {
 impl<H: hash::Hash> Encrypt<H> {
     pub fn new(
         input: std::collections::HashSet<String>,
-        maybe_salt: Option<String>,
+        salt: String,
     ) -> Result<Self, error::Error> {
         Ok(Self {
-            shared: Shared::new(input, maybe_salt)?,
+            shared: Shared::new(input, salt)?,
             _phantom: std::marker::PhantomData::<H>::default(),
         })
     }
@@ -225,7 +216,7 @@ impl<H: hash::Hash> DecryptBuilder<H> {
         let device = self.derive_device(number_space, threads);
 
         Ok(Decrypt {
-            shared: Shared::new(self.input, self.salt)?,
+            shared: Shared::new(self.input, self.salt.unwrap_or_default())?,
             device,
             files: self
                 .files
@@ -283,10 +274,4 @@ fn threads(requested_count: Option<u8>, number_space: u64) -> u8 {
 
     // Due to `min`, it will always be less than u8::MAX (255)
     threads as u8
-}
-
-// TODO: The env var should belong to CLI
-fn salt(maybe_salt: Option<String>) -> String {
-    maybe_salt
-        .unwrap_or_else(|| std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(secrets::SALT)))
 }

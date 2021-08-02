@@ -24,7 +24,6 @@ pub trait Input:
 impl Input for String {}
 
 fn main() {
-    println!("{}", base64::encode(secrets::XOR));
     #[cfg(feature = "qml")]
     if std::env::args().len() == 1 {
         gui::run();
