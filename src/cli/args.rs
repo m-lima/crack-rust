@@ -87,7 +87,13 @@ pub struct RawCrackShared {
     #[clap(short, long, parse(try_from_str = to_path))]
     files: Vec<std::path::PathBuf>,
 
-    /// Known prefix of hashed values
+    /// XOR mask to apply to plain values prior to hashing
+    ///
+    /// The mask is expected to be given as a base64 encoded representation
+    #[clap(short, long, parse(try_from_str = to_xor))]
+    xor: Option<XorMask>,
+
+    /// Known prefix of cracked values
     #[clap(short, long)]
     prefix: Option<String>,
 
@@ -99,7 +105,7 @@ pub struct RawCrackShared {
     #[clap(short, long, possible_values = options::Device::variants(), parse(try_from_str = to_device))]
     device: Option<options::Device>,
 
-    /// Length of hashed values
+    /// Length of cracked values
     #[clap(short, long, default_value = "12")]
     length: u8,
 }
@@ -131,6 +137,9 @@ pub struct RawCrackMd5 {
     #[clap(parse(try_from_str = <hash::md5::Hash as hash::Hash>::from_str))]
     input: Vec<hash::md5::Hash>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct XorMask(Vec<u8>);
 
 fn to_algorithm(value: &str) -> Result<hash::Algorithm, error::Error> {
     match value.to_uppercase().as_str() {
@@ -166,6 +175,12 @@ fn to_verboseness(value: u64) -> print::Verboseness {
         1 => print::Verboseness::Low,
         _ => print::Verboseness::High,
     }
+}
+
+fn to_xor(value: &str) -> Result<XorMask, error::Error> {
+    base64::decode(value)
+        .map(XorMask)
+        .map_err(|err| error!(err; "Failed to decode XOR mask"))
 }
 
 pub fn algorithm() -> hash::Algorithm {
@@ -251,17 +266,16 @@ fn compose_crack<H: hash::Hash>(
 
     (
         options::Mode::Decrypt(
-            options::Decrypt::new(
-                input,
-                files,
-                shared.shared.salt.map(Option::unwrap_or_default),
-                shared.length,
-                prefix,
-                shared.threads,
-                shared.device,
-            )
-            .map_err(|e| panic!("{}", e))
-            .unwrap(),
+            options::DecryptBuilder::new(input, shared.length)
+                .device(shared.device)
+                .files(files)
+                .prefix(prefix)
+                .salt(shared.shared.salt.map(Option::unwrap_or_default))
+                .threads(shared.threads)
+                .xor(shared.xor.map(|x| x.0))
+                .build()
+                .map_err(|e| panic!("{}", e))
+                .unwrap(),
         ),
         printer,
     )

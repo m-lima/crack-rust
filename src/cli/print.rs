@@ -188,6 +188,15 @@ fn encrypt_options<H: hash::Hash>(colored: bool, options: &options::Encrypt<H>) 
 
 fn decrypt_options<H: hash::Hash>(colored: bool, options: &options::Decrypt<H>) {
     shared_options(colored, options, H::name());
+    eprintln!(
+        "{:15}{}",
+        colorize!("XOR:", colored),
+        options
+            .xor()
+            .as_ref()
+            .map(base64::encode)
+            .unwrap_or_default()
+    );
     eprintln!("{:15}{}", colorize!("Device:", colored), options.device());
     if options::Device::CPU == options.device() {
         eprintln!(

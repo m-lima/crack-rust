@@ -159,7 +159,7 @@ impl Cracker {
                     .map_err(|err| self.error(err.to_string()))
                     .ok()
             })
-            .collect();
+            .collect::<std::collections::HashSet<_>>();
 
         let maybe_salt = if custom_salt { Some(salt) } else { None };
         let maybe_device = if auto_device {
@@ -172,7 +172,12 @@ impl Cracker {
 
         // Allowed because we can't pass `&mut self` to both side of `map_or_else`
         #[allow(clippy::map_unwrap_or)]
-        options::Decrypt::new(input, files, maybe_salt, length, prefix, None, maybe_device)
+        options::DecryptBuilder::new(input, length)
+            .device(maybe_device)
+            .files(files)
+            .prefix(prefix)
+            .salt(maybe_salt)
+            .build()
             .map(|options| {
                 use options::SharedAccessor;
 

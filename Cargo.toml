@@ -19,6 +19,7 @@ lto = true
 
 [dependencies]
 atty = "0.2"
+base64 = "0.12"
 clap = "3.0.0-beta.2"
 colored = "2"
 cpp = { version = "0.5", optional = true }

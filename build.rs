@@ -11,6 +11,12 @@ fn generate_dummys() {
         std::fs::File::create(salt_path).expect("Failed to create dummy salt");
     }
 
+    let xor_path = hidden_path.join("xor");
+    if !xor_path.exists() {
+        println!("Creating dummy xor file");
+        std::fs::File::create(xor_path).expect("Failed to create dummy xor");
+    }
+
     let template_path = hidden_path.join("template.in");
     if !template_path.exists() {
         println!("Creating dummy template file");

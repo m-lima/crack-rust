@@ -41,6 +41,7 @@ pub fn execute<H: hash::Hash>(
     for t in 0..u64::from(thread_count) {
         let count_sender = Sender(&count);
         let input_sender = Sender(&input);
+        let xor_sender = Sender(options.xor());
         let channel_sender = Sender(channel);
 
         let prefix = String::from(options.prefix());
@@ -50,9 +51,10 @@ pub fn execute<H: hash::Hash>(
         let last = std::cmp::min(first + thread_space, options.number_space());
 
         threads.push(std::thread::spawn(move || {
-            let count = &count_sender;
-            let input = &input_sender;
-            let channel = &channel_sender;
+            let count = count_sender;
+            let input = input_sender;
+            let channel = channel_sender;
+            let xor = xor_sender;
             let mut decrypted = Vec::new();
 
             for n in first..last {
@@ -72,7 +74,17 @@ pub fn execute<H: hash::Hash>(
                     }
                 }
 
-                let number = format!("{:01$}", n, length);
+                let mut number = format!("{:01$}", n, length);
+                if let Some(xor) = xor.as_ref() {
+                    number = base64::encode(
+                        number
+                            .into_bytes()
+                            .iter()
+                            .zip(xor.iter())
+                            .map(|(b, x)| b ^ x)
+                            .collect::<Vec<_>>(),
+                    );
+                }
                 let hash = H::digest(&salted_prefix, &number);
                 if input.eytzinger_search(&hash).is_some() {
                     count.fetch_sub(1, std::sync::atomic::Ordering::Release);
@@ -160,12 +172,13 @@ mod test {
                 .iter()
                 .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
                 .collect(),
-            std::collections::HashSet::new(),
             Some(salt),
+            Some(options::Device::CPU),
+            std::collections::HashSet::new(),
             3,
             prefix,
             Some(4),
-            Some(options::Device::CPU),
+            None,
         )
         .unwrap();
 

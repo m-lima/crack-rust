@@ -85,12 +85,13 @@ impl<H: hash::Hash> SharedAccessor<String> for Encrypt<H> {
 
 pub struct Decrypt<H: hash::Hash> {
     shared: Shared<H>,
+    device: Device,
     files: std::collections::HashSet<std::path::PathBuf>,
     length: u8,
-    threads: u8,
     number_space: u64,
     prefix: String,
-    device: Device,
+    threads: u8,
+    xor: Option<Vec<u8>>,
 }
 
 impl<H: hash::Hash> SharedAccessor<H> for Decrypt<H> {
@@ -100,35 +101,8 @@ impl<H: hash::Hash> SharedAccessor<H> for Decrypt<H> {
 }
 
 impl<H: hash::Hash> Decrypt<H> {
-    pub fn new(
-        input: std::collections::HashSet<H>,
-        files: std::collections::HashSet<std::path::PathBuf>,
-        maybe_salt: Option<String>,
-        length: u8,
-        prefix: String,
-        maybe_threads: Option<u8>,
-        maybe_device: Option<Device>,
-    ) -> Result<Self, error::Error> {
-        if prefix.len() > usize::from(length) {
-            bail!("Prefix is too long");
-        }
-
-        // Allowed because the length was checked for overflow
-        #[allow(clippy::cast_possible_truncation)]
-        let variable_length = length - prefix.len() as u8;
-        let number_space = 10_u64.pow(u32::from(variable_length));
-        let threads = threads(maybe_threads, number_space);
-        let device = device(maybe_device, number_space, threads);
-
-        Ok(Self {
-            shared: Shared::new(input, maybe_salt)?,
-            files,
-            length: variable_length,
-            threads,
-            number_space,
-            prefix,
-            device,
-        })
+    pub fn device(&self) -> Device {
+        self.device
     }
 
     pub fn files(&self) -> &std::collections::HashSet<std::path::PathBuf> {
@@ -139,10 +113,6 @@ impl<H: hash::Hash> Decrypt<H> {
         self.length
     }
 
-    pub fn threads(&self) -> u8 {
-        self.threads
-    }
-
     pub fn number_space(&self) -> u64 {
         self.number_space
     }
@@ -151,8 +121,12 @@ impl<H: hash::Hash> Decrypt<H> {
         &self.prefix
     }
 
-    pub fn device(&self) -> Device {
-        self.device
+    pub fn threads(&self) -> u8 {
+        self.threads
+    }
+
+    pub fn xor(&self) -> &Option<Vec<u8>> {
+        &self.xor
     }
 
     pub fn input_as_eytzinger(&self) -> Vec<H> {
@@ -172,6 +146,106 @@ impl<H: hash::Hash> Decrypt<H> {
     #[allow(clippy::cast_possible_truncation)]
     pub fn prefix_length(&self) -> u8 {
         self.prefix.len() as u8
+    }
+}
+
+pub struct DecryptBuilder<H: hash::Hash> {
+    input: std::collections::HashSet<H>,
+    length: u8,
+    device: Option<Device>,
+    files: Option<std::collections::HashSet<std::path::PathBuf>>,
+    prefix: Option<String>,
+    salt: Option<String>,
+    threads: Option<u8>,
+    xor: Option<Vec<u8>>,
+}
+
+impl<H: hash::Hash> DecryptBuilder<H> {
+    pub fn new(input: std::collections::HashSet<H>, length: u8) -> Self {
+        Self {
+            input,
+            length,
+            device: None,
+            files: None,
+            prefix: None,
+            salt: None,
+            threads: None,
+            xor: None,
+        }
+    }
+
+    pub fn device(mut self, device: impl Into<Option<Device>>) -> Self {
+        self.device = device.into();
+        self
+    }
+
+    pub fn files(
+        mut self,
+        files: impl Into<Option<std::collections::HashSet<std::path::PathBuf>>>,
+    ) -> Self {
+        self.files = files.into();
+        self
+    }
+
+    pub fn prefix(mut self, prefix: impl Into<Option<String>>) -> Self {
+        self.prefix = prefix.into();
+        self
+    }
+
+    pub fn salt(mut self, salt: impl Into<Option<String>>) -> Self {
+        self.salt = salt.into();
+        self
+    }
+
+    pub fn threads(mut self, threads: impl Into<Option<u8>>) -> Self {
+        self.threads = threads.into();
+        self
+    }
+
+    pub fn xor(mut self, xor: impl Into<Option<Vec<u8>>>) -> Self {
+        self.xor = xor.into();
+        self
+    }
+
+    pub fn build(self) -> Result<Decrypt<H>, error::Error> {
+        let prefix_len = self.prefix.as_ref().map_or(0, String::len);
+        if prefix_len > usize::from(self.length) {
+            bail!("Prefix is too long");
+        }
+
+        if self.xor.as_ref().map_or(usize::MAX, Vec::len) < usize::from(self.length) {
+            bail!("XOR mask is not long enough");
+        }
+
+        // Allowed because the length was checked for overflow
+        #[allow(clippy::cast_possible_truncation)]
+        let variable_length = self.length - prefix_len as u8;
+        let number_space = 10_u64.pow(u32::from(variable_length));
+        let threads = threads(self.threads, number_space);
+        let device = self.derive_device(number_space, threads);
+
+        Ok(Decrypt {
+            shared: Shared::new(self.input, self.salt)?,
+            device,
+            files: self
+                .files
+                .unwrap_or_else(|| std::collections::HashSet::with_capacity(0)),
+            length: variable_length,
+            number_space,
+            prefix: self.prefix.unwrap_or_else(String::new),
+            threads,
+            xor: self.xor,
+        })
+    }
+
+    fn derive_device(&self, number_space: u64, threads: u8) -> Device {
+        if let Some(device) = self.device {
+            device
+        } else if number_space > u64::from(threads) * decrypt::OPTIMAL_HASHES_PER_THREAD {
+            Device::GPU
+        } else {
+            Device::CPU
+        }
     }
 }
 
@@ -211,17 +285,8 @@ fn threads(requested_count: Option<u8>, number_space: u64) -> u8 {
     threads as u8
 }
 
+// TODO: The env var should belong to CLI
 fn salt(maybe_salt: Option<String>) -> String {
     maybe_salt
         .unwrap_or_else(|| std::env::var(SALT_ENV).unwrap_or_else(|_| String::from(secrets::SALT)))
-}
-
-fn device(maybe_device: Option<Device>, number_space: u64, threads: u8) -> Device {
-    if let Some(device) = maybe_device {
-        device
-    } else if number_space > u64::from(threads) * decrypt::OPTIMAL_HASHES_PER_THREAD {
-        Device::GPU
-    } else {
-        Device::CPU
-    }
 }
