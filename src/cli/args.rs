@@ -167,8 +167,8 @@ fn to_path(value: &str) -> Result<std::path::PathBuf> {
 
 fn to_device(value: &str) -> Result<options::Device> {
     match value.to_uppercase().as_str() {
-        "CPU" => Ok(options::Device::CPU),
-        "GPU" => Ok(options::Device::GPU),
+        "CPU" => Ok(options::Device::Cpu),
+        "GPU" => Ok(options::Device::Gpu),
         _ => bail!("possible values are [CPU, GPU]",),
     }
 }

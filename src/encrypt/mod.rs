@@ -12,7 +12,7 @@ pub fn execute<H: hash::Hash>(
         if channel.should_terminate() {
             return false;
         }
-        channel.result(&input, &format!("{:x}", H::digest(&options.salt(), input)));
+        channel.result(input, &format!("{:x}", H::digest(options.salt(), input)));
     }
 
     true

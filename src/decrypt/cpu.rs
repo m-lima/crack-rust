@@ -183,7 +183,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::CPU)
+            .device(options::Device::Cpu)
             .prefix(prefix)
             .salt(salt)
             .threads(4)
@@ -227,7 +227,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::CPU)
+            .device(options::Device::Cpu)
             .prefix(prefix)
             .salt(salt)
             .threads(4)
@@ -270,7 +270,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::CPU)
+            .device(options::Device::Cpu)
             .prefix(prefix)
             .salt(salt)
             .threads(4)
@@ -308,7 +308,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::CPU)
+            .device(options::Device::Cpu)
             .prefix(prefix)
             .salt(salt)
             .threads(4)

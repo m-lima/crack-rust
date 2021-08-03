@@ -5,8 +5,8 @@ use crate::Input;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Device {
-    CPU,
-    GPU,
+    Cpu,
+    Gpu,
 }
 
 impl Device {
@@ -18,8 +18,8 @@ impl Device {
 impl std::fmt::Display for Device {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::CPU => write!(fmt, "CPU"),
-            Self::GPU => write!(fmt, "GPU"),
+            Self::Cpu => write!(fmt, "CPU"),
+            Self::Gpu => write!(fmt, "GPU"),
         }
     }
 }
@@ -233,9 +233,9 @@ impl<H: hash::Hash> DecryptBuilder<H> {
         if let Some(device) = self.device {
             device
         } else if number_space > u64::from(threads) * decrypt::OPTIMAL_HASHES_PER_THREAD {
-            Device::GPU
+            Device::Gpu
         } else {
-            Device::CPU
+            Device::Cpu
         }
     }
 }

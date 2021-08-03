@@ -57,8 +57,8 @@ impl Printer {
 
     pub fn options<H: hash::Hash>(self, options: &options::Mode<H>) {
         if self.verboseness as u8 > 1 {
-            mode_options(self.colored, &options);
-            input(self.colored, &options);
+            mode_options(self.colored, options);
+            input(self.colored, options);
         }
         if self.verboseness as u8 > 0 {
             section!("Output", self.colored);
@@ -67,7 +67,7 @@ impl Printer {
 
     pub fn summary(self, summary: &results::Summary) {
         if self.verboseness as u8 > 0 {
-            print_summary(self.colored, summary)
+            print_summary(self.colored, summary);
         }
     }
 
@@ -192,7 +192,7 @@ fn decrypt_options<H: hash::Hash>(colored: bool, options: &options::Decrypt<H>) 
         eprintln!("{:15}{}", colorize!("XOR:", colored), base64::encode(xor));
     }
     eprintln!("{:15}{}", colorize!("Device:", colored), options.device());
-    if options::Device::CPU == options.device() {
+    if options::Device::Cpu == options.device() {
         eprintln!(
             "{:15}{}",
             colorize!("Threads:", colored),
@@ -203,7 +203,9 @@ fn decrypt_options<H: hash::Hash>(colored: bool, options: &options::Decrypt<H>) 
             }
         );
     }
-    eprintln!("{:15}{}", colorize!("Prefix:", colored), options.prefix());
+    if !options.prefix().is_empty() {
+        eprintln!("{:15}{}", colorize!("Prefix:", colored), options.prefix());
+    }
     eprintln!(
         "{:15}{}",
         colorize!("Length:", colored),

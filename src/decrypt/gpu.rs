@@ -24,7 +24,7 @@ fn compute_results<'a, H: hash::Hash>(
 
     for (i, plain) in output.iter().enumerate() {
         if plain.is_valid() {
-            let mut output = format!("{}{}", &options.prefix(), plain.printable(&environment));
+            let mut output = format!("{}{}", &options.prefix(), plain.printable(environment));
             if let Some(xor) = options.xor().as_ref() {
                 unsafe {
                     output
@@ -47,7 +47,7 @@ fn compute_results<'a, H: hash::Hash>(
         for i in 0..environment.cpu_iterations() {
             use eytzinger::SliceExt;
 
-            let zeros = opencl::Output::new(0, i).printable(&environment);
+            let zeros = opencl::Output::new(0, i).printable(environment);
             let hash = H::digest(&salted_prefix, &zeros);
 
             if input.eytzinger_search(&hash).is_some() {
@@ -137,7 +137,7 @@ pub fn execute<H: hash::Hash>(
         .finish()
         .map_err(|err| error!(err; "OpenCL: Failed to wait for queue to finish"))?;
 
-    let results = compute_results(&environment, &input, &out_buffer, &options)?;
+    let results = compute_results(&environment, &input, &out_buffer, options)?;
 
     for result in &results {
         channel.result(&result.hash, &result.plain);
@@ -205,7 +205,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::GPU)
+            .device(options::Device::Gpu)
             .prefix(prefix)
             .salt(salt)
             .build()
@@ -252,7 +252,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::GPU)
+            .device(options::Device::Gpu)
             .prefix(prefix)
             .salt(salt)
             .xor(xor)
@@ -298,7 +298,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::GPU)
+            .device(options::Device::Gpu)
             .prefix(prefix)
             .salt(salt)
             .build()
@@ -339,7 +339,7 @@ mod test {
                     .collect(),
                 3,
             )
-            .device(options::Device::GPU)
+            .device(options::Device::Gpu)
             .prefix(prefix)
             .salt(salt)
             .xor(xor)

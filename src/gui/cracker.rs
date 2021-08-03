@@ -196,9 +196,9 @@ impl Cracker {
         let maybe_device = if auto_device {
             None
         } else if use_gpu {
-            Some(options::Device::GPU)
+            Some(options::Device::Gpu)
         } else {
-            Some(options::Device::CPU)
+            Some(options::Device::Cpu)
         };
 
         // Allowed because we can't pass `&mut self` to both side of `map_or_else`
@@ -238,7 +238,7 @@ impl Cracker {
 
         std::thread::spawn(move || {
             // Allow the GUI to have breathing room to render
-            if options.device() == options::Device::GPU {
+            if options.device() == options::Device::Gpu {
                 std::thread::sleep(std::time::Duration::from_millis(500));
             }
 
@@ -269,13 +269,13 @@ impl Channel {
         let ptr = qmetaobject::QPointer::from(&*cracker);
         let result = qmetaobject::queued_callback(move |(input, output)| {
             if let Some(pin) = ptr.as_pinned() {
-                pin.borrow().found(input, output)
+                pin.borrow().found(input, output);
             }
         });
         let ptr = qmetaobject::QPointer::from(&*cracker);
         let error = qmetaobject::queued_callback(move |error| {
             if let Some(pin) = ptr.as_pinned() {
-                pin.borrow().error(error)
+                pin.borrow().error(error);
             }
         });
         Self {
@@ -287,17 +287,17 @@ impl Channel {
     }
 
     fn error(&self, error: String) {
-        (self.error)(error)
+        (self.error)(error);
     }
 }
 
 impl channel::Channel for Channel {
     fn progress(&self, progress: u8) {
-        (self.progress)(progress)
+        (self.progress)(progress);
     }
 
     fn result(&self, input: &str, output: &str) {
-        (self.result)((String::from(input), String::from(output)))
+        (self.result)((String::from(input), String::from(output)));
     }
 
     fn should_terminate(&self) -> bool {

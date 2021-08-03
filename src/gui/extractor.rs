@@ -18,7 +18,7 @@ impl QSyntaxHighlighter for Extractor {
         self.regex().find_iter(&text).for_each(|m| {
             let start = m.start();
             let count = m.end() - start;
-            self.format_text(start, count, self.color)
+            self.format_text(start, count, self.color);
         });
     }
 }

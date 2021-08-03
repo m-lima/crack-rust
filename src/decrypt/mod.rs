@@ -15,7 +15,7 @@ pub fn execute<H: hash::Hash>(
     channel: &impl channel::Channel,
 ) -> Result<results::Summary, error::Error> {
     match options.device() {
-        options::Device::GPU => gpu::execute(options, channel),
-        options::Device::CPU => cpu::execute(options, channel),
+        options::Device::Gpu => gpu::execute(options, channel),
+        options::Device::Cpu => cpu::execute(options, channel),
     }
 }
