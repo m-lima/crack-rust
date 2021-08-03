@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Fusion
-import QtQuick.Window
 
 Item {
   id: root
