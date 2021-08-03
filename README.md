@@ -44,6 +44,8 @@ With the feature flag `qml`, if no command line arguments are provided, the GUI 
 
 #### CLI
 ```bash
+SHA256 hasher/cracker
+
 USAGE:
     hasher <SUBCOMMAND>
 
@@ -99,6 +101,8 @@ OPTIONS:
 
 ### Decrypt
 ```bash
+Crack hashes
+
 USAGE:
     hasher crack [FLAGS] [OPTIONS] [--] [input]...
 
@@ -141,16 +145,21 @@ OPTIONS:
             place
 
     -l, --length <length>
-            Length of hashed values [default: 12]
+            Length of original values [default: 12]
 
     -p, --prefix <prefix>
-            Known prefix of hashed values
+            Known prefix of original values
 
     -s, --salt <salt>...
             Salt to prepend when generating hash [env: HASHER_SALT]
 
     -t, --threads <threads>
             Number of threads to spawn, automatic deduction if omitted
+
+    -x, --xor <xor>...
+            XOR mask to apply to plain values prior to hashing [env: HASHER_XOR]
+
+            The mask is expected to be given as a base64 encoded representation
 
 
 The cracker will exit with an error if any of the input hashes could not be cracked

@@ -100,7 +100,7 @@ pub struct RawCrackShared {
     #[allow(clippy::option_option)]
     xor: Option<Option<String>>,
 
-    /// Known prefix of cracked values
+    /// Known prefix of original values
     #[clap(short, long)]
     prefix: Option<String>,
 
@@ -112,7 +112,7 @@ pub struct RawCrackShared {
     #[clap(short, long, possible_values = options::Device::variants(), parse(try_from_str = to_device))]
     device: Option<options::Device>,
 
-    /// Length of cracked values
+    /// Length of original values
     #[clap(short, long, default_value = "12")]
     length: u8,
 }

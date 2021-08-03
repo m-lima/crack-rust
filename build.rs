@@ -20,8 +20,11 @@ fn generate_dummys() {
     let template_path = hidden_path.join("template.in");
     if !template_path.exists() {
         println!("Creating dummy template file");
-        std::fs::write(template_path, b"[Template::new(\"Custom\", \"\", 11)]")
-            .expect("Failed to create dummy templates");
+        std::fs::write(
+            template_path,
+            b"[Template::new(\"Custom\", \"\", 11, false)]",
+        )
+        .expect("Failed to create dummy templates");
     }
 }
 
