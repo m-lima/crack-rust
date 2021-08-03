@@ -108,8 +108,10 @@ Column {
     Switch {
       id: saltCustom
 
+      visible: _hasSalt
+      enabled: _hasSalt
       text: qsTr('Custom')
-      checked: false
+      checked: !_hasSalt
       onCheckedChanged: saltCustom.checked && saltValue.forceActiveFocus()
     }
 
@@ -119,7 +121,7 @@ Column {
       width: parent.width
       enabled: saltCustom.checked
       placeholderText: qsTr('Salt')
-      opacity: saltCustom.checked ? 1 : 0.5
+      opacity: enabled ? 1 : 0.5
     }
 
   }
@@ -177,32 +179,37 @@ Column {
     expanded: root._current === this
     onClicked: root._current = this
 
-    Switch {
-      id: maskEnabled
+    Row {
+      Switch {
+        id: maskEnabled
 
-      text: qsTr('Enable')
-      checked: false
-    }
+        text: qsTr('Enable')
+        checked: false
+        onCheckedChanged: !_hasMask && maskEnabled.checked && maskValue.forceActiveFocus()
+      }
 
-    Switch {
-      id: maskCustom
+      Switch {
+        id: maskCustom
 
-      text: qsTr('Custom')
-      enabled: maskEnabled.checked
-      checked: false
-      onCheckedChanged: maskCustom.checked && maskValue.forceActiveFocus()
+        text: qsTr('Custom')
+        visible: _hasMask
+        enabled: _hasMask && maskEnabled.checked
+        checked: !_hasMask
+        opacity: enabled ? 1 : 0.5
+        onCheckedChanged: maskCustom.checked && maskValue.forceActiveFocus()
+      }
     }
 
     TextField {
       id: maskValue
 
       width: parent.width
-      enabled: maskCustom.checked
-      placeholderText: qsTr('Mask')
-      opacity: maskCustom.checked ? 1 : 0.5
+      enabled: maskEnabled.checked && maskCustom.checked
+      placeholderText: qsTr('XOR mask')
+      opacity: enabled ? 1 : 0.5
 
       validator: RegularExpressionValidator {
-        regularExpression: /[0-9a-zA-Z\/+]{0,25}[=]{0,2}/
+        regularExpression: /[0-9a-zA-Z\/+]+[=]{0,2}/
       }
     }
 

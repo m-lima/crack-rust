@@ -180,12 +180,15 @@ impl Cracker {
             String::from(secrets::SALT)
         };
 
-        // TODO: Reject if built-in XOR is not present
-        // TODO: Communicate base64 decode error
         let xor = if use_mask {
-            custom_mask
-                .or_else(|| Some(String::from(secrets::XOR)))
-                .and_then(|xor| base64::decode(xor).ok())
+            if let Ok(xor) =
+                base64::decode(custom_mask.unwrap_or_else(|| String::from(secrets::XOR)))
+            {
+                Some(xor)
+            } else {
+                self.error(String::from("XOR mask is not a valid base64 value"));
+                return 0;
+            }
         } else {
             None
         };
