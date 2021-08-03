@@ -5,6 +5,7 @@ use crate::options;
 use crate::options::SharedAccessor;
 
 const MAX_GPU_LENGTH: u8 = 7;
+const PREPARE: &str = include_str!("../../cl/prepare.cl");
 
 pub(super) fn setup_for<H: hash::Hash>(
     options: &options::Decrypt<H>,
@@ -27,12 +28,14 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
     // Allowed because salted prefix is limited in size
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub(super) fn make_program(&self) -> Result<ocl::Program, error::Error> {
-        let salted_prefix = format!("{}{}", &self.options.salt(), &self.options.prefix());
+        let salted_prefix = format!("{}{}", self.options.salt(), self.options.prefix());
         let source = source::template::<H>().with_prefix(&salted_prefix);
 
         ocl::Program::builder()
+            .source(PREPARE)
             .source(source.to_string())
             .devices(self.configuration.device)
+            .cmplr_def("CONST_SALT_LEN", self.options.salt().len() as i32)
             .cmplr_def("CONST_BEGIN", salted_prefix.len() as i32)
             .cmplr_def(
                 "CONST_END",

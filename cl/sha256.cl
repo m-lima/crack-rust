@@ -5,13 +5,6 @@
     MIT License
 */
 
-union Value {
-  unsigned char bytes[64];
-  unsigned int ints[16];
-  unsigned long longs[8];
-};
-typedef union Value Value;
-
 union Hash {
   unsigned char bytes[32];
   unsigned int ints[8];
@@ -262,64 +255,13 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
 #undef shr32
 #undef rotl32
 
-/*
- * The skeleton is composed of: [SUFFIX + variable + LENGTH]
- * The size of the skeleton is a multiple of 512 bits (64 bytes)
- * The SUFFIX is arbitrary
- * The LENGTH is the length of (SUFFIX + variable) in a 64 bit format
- * If LENGTH happens to be larger than 64 bits, only the lower 64 bits
- * are considered
- */
-#ifdef CONST_LENGTH_ON_CPU
-inline void prepare(unsigned int value,
-    unsigned int iteration,
-    Value * skeleton) {
-  // Filling the "variable" part of the skeleton
-#pragma unroll
-  for (char index = CONST_END - 1;
-      index >= CONST_BEGIN + CONST_LENGTH_ON_CPU;
-      index--)
-  {
-    // Convert numbers to char
-    skeleton->bytes[index] = (value % 10) + 48;
-
-    // Move one decimal place
-    value /= 10;
-  }
-
-  // Filling the iteration part of the skeleton
-#pragma unroll
-  for (char index = CONST_BEGIN + CONST_LENGTH_ON_CPU - 1;
-      index >= CONST_BEGIN;
-      index--)
-  {
-    // Convert numbers to char
-    skeleton->bytes[index] = (iteration % 10) + 48;
-
-    // Move one decimal place
-    iteration /= 10;
-  }
-}
-#else
-inline void prepare(unsigned int value, Value * skeleton) {
-  // Filling the "variable" part of the skeleton
-#pragma unroll
-  for (char index = CONST_END - 1; index >= CONST_BEGIN; index--) {
-    // Convert numbers to char
-    skeleton->bytes[index] = (value % 10) + 48;
-
-    // Move one decimal place
-    value /= 10;
-  }
-}
-#endif
-
 //_____________________________________________________________________________
 // Find the hash for a limited number of targets
 //
 // Defines:
 // CONST_BEGIN {:d} # The index of where the variable part begins
 // CONST_END {:d} # The index past of where the variable part ends
+// CONST_SALT_LEN {:d} # The length of the salt in bytes
 // CONST_LENGTH_ON_CPU {:d} # Decimal places the iterations are substituting
 // CONST_TARGET_COUNT {:d} # The number of items in the targets array
 //
@@ -331,30 +273,27 @@ __kernel void crack(constant Hash * targets,
     private const unsigned int prefix) {
   unsigned int index = get_global_id(0);
 
-  // Inject the prefix and suffix
-  Value value;
-
-  // Zero out the bytes
-  for (int i = 0; i < 8; i++) {
-    value.longs[i] = 0;
-  }
-
-  // %%PREFIX%%
-
-  // Inject size
-  value.bytes[56] = CONST_END * 8ul;
-
-  // Inject padding
-  value.bytes[CONST_END] = 0x80;
-
   // Buffer for the hash
   Hash hash;
+
+  // Zero initialize
+  Value value = {};
 
 #ifdef CONST_LENGTH_ON_CPU
   prepare(index, prefix, &value);
 #else
   prepare(index, &value);
 #endif
+
+  // %%PREFIX%%
+
+  // %%XOR%%
+
+  // Inject size
+  value.bytes[56] = CONST_END * 8ul;
+
+  // Inject padding
+  value.bytes[CONST_END] = 0x80;
 
   // Actually cracking
   sha256(hash.ints, value.ints);
