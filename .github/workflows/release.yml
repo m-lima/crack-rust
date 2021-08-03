@@ -43,6 +43,8 @@ jobs:
     needs: [release]
     name: Build
     runs-on: ${{ matrix.os }}
+    env:
+      HASHER_DISABLE_GPU_TESTS: true
     strategy:
       matrix:
         os:

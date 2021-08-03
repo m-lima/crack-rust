@@ -52,6 +52,10 @@ fn build_cpp() {
 fn main() {
     generate_dummys();
 
+    if option_env!("HASHER_DISABLE_GPU_TESTS").is_some() {
+        println!("cargo:rustc-cfg=gpu_tests_disabled");
+    }
+
     #[cfg(feature = "qml")]
     build_cpp();
 }

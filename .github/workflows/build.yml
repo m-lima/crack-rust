@@ -5,6 +5,8 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HASHER_DISABLE_GPU_TESTS: true
     steps:
       - name: Checkout
         uses: actions/checkout@v1

@@ -152,7 +152,7 @@ pub fn execute<H: hash::Hash>(
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(gpu_tests_disabled)))]
 mod test {
     use super::channel;
 
