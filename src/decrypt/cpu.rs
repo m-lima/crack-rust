@@ -188,4 +188,49 @@ mod test {
 
         assert_eq!(execute(&options, &Channel).unwrap().results, expected);
     }
+
+    #[test]
+    fn test_xor_decryption() {
+        let salt = String::from("abc");
+        let prefix = String::from("1");
+        let xor = vec![3, 4, 5, 6];
+
+        let expected = vec![
+            results::Pair {
+                hash: String::from(
+                    "f3b90305e926c8d7ad0c4a1750532341875df1aeecde3c508bfbe4be1969180c",
+                ),
+                plain: String::from("MjY2"),
+            },
+            results::Pair {
+                hash: String::from(
+                    "836bfc1d576b5a04e1688cd4603f42a67dda7e31c2e7adb5142eb4c4e898a66d",
+                ),
+                plain: String::from("MjEw"),
+            },
+            results::Pair {
+                hash: String::from(
+                    "8823993be0da4a4f07aa33dd3ebfe1a33b36f01d5d11d64e93235119e8b3468f",
+                ),
+                plain: String::from("Mj08"),
+            },
+        ];
+
+        let options = options::DecryptBuilder::<hash::sha256::Hash>::new(
+            expected
+                .iter()
+                .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
+                .collect(),
+            3,
+        )
+        .device(options::Device::CPU)
+        .prefix(prefix)
+        .salt(salt)
+        .threads(4)
+        .xor(xor)
+        .build()
+        .unwrap();
+
+        assert_eq!(execute(&options, &Channel).unwrap().results, expected);
+    }
 }
