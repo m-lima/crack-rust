@@ -6,7 +6,7 @@ pub struct Summary {
     pub results: Vec<Pair>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Pair {
     pub hash: String,
     pub plain: String,

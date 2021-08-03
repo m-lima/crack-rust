@@ -24,10 +24,18 @@ fn compute_results<'a, H: hash::Hash>(
 
     for (i, plain) in output.iter().enumerate() {
         if plain.is_valid() {
-            results.push(results::Pair::new(
-                input[i].to_string(),
-                format!("{}{}", &options.prefix(), plain.printable(&environment)),
-            ));
+            let mut output = format!("{}{}", &options.prefix(), plain.printable(&environment));
+            if let Some(xor) = options.xor().as_ref() {
+                unsafe {
+                    output
+                        .as_bytes_mut()
+                        .iter_mut()
+                        .zip(xor.iter())
+                        .for_each(|(b, x)| *b ^= x);
+                }
+                output = base64::encode(output);
+            }
+            results.push(results::Pair::new(input[i].to_string(), output));
         }
     }
 
@@ -142,4 +150,206 @@ pub fn execute<H: hash::Hash>(
         threads: environment.range(),
         results,
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::channel;
+
+    #[derive(Copy, Clone)]
+    struct Channel;
+
+    impl channel::Channel for Channel {
+        fn progress(&self, _: u8) {}
+        fn result(&self, _: &str, _: &str) {}
+        fn should_terminate(&self) -> bool {
+            false
+        }
+    }
+
+    mod sha256 {
+        use super::super::{execute, hash, options, results};
+        use super::Channel;
+
+        #[test]
+        fn test_decryption() {
+            let salt = String::from("abc");
+            let prefix = String::from("1");
+
+            let mut expected = vec![
+                results::Pair {
+                    hash: String::from(
+                        "6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090",
+                    ),
+                    plain: prefix.clone() + "23",
+                },
+                results::Pair {
+                    hash: String::from(
+                        "97193f3095a7fc166ae10276c083735b41a36abdaac6a33e62d15b7eafa22a67",
+                    ),
+                    plain: prefix.clone() + "55",
+                },
+                results::Pair {
+                    hash: String::from(
+                        "237dd1639d476eda038aff4b83283e3c657a9f38b50c2d7177336d344fe8992e",
+                    ),
+                    plain: prefix.clone() + "99",
+                },
+            ];
+            expected.sort();
+
+            let options = options::DecryptBuilder::<hash::sha256::Hash>::new(
+                expected
+                    .iter()
+                    .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
+                    .collect(),
+                3,
+            )
+            .device(options::Device::GPU)
+            .prefix(prefix)
+            .salt(salt)
+            .build()
+            .unwrap();
+
+            let mut results = execute(&options, &Channel).unwrap().results;
+            results.sort();
+
+            assert_eq!(results, expected);
+        }
+
+        #[test]
+        fn test_xor_decryption() {
+            let salt = String::from("abc");
+            let prefix = String::from("1");
+            let xor = vec![3, 4, 5, 6];
+
+            let mut expected = vec![
+                results::Pair {
+                    hash: String::from(
+                        "f3b90305e926c8d7ad0c4a1750532341875df1aeecde3c508bfbe4be1969180c",
+                    ),
+                    plain: String::from("MjY2"),
+                },
+                results::Pair {
+                    hash: String::from(
+                        "836bfc1d576b5a04e1688cd4603f42a67dda7e31c2e7adb5142eb4c4e898a66d",
+                    ),
+                    plain: String::from("MjEw"),
+                },
+                results::Pair {
+                    hash: String::from(
+                        "8823993be0da4a4f07aa33dd3ebfe1a33b36f01d5d11d64e93235119e8b3468f",
+                    ),
+                    plain: String::from("Mj08"),
+                },
+            ];
+            expected.sort();
+
+            let options = options::DecryptBuilder::<hash::sha256::Hash>::new(
+                expected
+                    .iter()
+                    .map(|v| <hash::sha256::Hash as std::convert::From<&str>>::from(&v.hash))
+                    .collect(),
+                3,
+            )
+            .device(options::Device::GPU)
+            .prefix(prefix)
+            .salt(salt)
+            .xor(xor)
+            .build()
+            .unwrap();
+
+            let mut results = execute(&options, &Channel).unwrap().results;
+            results.sort();
+
+            assert_eq!(results, expected);
+        }
+    }
+
+    mod md5 {
+        use super::super::{execute, hash, options, results};
+        use super::Channel;
+
+        #[test]
+        fn test_decryption() {
+            let salt = String::from("abc");
+            let prefix = String::from("1");
+
+            let mut expected = vec![
+                results::Pair {
+                    hash: String::from("e99a18c428cb38d5f260853678922e03"),
+                    plain: prefix.clone() + "23",
+                },
+                results::Pair {
+                    hash: String::from("6b14d696623c7b26c275da041719ce53"),
+                    plain: prefix.clone() + "55",
+                },
+                results::Pair {
+                    hash: String::from("361ac235e1e08be7325a8ced898e6ff4"),
+                    plain: prefix.clone() + "99",
+                },
+            ];
+            expected.sort();
+
+            let options = options::DecryptBuilder::<hash::md5::Hash>::new(
+                expected
+                    .iter()
+                    .map(|v| <hash::md5::Hash as std::convert::From<&str>>::from(&v.hash))
+                    .collect(),
+                3,
+            )
+            .device(options::Device::GPU)
+            .prefix(prefix)
+            .salt(salt)
+            .build()
+            .unwrap();
+
+            let mut results = execute(&options, &Channel).unwrap().results;
+            results.sort();
+
+            assert_eq!(results, expected);
+        }
+
+        #[test]
+        fn test_xor_decryption() {
+            let salt = String::from("abc");
+            let prefix = String::from("1");
+            let xor = vec![3, 4, 5, 6];
+
+            let mut expected = vec![
+                results::Pair {
+                    hash: String::from("7900c0f65c087c03458293d7bb172ed1"),
+                    plain: String::from("MjY2"),
+                },
+                results::Pair {
+                    hash: String::from("7c1b8268077c6a9439fb82434dd5a5af"),
+                    plain: String::from("MjEw"),
+                },
+                results::Pair {
+                    hash: String::from("dd9eac6ed5ce1d8c5a645b4642ca1cd8"),
+                    plain: String::from("Mj08"),
+                },
+            ];
+            expected.sort();
+
+            let options = options::DecryptBuilder::<hash::md5::Hash>::new(
+                expected
+                    .iter()
+                    .map(|v| <hash::md5::Hash as std::convert::From<&str>>::from(&v.hash))
+                    .collect(),
+                3,
+            )
+            .device(options::Device::GPU)
+            .prefix(prefix)
+            .salt(salt)
+            .xor(xor)
+            .build()
+            .unwrap();
+
+            let mut results = execute(&options, &Channel).unwrap().results;
+            results.sort();
+
+            assert_eq!(results, expected);
+        }
+    }
 }

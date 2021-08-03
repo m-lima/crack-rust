@@ -5,6 +5,7 @@ use crate::options;
 use crate::options::SharedAccessor;
 
 const MAX_GPU_LENGTH: u8 = 7;
+const BASE64: &str = include_str!("../../cl/base64.cl");
 const PREPARE: &str = include_str!("../../cl/prepare.cl");
 
 pub(super) fn setup_for<H: hash::Hash>(
@@ -15,6 +16,14 @@ pub(super) fn setup_for<H: hash::Hash>(
         configuration: Configuration::new()?,
         kernel_parameters: KernelParameters::from(options),
     })
+}
+
+fn calculate_base64_len(length: usize) -> usize {
+    if length % 3 > 0 {
+        (length / 3 + 1) << 2
+    } else {
+        (length / 3) << 2
+    }
 }
 
 pub(super) struct Environment<'a, H: hash::Hash> {
@@ -29,18 +38,39 @@ impl<'a, H: hash::Hash> Environment<'a, H> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub(super) fn make_program(&self) -> Result<ocl::Program, error::Error> {
         let salted_prefix = format!("{}{}", self.options.salt(), self.options.prefix());
-        let source = source::template::<H>().with_prefix(&salted_prefix);
+        let end = i32::from(salted_prefix.len() as u8 + self.options.length());
 
-        ocl::Program::builder()
-            .source(PREPARE)
-            .source(source.to_string())
+        let mut builder = ocl::Program::builder();
+        builder.source(PREPARE);
+
+        if let Some(xor) = self.options.xor().as_ref() {
+            let length = usize::from(self.options.length() + self.options.prefix_length());
+            let source = source::template::<H>().with_prefix_and_xor(
+                &salted_prefix,
+                self.options.salt().len(),
+                length,
+                xor,
+            );
+
+            builder
+                .source(BASE64)
+                .source(source.to_string())
+                .cmplr_def("CONST_BASE64_BEGIN", self.options.salt().len() as i32)
+                .cmplr_def(
+                    "CONST_LENGTH",
+                    (calculate_base64_len(length) + self.options.salt().len()) as i32,
+                );
+        } else {
+            let source = source::template::<H>().with_prefix(&salted_prefix);
+            builder
+                .source(source.to_string())
+                .cmplr_def("CONST_LENGTH", end);
+        }
+
+        builder
             .devices(self.configuration.device)
-            .cmplr_def("CONST_SALT_LEN", self.options.salt().len() as i32)
             .cmplr_def("CONST_BEGIN", salted_prefix.len() as i32)
-            .cmplr_def(
-                "CONST_END",
-                i32::from(salted_prefix.len() as u8 + self.options.length()),
-            )
+            .cmplr_def("CONST_END", end)
             .cmplr_def("CONST_TARGET_COUNT", self.options.input().len() as i32)
             .cmplr_def(
                 self.kernel_parameters.cpu_length_definition(),
@@ -259,6 +289,38 @@ mod source {
 
             Source(output)
         }
+
+        pub(super) fn with_prefix_and_xor(
+            &self,
+            salted_prefix: &str,
+            salt_len: usize,
+            length: usize,
+            xor: &[u8],
+        ) -> Source {
+            let mut prefix_code = String::new();
+            for (i, c) in salted_prefix.chars().enumerate() {
+                prefix_code.push_str(format!("value.bytes[{}] = \'{}\';", i, c).as_str());
+            }
+
+            let mut xor_code = String::new();
+            for (i, c) in xor.iter().take(length).enumerate() {
+                xor_code.push_str(format!("value.bytes[{}] ^= {};", i + salt_len, c).as_str());
+            }
+
+            let mut output = String::new();
+            for line in self.0.lines() {
+                if line.ends_with("// %%PREFIX%%") {
+                    output.push_str(prefix_code.as_str());
+                } else if line.ends_with("// %%XOR%%") {
+                    output.push_str(xor_code.as_str());
+                } else {
+                    output.push_str(line);
+                };
+                output.push('\n');
+            }
+
+            Source(output)
+        }
     }
 
     impl Source {
@@ -291,5 +353,48 @@ Final line
             let output = SourceTemplate(src).with_prefix("012");
             assert_eq!(output.to_string(), expected);
         }
+
+        #[test]
+        fn test_code_injection() {
+            let src = r#"
+One line
+Another line
+// %%PREFIX%%
+// %%PREFIX%% 
+   // %%XOR%%
+Final line"#;
+
+            let expected = r#"
+One line
+Another line
+value.bytes[0] = '0';value.bytes[1] = '1';value.bytes[2] = '2';
+// %%PREFIX%% 
+value.bytes[1] ^= 0;value.bytes[2] ^= 1;
+Final line
+"#;
+
+            let output = SourceTemplate(src).with_prefix_and_xor("012", 1, 2, &[0, 1, 2, 3]);
+            assert_eq!(output.to_string(), expected);
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn base64_length() {
+        use super::calculate_base64_len;
+
+        assert_eq!(calculate_base64_len(0), 0);
+        assert_eq!(calculate_base64_len(1), 4);
+        assert_eq!(calculate_base64_len(2), 4);
+        assert_eq!(calculate_base64_len(3), 4);
+        assert_eq!(calculate_base64_len(4), 8);
+        assert_eq!(calculate_base64_len(5), 8);
+        assert_eq!(calculate_base64_len(6), 8);
+        assert_eq!(calculate_base64_len(7), 12);
+        assert_eq!(calculate_base64_len(8), 12);
+        assert_eq!(calculate_base64_len(9), 12);
+        assert_eq!(calculate_base64_len(10), 16);
     }
 }

@@ -255,19 +255,20 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
 #undef shr32
 #undef rotl32
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 // Find the hash for a limited number of targets
 //
 // Defines:
 // CONST_BEGIN {:d} # The index of where the variable part begins
 // CONST_END {:d} # The index past of where the variable part ends
-// CONST_SALT_LEN {:d} # The length of the salt in bytes
+// CONST_BASE64_BEGIN {:d} # The index where to base64 encode from (salt length)
+// CONST_LENGTH {:d} # The length of the payload (salt + value)
 // CONST_LENGTH_ON_CPU {:d} # Decimal places the iterations are substituting
 // CONST_TARGET_COUNT {:d} # The number of items in the targets array
 //
 // targets: Target hashes
 // output: Matched values
-//_____________________________________________________________________________
+//______________________________________________________________________________
 __kernel void crack(constant Hash * targets,
     global unsigned int * output,
     private const unsigned int prefix) {
@@ -287,13 +288,16 @@ __kernel void crack(constant Hash * targets,
 
   // %%PREFIX%%
 
+#ifdef CONST_BASE64_BEGIN
   // %%XOR%%
+  to_base64(&value);
+#endif
 
   // Inject size
-  value.bytes[56] = CONST_END * 8ul;
+  value.longs[7] = CONST_LENGTH << 3;
 
   // Inject padding
-  value.bytes[CONST_END] = 0x80;
+  value.bytes[CONST_LENGTH] = 0x80;
 
   // Actually cracking
   sha256(hash.ints, value.ints);
