@@ -294,7 +294,10 @@ __kernel void crack(constant Hash * targets,
 #endif
 
   // Inject size
-  value.longs[7] = CONST_LENGTH << 3;
+  value.bytes[56] = CONST_LENGTH << 3 & 0xff;
+#if CONST_LENGTH > 31
+  value.bytes[57] = (CONST_LENGTH << 3 & 0xff00) >> 8;
+#endif
 
   // Inject padding
   value.bytes[CONST_LENGTH] = 0x80;
