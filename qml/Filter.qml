@@ -52,7 +52,7 @@ Canvas {
     }
 
     validator: RegularExpressionValidator {
-      regularExpression: /[a-fA-F0-9]*/
+      regularExpression: /[0-9a-zA-Z\/+]+[+]{0,2}/
     }
 
   }
