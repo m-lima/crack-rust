@@ -149,8 +149,8 @@ static void sha256_process2(const unsigned int * W, unsigned int * digest) {
 
 /* The main hashing function */
 static void sha256(unsigned int * hash, const unsigned int * input) {
-  int input_len = CONST_END / 4;
-  if (mod(CONST_END, 4)) {
+  int input_len = CONST_LENGTH / 4;
+  if (mod(CONST_LENGTH, 4)) {
     input_len++;
   }
 
@@ -190,13 +190,13 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
       loops--;
     }
 
-    if (loops == 0 && mod(CONST_END, 64) != 0) {
-      unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
-      int v = mod(CONST_END, 64);
+    if (loops == 0 && mod(CONST_LENGTH, 64) != 0) {
+      unsigned int padding = 0x80 << (((CONST_LENGTH + 4) - ((CONST_LENGTH + 4) / 4 * 4)) * 8);
+      int v = mod(CONST_LENGTH, 64);
       W[v / 4] |= SWAP(padding);
-      if ((CONST_END & 0x3B) != 0x3B) {
+      if ((CONST_LENGTH & 0x3B) != 0x3B) {
         /* Let's add length */
-        W[0x0F] = CONST_END * 8;
+        W[0x0F] = CONST_LENGTH * 8;
       }
     }
 
@@ -222,13 +222,13 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
     W[0xE] = 0x0;
     W[0xF] = 0x0;
 
-    if ((CONST_END & 0x3B) != 0x3B) {
-      unsigned int padding = 0x80 << (((CONST_END + 4) - ((CONST_END + 4) / 4 * 4)) * 8);
+    if ((CONST_LENGTH & 0x3B) != 0x3B) {
+      unsigned int padding = 0x80 << (((CONST_LENGTH + 4) - ((CONST_LENGTH + 4) / 4 * 4)) * 8);
       W[0] |= SWAP(padding);
     }
 
     /* Let's add length */
-    W[0x0F] = CONST_END * 8;
+    W[0x0F] = CONST_LENGTH * 8;
 
     sha256_process2(W, State);
   }
@@ -294,10 +294,7 @@ __kernel void crack(constant Hash * targets,
 #endif
 
   // Inject size
-  value.bytes[56] = CONST_LENGTH << 3 & 0xff;
-#if CONST_LENGTH > 31
-  value.bytes[57] = (CONST_LENGTH << 3 & 0xff00) >> 8;
-#endif
+  value.longs[7] = CONST_LENGTH << 3;
 
   // Inject padding
   value.bytes[CONST_LENGTH] = 0x80;
