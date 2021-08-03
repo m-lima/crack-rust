@@ -1,7 +1,4 @@
-#!/usr/bin/env zsh
-
-local force=''
-local noFinalDeploy=''
+#!/usr/bin/env bash
 
 while [ -n "${1}" ]
 do
