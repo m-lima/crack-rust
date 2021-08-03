@@ -39,7 +39,7 @@ jobs:
         name: release_url
         path: release_url.txt
 
-  build:
+  build_cli:
     needs: [release]
     name: Build
     runs-on: ${{ matrix.os }}
@@ -92,7 +92,7 @@ jobs:
       with:
         upload_url: ${{ steps.load_release.outputs.upload_url }}
         asset_path: ./target/release/hasher
-        asset_name: hasher-${{ steps.load_release.outputs.os_name }}
+        asset_name: hasher-${{ steps.load_release.outputs.os_name }}-cli
         asset_content_type: application/octet-stream
     - name: Upload asset (WINDOWS)
       if: matrix.os == 'windows-latest'
@@ -102,6 +102,141 @@ jobs:
       with:
         upload_url: ${{ steps.load_release.outputs.upload_url }}
         asset_path: ./target/release/hasher.exe
-        asset_name: hasher-${{ steps.load_release.outputs.os_name }}.exe
+        asset_name: hasher-${{ steps.load_release.outputs.os_name }}-cli.exe
         asset_content_type: application/octet-stream
 
+  build_gui:
+    needs: [release]
+    name: Build
+    runs-on: ${{ matrix.os }}
+    env:
+      HASHER_DISABLE_GPU_TESTS: true
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Prepare
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Prepare OpenCL (UBUNTU)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clinfo mesa-opencl-icd
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
+    - name: Prepare OpenCL (WINDOWS)
+      if: matrix.os == 'windows-latest'
+      run: |
+        Invoke-WebRequest -Uri https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip -OutFile lightOCLSDK.zip
+        Expand-Archive -Path lightOCLSDK.zip
+        mv lightOCLSDK/lib/x86_64/OpenCL.lib .
+    - name: Prepare QT
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: '6.1.1'
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release --features qml
+    - name: Recover release URL
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+    - name: Load release
+      id: load_release
+      run: |
+        echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
+        echo "::set-output name=os_name::$(echo ${{ matrix.os }} | cut -d'-' -f1)"
+    - name: Upload asset (UNIX)
+      if: matrix.os != 'windows-latest'
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.load_release.outputs.upload_url }}
+        asset_path: ./target/release/hasher
+        asset_name: hasher-${{ steps.load_release.outputs.os_name }}-gui
+        asset_content_type: application/octet-stream
+    - name: Upload asset (WINDOWS)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.load_release.outputs.upload_url }}
+        asset_path: ./target/release/hasher.exe
+        asset_name: hasher-${{ steps.load_release.outputs.os_name }}-gui.exe
+        asset_content_type: application/octet-stream
+
+  # build_bundle:
+  #   needs: [release]
+  #   name: Build
+  #   runs-on: ${{ matrix.os }}
+  #   env:
+  #     HASHER_DISABLE_GPU_TESTS: true
+  #   strategy:
+  #     matrix:
+  #       os:
+  #         - ubuntu-latest
+  #         - macOS-latest
+  #         - windows-latest
+  #   steps:
+  #   - name: Checkout
+  #     uses: actions/checkout@v1
+  #   - name: Prepare
+  #     uses: actions-rs/toolchain@v1
+  #     with:
+  #       toolchain: stable
+  #   - name: Prepare OpenCL (UBUNTU)
+  #     if: matrix.os == 'ubuntu-latest'
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install -y clinfo mesa-opencl-icd
+  #       sudo ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
+  #   - name: Prepare OpenCL (WINDOWS)
+  #     if: matrix.os == 'windows-latest'
+  #     run: |
+  #       Invoke-WebRequest -Uri https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip -OutFile lightOCLSDK.zip
+  #       Expand-Archive -Path lightOCLSDK.zip
+  #       mv lightOCLSDK/lib/x86_64/OpenCL.lib .
+  #   - name: Build
+  #     uses: actions-rs/cargo@v1
+  #     with:
+  #       command: build
+  #       args: --verbose --release
+  #   - name: Recover release URL
+  #     uses: actions/download-artifact@v1
+  #     with:
+  #       name: release_url
+  #   - name: Load release
+  #     id: load_release
+  #     run: |
+  #       echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
+  #       echo "::set-output name=os_name::$(echo ${{ matrix.os }} | cut -d'-' -f1)"
+  #   - name: Upload asset (UNIX)
+  #     if: matrix.os != 'windows-latest'
+  #     uses: actions/upload-release-asset@v1.0.1
+  #     env:
+  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     with:
+  #       upload_url: ${{ steps.load_release.outputs.upload_url }}
+  #       asset_path: ./target/release/hasher
+  #       asset_name: hasher-${{ steps.load_release.outputs.os_name }}-bundle
+  #       asset_content_type: application/octet-stream
+  #   - name: Upload asset (WINDOWS)
+  #     if: matrix.os == 'windows-latest'
+  #     uses: actions/upload-release-asset@v1.0.1
+  #     env:
+  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     with:
+  #       upload_url: ${{ steps.load_release.outputs.upload_url }}
+  #       asset_path: ./target/release/hasher.exe
+  #       asset_name: hasher-${{ steps.load_release.outputs.os_name }}-bundle.exe
+  #       asset_content_type: application/octet-stream
