@@ -15,7 +15,7 @@ Item {
     for (let i = 0; i < input.files.count; i++) {
       files.push(input.files.get(i).path);
     }
-    let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, input.hashes, files);
+    let total = cracker.crack(parameters.prefix, parameters.length, parameters.saltCustom, parameters.saltValue, parameters.useSha256, parameters.deviceAutomatic, parameters.useGpu, parameters.useMask, parameters.customMask, parameters.maskValue, input.hashes, files);
     if (total > 0)
       progress.total = total;
 

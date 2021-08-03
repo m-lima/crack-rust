@@ -12,6 +12,9 @@ Column {
   property alias useSha256: algorithmSha256.checked
   property alias deviceAutomatic: deviceAutomatic.checked
   property alias useGpu: gpu.checked
+  property alias useMask: maskEnabled.checked
+  property alias customMask: maskCustom.checked
+  property alias maskValue: maskValue.text
   property Item _current: null
 
   state: _current ? 'Expanded' : ''
@@ -37,6 +40,7 @@ Column {
         let idx = model.index(currentIndex, 0);
         prefix.text = model.data(idx, Qt.UserRole + 1);
         length.value = model.data(idx, Qt.UserRole + 2);
+        maskEnabled.checked = model.data(idx, Qt.UserRole + 3)
       }
 
       function selectMatching() {
@@ -97,7 +101,6 @@ Column {
   }
 
   CollapsibleItem {
-    // TODO: Add OPET
     title: qsTr('Salt')
     expanded: root._current === this
     onClicked: root._current = this
@@ -141,7 +144,6 @@ Column {
 
   CollapsibleItem {
     title: qsTr('Device')
-    showLine: false
     expanded: root._current === this
     onClicked: root._current = this
 
@@ -165,6 +167,43 @@ Column {
       text: qsTr('CPU')
       enabled: !deviceAutomatic.checked
       paintDisabled: false
+    }
+
+  }
+
+  CollapsibleItem {
+    title: qsTr('Mask')
+    showLine: false
+    expanded: root._current === this
+    onClicked: root._current = this
+
+    Switch {
+      id: maskEnabled
+
+      text: qsTr('Enable')
+      checked: false
+    }
+
+    Switch {
+      id: maskCustom
+
+      text: qsTr('Custom')
+      enabled: maskEnabled.checked
+      checked: false
+      onCheckedChanged: maskCustom.checked && maskValue.forceActiveFocus()
+    }
+
+    TextField {
+      id: maskValue
+
+      width: parent.width
+      enabled: maskCustom.checked
+      placeholderText: qsTr('Mask')
+      opacity: maskCustom.checked ? 1 : 0.5
+
+      validator: RegularExpressionValidator {
+        regularExpression: /[0-9a-zA-Z\/+]{0,25}[=]{0,2}/
+      }
     }
 
   }

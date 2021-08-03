@@ -6,6 +6,7 @@ use crate::files;
 use crate::hash;
 use crate::options;
 use crate::results;
+use crate::secrets;
 
 #[allow(non_snake_case, dead_code)]
 #[derive(QObject, Default)]
@@ -29,6 +30,9 @@ pub struct Cracker {
             useSha256: bool,
             autoDevice: bool,
             useGpu: bool,
+            useMask: bool,
+            customMask: bool,
+            maskValue: String,
             input: qmetaobject::QVariantList,
             files: qmetaobject::QVariantList,
         ) -> usize
@@ -102,6 +106,9 @@ impl Cracker {
         use_sha256: bool,
         auto_device: bool,
         use_gpu: bool,
+        use_mask: bool,
+        custom_mask: bool,
+        mask_value: String,
         input: qmetaobject::QVariantList,
         files: qmetaobject::QVariantList,
     ) -> usize {
@@ -113,6 +120,8 @@ impl Cracker {
                 salt,
                 auto_device,
                 use_gpu,
+                use_mask,
+                if custom_mask { Some(mask_value) } else { None },
                 input,
                 files,
             )
@@ -124,6 +133,8 @@ impl Cracker {
                 salt,
                 auto_device,
                 use_gpu,
+                use_mask,
+                if custom_mask { Some(mask_value) } else { None },
                 input,
                 files,
             )
@@ -138,6 +149,8 @@ impl Cracker {
         salt: String,
         auto_device: bool,
         use_gpu: bool,
+        use_mask: bool,
+        custom_mask: Option<String>,
         input: qmetaobject::QVariantList,
         files: qmetaobject::QVariantList,
     ) -> usize {
@@ -161,7 +174,22 @@ impl Cracker {
             })
             .collect::<std::collections::HashSet<_>>();
 
-        let maybe_salt = if custom_salt { Some(salt) } else { None };
+        let salt = if custom_salt {
+            salt
+        } else {
+            String::from(secrets::SALT)
+        };
+
+        // TODO: Reject if built-in XOR is not present
+        // TODO: Communicate base64 decode error
+        let xor = if use_mask {
+            custom_mask
+                .or_else(|| Some(String::from(secrets::XOR)))
+                .and_then(|xor| base64::decode(xor).ok())
+        } else {
+            None
+        };
+
         let maybe_device = if auto_device {
             None
         } else if use_gpu {
@@ -176,7 +204,8 @@ impl Cracker {
             .device(maybe_device)
             .files(files)
             .prefix(prefix)
-            .salt(maybe_salt)
+            .salt(salt)
+            .xor(xor)
             .build()
             .map(|options| {
                 use options::SharedAccessor;
