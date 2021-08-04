@@ -34,7 +34,7 @@ Item {
       for (let i = 0; i < results.model.count; i++) {
         // Implicit conversion for comparison desired
         let current = results.model.get(i);
-        if (!current.plain && current.text == input)
+        if (!current.plain && current.value == input)
           return ;
 
       }
