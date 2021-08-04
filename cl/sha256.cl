@@ -24,7 +24,7 @@ typedef union Hash Hash;
 #define S2(x) (rotl32 ((x), 30u) ^ rotl32 ((x), 19u) ^ rotl32 ((x), 10u))
 #define S3(x) (rotl32 ((x), 26u) ^ rotl32 ((x), 21u) ^ rotl32 ((x),  7u))
 
-#define SWAP(val) (rotate(((val) & 0x00FF00FF), 24U) | rotate(((val) & 0xFF00FF00), 8U))
+#define SWAP(val) ((val & 0xff) << 24) | ((val & 0xff00) << 8) | ((val & 0xff0000) >> 8) | ((val & 0xff000000) >> 24);
 
 __constant uint k_sha256[64] =
 {
@@ -178,12 +178,12 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
     W[0x7] = 0x0;
     W[0x8] = 0x0;
     W[0x9] = 0x0;
-    W[0xA] = 0x0;
-    W[0xB] = 0x0;
-    W[0xC] = 0x0;
-    W[0xD] = 0x0;
-    W[0xE] = 0x0;
-    W[0xF] = 0x0;
+    W[0xa] = 0x0;
+    W[0xb] = 0x0;
+    W[0xc] = 0x0;
+    W[0xd] = 0x0;
+    W[0xe] = 0x0;
+    W[0xf] = 0x0;
 
     for (int m = 0; loops != 0 && m < 16; m++) {
       W[m] ^= SWAP(input[m + (current_loop * 16)]);
@@ -194,9 +194,9 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
       unsigned int padding = 0x80 << (((CONST_LENGTH + 4) - ((CONST_LENGTH + 4) / 4 * 4)) * 8);
       int v = mod(CONST_LENGTH, 64);
       W[v / 4] |= SWAP(padding);
-      if ((CONST_LENGTH & 0x3B) != 0x3B) {
+      if ((CONST_LENGTH & 0x3b) != 0x3b) {
         /* Let's add length */
-        W[0x0F] = CONST_LENGTH * 8;
+        W[0x0f] = CONST_LENGTH * 8;
       }
     }
 
@@ -215,20 +215,20 @@ static void sha256(unsigned int * hash, const unsigned int * input) {
     W[0x7] = 0x0;
     W[0x8] = 0x0;
     W[0x9] = 0x0;
-    W[0xA] = 0x0;
-    W[0xB] = 0x0;
-    W[0xC] = 0x0;
-    W[0xD] = 0x0;
-    W[0xE] = 0x0;
-    W[0xF] = 0x0;
+    W[0xa] = 0x0;
+    W[0xb] = 0x0;
+    W[0xc] = 0x0;
+    W[0xd] = 0x0;
+    W[0xe] = 0x0;
+    W[0xf] = 0x0;
 
-    if ((CONST_LENGTH & 0x3B) != 0x3B) {
+    if ((CONST_LENGTH & 0x3b) != 0x3b) {
       unsigned int padding = 0x80 << (((CONST_LENGTH + 4) - ((CONST_LENGTH + 4) / 4 * 4)) * 8);
       W[0] |= SWAP(padding);
     }
 
     /* Let's add length */
-    W[0x0F] = CONST_LENGTH * 8;
+    W[0x0f] = CONST_LENGTH * 8;
 
     sha256_process2(W, State);
   }
