@@ -40,7 +40,7 @@ Column {
         let idx = model.index(currentIndex, 0);
         prefix.text = model.data(idx, Qt.UserRole + 1);
         length.value = model.data(idx, Qt.UserRole + 2);
-        maskEnabled.checked = model.data(idx, Qt.UserRole + 3)
+        maskEnabled.checked = model.data(idx, Qt.UserRole + 3);
       }
 
       function selectMatching() {
@@ -198,6 +198,7 @@ Column {
         opacity: enabled ? 1 : 0.5
         onCheckedChanged: maskCustom.checked && maskValue.forceActiveFocus()
       }
+
     }
 
     TextField {
@@ -211,6 +212,7 @@ Column {
       validator: RegularExpressionValidator {
         regularExpression: /[0-9a-zA-Z\/+]+[=]{0,2}/
       }
+
     }
 
   }
