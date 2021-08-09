@@ -23,6 +23,7 @@ type Result<T> = std::result::Result<T, error::Error>;
 pub enum RawModeSha256 {
     /// Generate hashes
     Hash(RawHash),
+
     /// Crack hashes
     #[clap(
         after_help = "The cracker will exit with an error if any of the input hashes could not be cracked"
@@ -40,6 +41,7 @@ pub enum RawModeSha256 {
 pub enum RawModeMd5 {
     /// Generate hashes
     Hash(RawHash),
+
     /// Crack hashes
     #[clap(
         after_help = "The cracker will exit with an error if any of the input hashes could not be cracked"

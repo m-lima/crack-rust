@@ -17,7 +17,7 @@ pub fn run() {
     }
 }
 
-pub fn run_wrapped() -> Result<bool, error::Error> {
+fn run_wrapped() -> Result<bool, error::Error> {
     setup_panic();
 
     Ok(match args::algorithm() {
