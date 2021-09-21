@@ -18,8 +18,6 @@ pub fn run() {
 }
 
 fn run_wrapped() -> Result<bool, error::Error> {
-    setup_panic();
-
     Ok(match args::algorithm() {
         hash::Algorithm::sha256 => run_algorithm(args::parse_sha256()?),
         hash::Algorithm::md5 => run_algorithm(args::parse_md5()?),
