@@ -6,7 +6,7 @@ Hasher [![Github](https://github.com/m-lima/hasher/workflows/build/badge.svg)](h
 
 ### Depencies
 - Rust
-- OpenGL
+- OpenCL
 - C++17 [optional]
 - Qt6 [optional]
 
@@ -43,7 +43,7 @@ With the feature flag `qml`, if no command line arguments are provided, the GUI 
 ![Screen](.github/img/screenshot.png)
 
 #### CLI
-```bash
+```
 SHA256 hasher/cracker
 
 USAGE:
@@ -62,7 +62,7 @@ Input can be provided through stdin or as parameters
 ```
 
 ### Hash
-```bash
+```
 Generate hashes
 
 USAGE:
@@ -100,7 +100,7 @@ OPTIONS:
 ```
 
 ### Decrypt
-```bash
+```
 Crack hashes
 
 USAGE:
