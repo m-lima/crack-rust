@@ -223,7 +223,7 @@ impl<H: hash::Hash> DecryptBuilder<H> {
                 .unwrap_or_else(|| std::collections::HashSet::with_capacity(0)),
             length: variable_length,
             number_space,
-            prefix: self.prefix.unwrap_or_else(String::new),
+            prefix: self.prefix.unwrap_or_default(),
             threads,
             xor: self.xor,
         })

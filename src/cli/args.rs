@@ -66,6 +66,8 @@ pub struct RawShared {
     #[clap(short('n'), long("no-colors"), parse(from_flag = std::ops::Not::not))]
     colored: bool,
 
+    // Allowed because this is done for the help rendering, but fetched manually from the params
+    #[allow(dead_code)]
     /// Algorithm to use
     #[clap(short, long, default_value = "sha256", possible_values = hash::Algorithm::variants(), parse(try_from_str = to_algorithm))]
     algorithm: hash::Algorithm,

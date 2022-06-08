@@ -11,10 +11,10 @@ macro_rules! error {
 #[macro_export]
 macro_rules! bail {
     ($error:tt; $($arg:tt)*) => {
-        return Err($crate::error::Error::new(format!("{}: {}", format!($($arg)*), $error)));
+        return Err($crate::error::Error::new(format!("{}: {}", format!($($arg)*), $error)))
     };
     ($($arg:tt)*) => {
-        return Err($crate::error::Error::new(format!($($arg)*)));
+        return Err($crate::error::Error::new(format!($($arg)*)))
     };
 }
 
