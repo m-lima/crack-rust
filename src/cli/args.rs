@@ -1,5 +1,3 @@
-use clap::Clap;
-
 use crate::error;
 use crate::files;
 use crate::hash;
@@ -14,7 +12,7 @@ const XOR_ENV: &str = "HASHER_XOR";
 type Result<T> = std::result::Result<T, error::Error>;
 
 /// SHA256 hasher/cracker
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 #[clap(
     name = "Hasher",
     version,
@@ -32,7 +30,7 @@ pub enum RawModeSha256 {
 }
 
 /// Md5 hasher/cracker
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 #[clap(
     name = "Hasher",
     version,
@@ -49,7 +47,7 @@ pub enum RawModeMd5 {
     Crack(RawCrackMd5),
 }
 
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 pub struct RawShared {
     /// Salt to prepend when generating hash [env: HASHER_SALT]
     #[clap(short, long)]
@@ -73,7 +71,7 @@ pub struct RawShared {
     algorithm: hash::Algorithm,
 }
 
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 pub struct RawHash {
     #[clap(flatten)]
     shared: RawShared,
@@ -85,7 +83,7 @@ pub struct RawHash {
     input: Vec<String>,
 }
 
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 pub struct RawCrackShared {
     #[clap(flatten)]
     shared: RawShared,
@@ -121,7 +119,7 @@ pub struct RawCrackShared {
     length: u8,
 }
 
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 pub struct RawCrackSha256 {
     #[clap(flatten)]
     shared: RawCrackShared,
@@ -135,7 +133,7 @@ pub struct RawCrackSha256 {
     input: Vec<hash::sha256::Hash>,
 }
 
-#[derive(Clap, Debug)]
+#[derive(clap::Parser, Debug)]
 pub struct RawCrackMd5 {
     #[clap(flatten)]
     shared: RawCrackShared,
@@ -197,6 +195,7 @@ pub fn algorithm() -> hash::Algorithm {
 }
 
 pub fn parse_sha256() -> Result<(options::Mode<hash::sha256::Hash>, print::Printer)> {
+    use clap::Parser;
     use hash::sha256::Hash as H;
 
     let (mode, mut printer) = match RawModeSha256::parse() {
@@ -212,6 +211,7 @@ pub fn parse_sha256() -> Result<(options::Mode<hash::sha256::Hash>, print::Print
 }
 
 pub fn parse_md5() -> Result<(options::Mode<hash::md5::Hash>, print::Printer)> {
+    use clap::Parser;
     use hash::md5::Hash as H;
 
     let (mode, mut printer) = match RawModeMd5::parse() {
