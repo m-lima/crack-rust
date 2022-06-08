@@ -1,12 +1,12 @@
 use cpp::cpp;
 
 pub trait QSyntaxHighlighter: qmetaobject::QObject {
-    fn get_object_description() -> &'static qmetaobject::QObjectDescription
+    fn get_object_description() -> &'static qmetaobject::QObjectDescriptor
     where
         Self: Sized,
     {
         unsafe {
-            &*cpp!([]-> *const qmetaobject::QObjectDescription as "RustObjectDescription const*" {
+            &*cpp!([]-> *const qmetaobject::QObjectDescriptor as "RustObjectDescription const*" {
                 return rustObjectDescription<Rust_QSyntaxHighlighter>();
             })
         }
